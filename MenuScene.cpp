@@ -1,5 +1,5 @@
 ﻿#include "MenuScene.h"
-// #include "GameScene.h"
+#include "GameScene.h"
 
 USING_NS_CC;
 
@@ -36,47 +36,25 @@ void MenuScene::createBackground()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 尝试加载背景图片
-    if (checkImageExists("images/backgrounds/menu_bg.png")) {
-        auto bg = Sprite::create("images/backgrounds/menu_bg.png");
-        if (bg) {
-            bg->setPosition(Vec2(
-                origin.x + visibleSize.width / 2,
-                origin.y + visibleSize.height / 2
-            ));
+    // 加载背景图片
+    checkImageExists("images/backgrounds/menu_bg.png");
+    auto bg = Sprite::create("images/backgrounds/menu_bg.png");
+    if (bg) {
+        bg->setPosition(Vec2(
+            origin.x + visibleSize.width / 2,
+            origin.y + visibleSize.height / 2
+        ));
 
-            // 缩放以适应屏幕
-            float scaleX = visibleSize.width / bg->getContentSize().width;
-            float scaleY = visibleSize.height / bg->getContentSize().height;
-            float scale = MAX(scaleX, scaleY);
-            bg->setScale(scale);
+        // 缩放以适应屏幕
+        float scaleX = visibleSize.width / bg->getContentSize().width;
+        float scaleY = visibleSize.height / bg->getContentSize().height;
+        float scale = MAX(scaleX, scaleY);
+        bg->setScale(scale);
 
-            this->addChild(bg, -10);
-            CCLOG("Background image loaded successfully!");
-            return;
-        }
+        this->addChild(bg, -10);
+        CCLOG("Background image loaded successfully!");
+        return;
     }
-
-    // 降级方案：渐变色背景
-    CCLOG("Using gradient background (fallback)");
-
-    auto skyTop = LayerColor::create(Color4B(135, 206, 235, 255));
-    skyTop->setContentSize(Size(visibleSize.width, visibleSize.height * 0.6f));
-    skyTop->setPosition(Vec2(origin.x, origin.y + visibleSize.height * 0.4f));
-    this->addChild(skyTop, -10);
-
-    auto ground = LayerColor::create(Color4B(34, 139, 34, 255));
-    ground->setContentSize(Size(visibleSize.width, visibleSize.height * 0.4f));
-    ground->setPosition(Vec2(origin.x, origin.y));
-    this->addChild(ground, -10);
-
-    auto transition = LayerGradient::create(
-        Color4B(135, 206, 235, 255),
-        Color4B(34, 139, 34, 255)
-    );
-    transition->setContentSize(Size(visibleSize.width, visibleSize.height * 0.2f));
-    transition->setPosition(Vec2(origin.x, origin.y + visibleSize.height * 0.4f));
-    this->addChild(transition, -9);
 }
 
 // ========== 创建Logo ==========
@@ -86,51 +64,27 @@ void MenuScene::createLogo()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 尝试加载Logo图片
-    if (checkImageExists("images/ui/logo.png")) {
-        auto logo = Sprite::create("images/ui/logo.png");
-        if (logo) {
-            logo->setPosition(Vec2(
-                origin.x + visibleSize.width / 2,
-                origin.y + visibleSize.height * 0.75f
-            ));
+    // 加载Logo图片
+    checkImageExists("images/ui/logo.png");
+    auto logo = Sprite::create("images/ui/logo.png");
+    if (logo) {
+        logo->setPosition(Vec2(
+            origin.x + visibleSize.width / 2,
+            origin.y + visibleSize.height * 0.75f
+    ));
 
-            float maxWidth = visibleSize.width * 0.6f;
-            if (logo->getContentSize().width > maxWidth) {
-                float scale = maxWidth / logo->getContentSize().width;
-                logo->setScale(scale);
-            }
-
-            logo->setTag(1001);
-            this->addChild(logo, 10);
-            CCLOG("Logo image loaded successfully!");
-            return;
+        float maxWidth = visibleSize.width * 1.0f;
+        if (logo->getContentSize().width > maxWidth) {
+            float scale = maxWidth / logo->getContentSize().width;
+            logo->setScale(scale);
         }
+
+        logo->setTag(1001);
+        this->addChild(logo, 10);
+        CCLOG("Logo image loaded successfully!");
+        return;
     }
-
-    // 降级方案：文字标题
-    CCLOG("Using text logo (fallback)");
-
-    auto title = Label::createWithSystemFont("Stardew Farm", "Arial", 72);
-    title->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.75f
-    ));
-    title->setColor(Color3B::WHITE);
-    title->enableOutline(Color4B(101, 67, 33, 255), 4);
-    title->enableShadow(Color4B(0, 0, 0, 128), Size(3, -3), 0);
-    title->setTag(1001);
-    this->addChild(title, 10);
-
-    auto subtitle = Label::createWithSystemFont("Farm Simulation Game", "Arial", 32);
-    subtitle->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.65f
-    ));
-    subtitle->setColor(Color3B(255, 248, 220));
-    subtitle->enableOutline(Color4B(101, 67, 33, 255), 2);
-    subtitle->enableShadow(Color4B(0, 0, 0, 128), Size(2, -2), 0);
-    this->addChild(subtitle, 10);
+    
 }
 
 // ========== 创建半透明按钮 ==========
@@ -312,7 +266,7 @@ void MenuScene::startGameCallback(Ref* sender)
 
     // 2秒后移除
     auto removeAction = Sequence::create(
-        DelayTime::create(2.0f),
+        DelayTime::create(1.0f),
         RemoveSelf::create(),
         nullptr
     );
@@ -320,12 +274,12 @@ void MenuScene::startGameCallback(Ref* sender)
     label->runAction(removeAction->clone());
 
     // Uncomment when GameScene is ready
-    /*
+    
     auto scene = GameScene::createScene();
     Director::getInstance()->replaceScene(
         TransitionFade::create(1.0f, scene)
     );
-    */
+    
 }
 
 void MenuScene::continueGameCallback(Ref* sender)
@@ -348,7 +302,7 @@ void MenuScene::continueGameCallback(Ref* sender)
     this->addChild(label, 101);
 
     auto removeAction = Sequence::create(
-        DelayTime::create(2.0f),
+        DelayTime::create(1.0f),
         RemoveSelf::create(),
         nullptr
     );
@@ -376,7 +330,7 @@ void MenuScene::settingsCallback(Ref* sender)
     this->addChild(label, 101);
 
     auto removeAction = Sequence::create(
-        DelayTime::create(2.0f),
+        DelayTime::create(1.0f),
         RemoveSelf::create(),
         nullptr
     );
