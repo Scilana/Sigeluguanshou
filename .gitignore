@@ -1,0 +1,26 @@
+# 忽略编译生成目录
+build/
+bin/
+out/
+Debug.win32/
+Release.win32/
+x64/
+.vs/
+
+# 忽略VS产生的临时垃圾文件
+*.sdf
+*.opensdf
+*.suo
+*.user
+*.ipch
+*.pch
+*.db
+*.pdb
+*.idb
+*.tlog
+*.obj
+*.log
+
+# 忽略Windows系统缩略图
+Thumbs.db
+Desktop.ini

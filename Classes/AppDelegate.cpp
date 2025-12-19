@@ -24,6 +24,8 @@
 
 #include "AppDelegate.h"
 #include "MenuScene.h"
+//#include "HelloWorldScene.h"
+
 // #define USE_AUDIO_ENGINE 1
 // #define USE_SIMPLE_AUDIO_ENGINE 1
 
@@ -84,7 +86,7 @@ bool AppDelegate::applicationDidFinishLaunching() {
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_MAC) || (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX)
         glview = GLViewImpl::createWithRect("StardewFarm - Farm Simulation Game", cocos2d::Rect(0, 0, designResolutionSize.width, designResolutionSize.height));
 #else
-        glview = GLViewImpl::create("StardewFarm - ÐÇÂ¶¹ÈÅ©³¡");
+        glview = GLViewImpl::create("StardewFarm - ï¿½ï¿½Â¶ï¿½ï¿½Å©ï¿½ï¿½");
 #endif
         director->setOpenGLView(glview);
     }
@@ -117,9 +119,8 @@ bool AppDelegate::applicationDidFinishLaunching() {
     register_all_packages();
 
     // create a scene. it's an autorelease object
-    auto scene = MenuScene::createScene();
-
-    // run
+   // auto scene = HelloWorldScene::createScene();
+    auto scene = MenuScene::createScene(); // <--- æ”¹å›ž MenuScene    // run
     director->runWithScene(scene);
 
     return true;

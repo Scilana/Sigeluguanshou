@@ -30,6 +30,7 @@
 #if CC_TARGET_PLATFORM == CC_PLATFORM_WIN32
 
 #include <string>
+#include <functional>
 #include <condition_variable>
 #include <mutex>
 #include <thread>
