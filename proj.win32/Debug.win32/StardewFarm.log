@@ -1,0 +1,4 @@
+﻿C:\Program Files\Microsoft Visual Studio\2022\Community\MSBuild\Current\Bin\amd64\Microsoft.Common.CurrentVersion.targets(2189,5): warning MSB9008: 引用的项目 ..\cocos2d\external\Box2D\proj.win32\libbox2d.vcxproj 不存在。
+  StardewFarm.vcxproj -> D:\CocosProjects\StardewFarm\proj.win32\Debug.win32\StardewFarm.exe
+  正在执行自定义生成步骤
+  复制了 0 个文件

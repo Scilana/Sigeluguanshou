@@ -1,0 +1,17 @@
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DebugUtils\DebugDraw.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DebugDraw.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DebugUtils\DetourDebugDraw.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourDebugDraw.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourCrowd.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourCrowd.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourLocalBoundary.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourLocalBoundary.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourObstacleAvoidance.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourObstacleAvoidance.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourPathCorridor.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourPathCorridor.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourPathQueue.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourPathQueue.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourCrowd\DetourProximityGrid.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourProximityGrid.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourTileCache\DetourTileCache.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourTileCache.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\DetourTileCache\DetourTileCacheBuilder.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourTileCacheBuilder.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourAlloc.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourAlloc.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourCommon.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourCommon.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourNavMesh.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourNavMesh.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourNavMeshBuilder.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourNavMeshBuilder.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourNavMeshQuery.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourNavMeshQuery.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\Detour\DetourNode.cpp;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\DetourNode.obj
+D:\CocosProjects\StardewFarm\cocos2d\external\recast\fastlz\fastlz.c;D:\CocosProjects\StardewFarm\cocos2d\external\recast\proj.win32\Debug.win32\fastlz.obj
