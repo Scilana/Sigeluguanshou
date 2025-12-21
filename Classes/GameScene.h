@@ -190,11 +190,16 @@ private:
         cocos2d::Node* node;
     };
     std::vector<Tree> trees_;
-    int choppingIndex_;
-    float choppingTimer_;
+
+    struct PendingChop
+    {
+        std::vector<cocos2d::Vec2> tiles;
+        float timer;
+        int fillGid;
+    };
+    std::vector<PendingChop> pendingChops_;
     void initTrees();
     int findTreeIndex(const cocos2d::Vec2& tile) const;
-    void startChopTree(int index);
     void updateChopping(float delta);
 };
 

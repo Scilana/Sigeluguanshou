@@ -181,6 +181,36 @@ void MapLayer::clearBaseTileAt(const Vec2& tileCoord)
     baseLayer_->setTileGID(0, tileCoord);
 }
 
+int MapLayer::getBaseTileGID(const Vec2& tileCoord) const
+{
+    if (!tmxMap_ || !baseLayer_)
+        return 0;
+
+    Size mapSize = tmxMap_->getMapSize();
+    if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
+        tileCoord.y < 0 || tileCoord.y >= mapSize.height)
+    {
+        return 0;
+    }
+
+    return baseLayer_->getTileGIDAt(tileCoord);
+}
+
+void MapLayer::setBaseTileGID(const Vec2& tileCoord, int gid)
+{
+    if (!tmxMap_ || !baseLayer_)
+        return;
+
+    Size mapSize = tmxMap_->getMapSize();
+    if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
+        tileCoord.y < 0 || tileCoord.y >= mapSize.height)
+    {
+        return;
+    }
+
+    baseLayer_->setTileGID(gid, tileCoord);
+}
+
 Vec2 MapLayer::positionToTileCoord(const Vec2& position) const
 {
     if (!tmxMap_)

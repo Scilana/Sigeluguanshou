@@ -22,6 +22,8 @@ public:
     bool hasCollisionAt(const cocos2d::Vec2& tileCoord) const;
     void clearCollisionAt(const cocos2d::Vec2& tileCoord);
     void clearBaseTileAt(const cocos2d::Vec2& tileCoord);
+    int getBaseTileGID(const cocos2d::Vec2& tileCoord) const;
+    void setBaseTileGID(const cocos2d::Vec2& tileCoord, int gid);
 
     cocos2d::Vec2 positionToTileCoord(const cocos2d::Vec2& position) const;
     cocos2d::Vec2 tileCoordToPosition(const cocos2d::Vec2& tileCoord) const;

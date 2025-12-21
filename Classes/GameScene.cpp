@@ -524,7 +524,6 @@ void GameScene::update(float delta)
     updateUI();
 
     // 处理砍树计时
-
     updateChopping(delta);
 
 }
@@ -711,7 +710,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             result = farmManager_->harvestTile(tileCoord);
             break;
         case ItemType::Axe: {
-            // 在当前及8方向查找带碰撞的格子，收集其连通块，只有小块（<=8格）才认定为树
+            // 在当前及8方向查找带碰撞的格子，收集其连通块，只有小块（<=8格）且底图是树才认定为树
             cocos2d::Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
                 result = {false, "No tree to chop here"};
@@ -725,16 +724,23 @@ void GameScene::handleFarmAction(bool waterOnly)
                 break;
             }
 
-            for (const auto& t : component) {
-                mapLayer_->clearCollisionAt(t);
-                mapLayer_->clearBaseTileAt(t);
-                int idx = findTreeIndex(t);
-                if (idx >= 0 && trees_[idx].node) {
-                    trees_[idx].node->removeFromParent();
-                    trees_.erase(trees_.begin() + idx);
-                }
+            // 判断底图是否树：使用简单的 GID 白名单
+            static const int treeGids[] = {43793, 43920, 43108, 43109, 43558, 43608, 44445, 43158};
+            int baseGid = mapLayer_->getBaseTileGID(component.front());
+            bool isTree = false;
+            for (int gid : treeGids) {
+                if (baseGid == gid) { isTree = true; break; }
             }
-            result = {true, "Tree chopped"};
+            if (!isTree) {
+                result = {false, "No tree to chop here"};
+                break;
+            }
+
+            PendingChop job;
+            job.tiles = component;
+            job.timer = 2.0f; // 2秒
+            pendingChops_.push_back(job);
+            result = {true, "Chopping tree... (2s)"};
             break;
         }
         case ItemType::SeedTurnip:
@@ -936,13 +942,12 @@ int GameScene::getCropIdForItem(ItemType type) const
 void GameScene::initTrees()
 {
     trees_.clear();
-    choppingIndex_ = -1;
-    choppingTimer_ = 0.0f;
+    pendingChops_.clear();
 
     if (!mapLayer_)
         return;
 
-    // Place a few sample trees
+    // Place a few sample trees (debug draw only)
     std::vector<Vec2> sampleTiles = { Vec2(8, 8), Vec2(10, 12), Vec2(12, 9) };
 
     Size tileSize = mapLayer_->getTileSize();
@@ -973,35 +978,50 @@ int GameScene::findTreeIndex(const Vec2& tile) const
     return -1;
 }
 
-void GameScene::startChopTree(int index)
-{
-    if (index < 0 || index >= static_cast<int>(trees_.size()))
-        return;
-
-    choppingIndex_ = index;
-    choppingTimer_ = 2.0f; // 2s to chop
-}
-
 void GameScene::updateChopping(float delta)
 {
-    if (choppingIndex_ < 0 || choppingIndex_ >= static_cast<int>(trees_.size()))
+    if (pendingChops_.empty())
         return;
 
-    choppingTimer_ -= delta;
-    if (choppingTimer_ <= 0.0f)
+    // 逆序遍历以便安全删除
+    for (int i = static_cast<int>(pendingChops_.size()) - 1; i >= 0; --i)
     {
-        // Remove tree
-        auto tree = trees_[choppingIndex_];
-        if (tree.node)
+        pendingChops_[i].timer -= delta;
+        if (pendingChops_[i].timer <= 0.0f)
         {
-            tree.node->removeFromParent();
+            int fillGid = 0;
+            for (const auto& t : pendingChops_[i].tiles)
+            {
+                static const Vec2 neigh[8] = { Vec2(1,0),Vec2(-1,0),Vec2(0,1),Vec2(0,-1),Vec2(1,1),Vec2(1,-1),Vec2(-1,1),Vec2(-1,-1) };
+                for (const auto& n : neigh)
+                {
+                    Vec2 test = t + n;
+                    if (!mapLayer_->hasCollisionAt(test))
+                    {
+                        int gid = mapLayer_->getBaseTileGID(test);
+                        if (gid != 0) { fillGid = gid; break; }
+                    }
+                }
+                if (fillGid != 0) break;
+            }
+
+            for (const auto& t : pendingChops_[i].tiles)
+            {
+                mapLayer_->clearCollisionAt(t);
+                if (fillGid != 0)
+                    mapLayer_->setBaseTileGID(t, fillGid);
+
+                int idx = findTreeIndex(t);
+                if (idx >= 0 && trees_[idx].node)
+                {
+                    trees_[idx].node->removeFromParent();
+                    trees_.erase(trees_.begin() + idx);
+                }
+            }
+
+            pendingChops_.erase(pendingChops_.begin() + i);
+            showActionMessage("Tree chopped", Color3B(200, 255, 200));
         }
-        // 清除碰撞
-        mapLayer_->clearCollisionAt(tree.tileCoord);
-        trees_.erase(trees_.begin() + choppingIndex_);
-        choppingIndex_ = -1;
-        choppingTimer_ = 0.0f;
-        showActionMessage("Tree chopped!", Color3B(200, 255, 200));
     }
 }
 // ========== 返回菜单 ==========
