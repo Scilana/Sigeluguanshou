@@ -34,6 +34,7 @@ bool GameScene::init()
 
     initMap();
     initFarm();
+    initTrees();
     initPlayer();
     initCamera();
     initUI();
@@ -386,7 +387,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "WASD: Move | J: till/plant/harvest | K: water | ESC: Menu",
+        "1-0: Select item | J: use item | K: water | ESC: Menu",
         "Arial", 18
     );
 
@@ -417,6 +418,18 @@ void GameScene::initUI()
     actionLabel_->setColor(Color3B::WHITE);
 
     uiLayer_->addChild(actionLabel_, 1);
+
+    // ===== 当前物品显示 =====
+    itemLabel_ = Label::createWithSystemFont("Item: Hoe (1-0切换)", "Arial", 18);
+    itemLabel_->setAnchorPoint(Vec2(0, 0.5f));
+    itemLabel_->setPosition(Vec2(
+        origin.x + 20,
+        origin.y + 60
+    ));
+    itemLabel_->setColor(Color3B(200, 255, 200));
+    uiLayer_->addChild(itemLabel_, 1);
+
+    initToolbar();
 
     CCLOG("UI initialized - using simple fixed layer method");
 
@@ -457,6 +470,36 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_K:
         handleFarmAction(true);   // water
         break;
+    case EventKeyboard::KeyCode::KEY_1:
+        selectItemByIndex(0);
+        break;
+    case EventKeyboard::KeyCode::KEY_2:
+        selectItemByIndex(1);
+        break;
+    case EventKeyboard::KeyCode::KEY_3:
+        selectItemByIndex(2);
+        break;
+    case EventKeyboard::KeyCode::KEY_4:
+        selectItemByIndex(3);
+        break;
+    case EventKeyboard::KeyCode::KEY_5:
+        selectItemByIndex(4);
+        break;
+    case EventKeyboard::KeyCode::KEY_6:
+        selectItemByIndex(5);
+        break;
+    case EventKeyboard::KeyCode::KEY_7:
+        selectItemByIndex(6);
+        break;
+    case EventKeyboard::KeyCode::KEY_8:
+        selectItemByIndex(7);
+        break;
+    case EventKeyboard::KeyCode::KEY_9:
+        selectItemByIndex(8);
+        break;
+    case EventKeyboard::KeyCode::KEY_0:
+        selectItemByIndex(9);
+        break;
     default:
         break;
     }
@@ -476,6 +519,10 @@ void GameScene::update(float delta)
     // 更新UI显示
 
     updateUI();
+
+    // 处理砍树计时
+
+    updateChopping(delta);
 
 }
 
@@ -641,11 +688,24 @@ void GameScene::handleFarmAction(bool waterOnly)
 
     FarmManager::ActionResult result{false, "Unavailable"};
 
+    ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
+
     if (waterOnly)
 
     {
 
-        result = farmManager_->waterTile(tileCoord);
+        if (current == ItemType::WateringCan)
+
+        {
+
+            result = farmManager_->waterTile(tileCoord);
+
+        }
+
+        else
+        {
+            result = {false, "Need watering can to water"};
+        }
 
     }
 
@@ -653,21 +713,41 @@ void GameScene::handleFarmAction(bool waterOnly)
 
     {
 
-        // 优先收获 -> 种植 -> 耕地
-
-        result = farmManager_->harvestTile(tileCoord);
-
-        if (!result.success)
+        switch (current)
 
         {
 
-            auto plant = farmManager_->plantSeed(tileCoord);
+        case ItemType::Hoe:
 
-            if (plant.success)
+            result = farmManager_->tillTile(tileCoord);
+
+            break;
+
+        case ItemType::WateringCan:
+
+            result = farmManager_->waterTile(tileCoord);
+
+            break;
+
+        case ItemType::Scythe:
+
+            result = farmManager_->harvestTile(tileCoord);
+
+            break;
+
+        case ItemType::Axe:
+
+        {
+
+            int idx = findTreeIndex(tileCoord);
+
+            if (idx >= 0)
 
             {
 
-                result = plant;
+                startChopTree(idx);
+
+                result = {true, "Chopping tree... (2s)"};
 
             }
 
@@ -675,11 +755,36 @@ void GameScene::handleFarmAction(bool waterOnly)
 
             {
 
-                auto till = farmManager_->tillTile(tileCoord);
-
-                result = till.success ? till : plant;
+                result = {false, "No tree to chop here"};
 
             }
+
+            break;
+
+        }
+
+        case ItemType::SeedTurnip:
+        case ItemType::SeedPotato:
+        case ItemType::SeedCorn:
+        case ItemType::SeedTomato:
+        case ItemType::SeedPumpkin:
+        case ItemType::SeedBlueberry:
+
+        {
+
+            int cropId = getCropIdForItem(current);
+
+            result = farmManager_->plantSeed(tileCoord, cropId);
+
+            break;
+
+        }
+
+        default:
+
+            result = {false, "Unknown item action"};
+
+            break;
 
         }
 
@@ -719,6 +824,150 @@ void GameScene::showActionMessage(const std::string& text, const Color3B& color)
 
 }
 
+void GameScene::initToolbar()
+
+{
+
+    toolbarItems_ = {
+        ItemType::Hoe,
+        ItemType::WateringCan,
+        ItemType::Scythe,
+        ItemType::Axe,
+        ItemType::SeedTurnip,
+        ItemType::SeedPotato,
+        ItemType::SeedCorn,
+        ItemType::SeedTomato,
+        ItemType::SeedPumpkin,
+        ItemType::SeedBlueberry
+    };
+
+    selectedItemIndex_ = 0;
+    selectItemByIndex(0);
+
+}
+
+void GameScene::selectItemByIndex(int idx)
+
+{
+
+    if (toolbarItems_.empty())
+        return;
+
+    if (idx < 0 || idx >= static_cast<int>(toolbarItems_.size()))
+        return;
+
+    selectedItemIndex_ = idx;
+    std::string name = getItemName(toolbarItems_[selectedItemIndex_]);
+
+    if (itemLabel_)
+    {
+        itemLabel_->setString(StringUtils::format("Item: %s (1-0切换)", name.c_str()));
+    }
+
+    showActionMessage(StringUtils::format("切换到 %s", name.c_str()), Color3B(180, 220, 255));
+}
+
+std::string GameScene::getItemName(ItemType type) const
+{
+    switch (type)
+    {
+    case ItemType::Hoe: return "Hoe";
+    case ItemType::WateringCan: return "Watering Can";
+    case ItemType::Scythe: return "Scythe";
+    case ItemType::Axe: return "Axe";
+    case ItemType::SeedTurnip: return "Turnip Seed";
+    case ItemType::SeedPotato: return "Potato Seed";
+    case ItemType::SeedCorn: return "Corn Seed";
+    case ItemType::SeedTomato: return "Tomato Seed";
+    case ItemType::SeedPumpkin: return "Pumpkin Seed";
+    case ItemType::SeedBlueberry: return "Blueberry Seed";
+    default: return "Unknown";
+    }
+}
+
+int GameScene::getCropIdForItem(ItemType type) const
+{
+    switch (type)
+    {
+    case ItemType::SeedTurnip: return 0;
+    case ItemType::SeedPotato: return 1;
+    case ItemType::SeedCorn: return 2;
+    case ItemType::SeedTomato: return 3;
+    case ItemType::SeedPumpkin: return 4;
+    case ItemType::SeedBlueberry: return 5;
+    default: return -1;
+    }
+}
+
+void GameScene::initTrees()
+{
+    trees_.clear();
+    choppingIndex_ = -1;
+    choppingTimer_ = 0.0f;
+
+    if (!mapLayer_)
+        return;
+
+    // Place a few sample trees
+    std::vector<Vec2> sampleTiles = { Vec2(8, 8), Vec2(10, 12), Vec2(12, 9) };
+
+    Size tileSize = mapLayer_->getTileSize();
+    float halfW = tileSize.width / 2.0f;
+    float halfH = tileSize.height / 2.0f;
+
+    for (const auto& t : sampleTiles)
+    {
+        Vec2 pos = mapLayer_->tileCoordToPosition(t);
+        auto node = DrawNode::create();
+        Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
+        Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
+        node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.9f));
+        node->drawSolidCircle(pos, 10.0f, 0, 12, 1.0f, 1.0f, Color4F(0.1f, 0.5f, 0.1f, 0.9f));
+        mapLayer_->addChild(node, 15);
+
+        trees_.push_back(Tree{ t, node });
+    }
+}
+
+int GameScene::findTreeIndex(const Vec2& tile) const
+{
+    for (int i = 0; i < static_cast<int>(trees_.size()); ++i)
+    {
+        if (trees_[i].tileCoord == tile)
+            return i;
+    }
+    return -1;
+}
+
+void GameScene::startChopTree(int index)
+{
+    if (index < 0 || index >= static_cast<int>(trees_.size()))
+        return;
+
+    choppingIndex_ = index;
+    choppingTimer_ = 2.0f; // 2s to chop
+}
+
+void GameScene::updateChopping(float delta)
+{
+    if (choppingIndex_ < 0 || choppingIndex_ >= static_cast<int>(trees_.size()))
+        return;
+
+    choppingTimer_ -= delta;
+    if (choppingTimer_ <= 0.0f)
+    {
+        // Remove tree
+        auto tree = trees_[choppingIndex_];
+        if (tree.node)
+        {
+            tree.node->removeFromParent();
+        }
+        trees_.erase(trees_.begin() + choppingIndex_);
+        choppingIndex_ = -1;
+        choppingTimer_ = 0.0f;
+        showActionMessage("Tree chopped!", Color3B(200, 255, 200));
+    }
+}
 // ========== 返回菜单 ==========
 
 void GameScene::backToMenu()
@@ -732,3 +981,5 @@ void GameScene::backToMenu()
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, scene));
 
 }
+
+

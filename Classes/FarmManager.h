@@ -29,7 +29,7 @@ public:
     virtual void update(float delta) override;
 
     ActionResult tillTile(const cocos2d::Vec2& tileCoord);
-    ActionResult plantSeed(const cocos2d::Vec2& tileCoord);
+    ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
     ActionResult waterTile(const cocos2d::Vec2& tileCoord);
     ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
 

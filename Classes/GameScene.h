@@ -3,8 +3,8 @@
 #define __GAME_SCENE_H__
 
 #include "cocos2d.h"
-
 #include <string>
+#include <vector>
 #include "MapLayer.h"
 #include "Player.h"
 #include "FarmManager.h"
@@ -81,6 +81,7 @@ private:
     cocos2d::Label* moneyLabel_;
     cocos2d::Label* positionLabel_;  // 显示玩家位置（调试用）
     cocos2d::Label* actionLabel_;    // 显示农场操作提示
+    cocos2d::Label* itemLabel_;      // 显示当前物品
 
     /**
      * @brief 初始化地图
@@ -156,6 +157,44 @@ private:
      * @brief 显示一次性的操作提示
      */
     void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
+
+    // 物品栏
+    enum class ItemType
+    {
+        Hoe,
+        WateringCan,
+        Scythe,
+        Axe,
+        SeedTurnip,
+        SeedPotato,
+        SeedCorn,
+        SeedTomato,
+        SeedPumpkin,
+        SeedBlueberry
+    };
+
+    std::vector<ItemType> toolbarItems_;
+    int selectedItemIndex_;
+    void initToolbar();
+    void selectItemByIndex(int idx);
+    std::string getItemName(ItemType type) const;
+    int getCropIdForItem(ItemType type) const;
+
+    // 树木
+    struct Tree
+    {
+        cocos2d::Vec2 tileCoord;
+        cocos2d::Node* node;
+    };
+    std::vector<Tree> trees_;
+    int choppingIndex_;
+    float choppingTimer_;
+    void initTrees();
+    int findTreeIndex(const cocos2d::Vec2& tile) const;
+    void startChopTree(int index);
+    void updateChopping(float delta);
 };
 
 #endif // __GAME_SCENE_H__
+
+

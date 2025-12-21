@@ -58,13 +58,13 @@ void FarmManager::initCropDefs()
 {
     crops_.clear();
 
-    // Simple default crop: Turnip, 3 stages, 1 day per stage.
-    CropDef turnip;
-    turnip.id = 0;
-    turnip.name = "Turnip";
-    turnip.stageDays = {1, 1, 1};
-    turnip.salePrice = 60;
-    crops_[turnip.id] = turnip;
+    // 6 种作物：简单周期与售价
+    crops_[0] = {0, "Turnip", {1, 1, 1}, 60};
+    crops_[1] = {1, "Potato", {1, 2, 2}, 80};
+    crops_[2] = {2, "Corn", {2, 2, 2, 2}, 120};
+    crops_[3] = {3, "Tomato", {1, 2, 2}, 90};
+    crops_[4] = {4, "Pumpkin", {2, 3, 3}, 180};
+    crops_[5] = {5, "Blueberry", {1, 2, 2}, 110};
 }
 
 void FarmManager::update(float delta)
@@ -101,7 +101,7 @@ FarmManager::ActionResult FarmManager::tillTile(const Vec2& tileCoord)
     return result;
 }
 
-FarmManager::ActionResult FarmManager::plantSeed(const Vec2& tileCoord)
+FarmManager::ActionResult FarmManager::plantSeed(const Vec2& tileCoord, int cropId)
 {
     ActionResult result{false, ""};
     if (!isValidTile(tileCoord))
@@ -122,14 +122,16 @@ FarmManager::ActionResult FarmManager::plantSeed(const Vec2& tileCoord)
         return result;
     }
 
+    CropDef def = getCropDef(cropId);
+
     tile.hasCrop = true;
-    tile.cropId = 0; // default crop
+    tile.cropId = def.id;
     tile.stage = 0;
     tile.progressDays = 0;
     tile.watered = false;
 
     result.success = true;
-    result.message = "Planted turnip";
+    result.message = StringUtils::format("Planted %s", def.name.c_str());
     redrawOverlay();
     return result;
 }
@@ -300,4 +302,3 @@ void FarmManager::redrawOverlay()
         }
     }
 }
-
