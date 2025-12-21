@@ -1,6 +1,7 @@
 #include "GameScene.h"
 #include "MenuScene.h"
 #include "FarmManager.h"
+#include <cmath>
 
 USING_NS_CC;
 
@@ -387,7 +388,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Select item | J: use item | K: water | ESC: Menu",
+        u8"1-0: \u5207\u6362\u7269\u54c1 | J: \u4f7f\u7528\u5f53\u524d\u7269\u54c1 | K: \u6dcb\u6c34 | ESC: \u83dc\u5355",
         "Arial", 18
     );
 
@@ -420,7 +421,7 @@ void GameScene::initUI()
     uiLayer_->addChild(actionLabel_, 1);
 
     // ===== 当前物品显示 =====
-    itemLabel_ = Label::createWithSystemFont("Item: Hoe (1-0切换)", "Arial", 18);
+    itemLabel_ = Label::createWithSystemFont(u8"\u5f53\u524d\u7269\u54c1: \u9504\u5934 (1-0\u5207\u6362)", "Arial", 18);
     itemLabel_->setAnchorPoint(Vec2(0, 0.5f));
     itemLabel_->setPosition(Vec2(
         origin.x + 20,
@@ -604,7 +605,7 @@ void GameScene::updateCamera()
 
     }
 
-    // ⭐⭐⭐ 关键：更新UI层位置，使其跟随摄像机（固定在屏幕上）
+    // Update UI layer position so it stays with the camera (screen-space)
 
     if (uiLayer_)
 
@@ -679,121 +680,75 @@ void GameScene::updateUI()
 void GameScene::handleFarmAction(bool waterOnly)
 
 {
-
     if (!mapLayer_ || !farmManager_ || !player_)
-
         return;
 
     Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
+    // Snap to integral tile to avoid float drift
+    tileCoord.x = std::round(tileCoord.x);
+    tileCoord.y = std::round(tileCoord.y);
 
     FarmManager::ActionResult result{false, "Unavailable"};
-
     ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
 
-    if (waterOnly)
-
-    {
-
-        if (current == ItemType::WateringCan)
-
-        {
-
+    if (waterOnly) {
+        if (current == ItemType::WateringCan) {
             result = farmManager_->waterTile(tileCoord);
-
-        }
-
-        else
-        {
+        } else {
             result = {false, "Need watering can to water"};
         }
-
-    }
-
-    else
-
-    {
-
-        switch (current)
-
-        {
-
+    } else {
+        switch (current) {
         case ItemType::Hoe:
-
             result = farmManager_->tillTile(tileCoord);
-
             break;
-
         case ItemType::WateringCan:
-
             result = farmManager_->waterTile(tileCoord);
-
             break;
-
         case ItemType::Scythe:
-
             result = farmManager_->harvestTile(tileCoord);
-
             break;
-
-        case ItemType::Axe:
-
-        {
-
+        case ItemType::Axe: {
             int idx = findTreeIndex(tileCoord);
-
-            if (idx >= 0)
-
-            {
-
+            if (idx >= 0) {
                 startChopTree(idx);
-
                 result = {true, "Chopping tree... (2s)"};
-
-            }
-
-            else
-
-            {
-
+            } else if (mapLayer_->hasCollisionAt(tileCoord)) {
+                Vec2 pos = mapLayer_->tileCoordToPosition(tileCoord);
+                auto node = DrawNode::create();
+                Size tileSize = mapLayer_->getTileSize();
+                float halfW = tileSize.width / 2.0f;
+                float halfH = tileSize.height / 2.0f;
+                Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
+                Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
+                node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.7f));
+                mapLayer_->addChild(node, 15);
+                trees_.push_back(Tree{ tileCoord, node });
+                startChopTree(static_cast<int>(trees_.size()) - 1);
+                result = {true, "Chopping tree... (2s)"};
+            } else {
                 result = {false, "No tree to chop here"};
-
             }
-
             break;
-
         }
-
         case ItemType::SeedTurnip:
         case ItemType::SeedPotato:
         case ItemType::SeedCorn:
         case ItemType::SeedTomato:
         case ItemType::SeedPumpkin:
-        case ItemType::SeedBlueberry:
-
-        {
-
+        case ItemType::SeedBlueberry: {
             int cropId = getCropIdForItem(current);
-
             result = farmManager_->plantSeed(tileCoord, cropId);
-
             break;
-
         }
-
         default:
-
             result = {false, "Unknown item action"};
-
             break;
-
         }
-
     }
 
     Color3B color = result.success ? Color3B(120, 230, 140) : Color3B(255, 180, 120);
-
     showActionMessage(result.message, color);
-
 }
 
 void GameScene::showActionMessage(const std::string& text, const Color3B& color)
@@ -858,13 +813,14 @@ void GameScene::selectItemByIndex(int idx)
 
     selectedItemIndex_ = idx;
     std::string name = getItemName(toolbarItems_[selectedItemIndex_]);
+    std::string nameZh = getItemNameChinese(toolbarItems_[selectedItemIndex_]);
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Item: %s (1-0切换)", name.c_str()));
+        itemLabel_->setString(StringUtils::format(u8"\u5f53\u524d\u7269\u54c1: %s (1-0\u5207\u6362)", nameZh.c_str()));
     }
 
-    showActionMessage(StringUtils::format("切换到 %s", name.c_str()), Color3B(180, 220, 255));
+    showActionMessage(StringUtils::format(u8"\u5207\u6362\u5230 %s", nameZh.c_str()), Color3B(180, 220, 255));
 }
 
 std::string GameScene::getItemName(ItemType type) const
@@ -882,6 +838,24 @@ std::string GameScene::getItemName(ItemType type) const
     case ItemType::SeedPumpkin: return "Pumpkin Seed";
     case ItemType::SeedBlueberry: return "Blueberry Seed";
     default: return "Unknown";
+    }
+}
+
+std::string GameScene::getItemNameChinese(ItemType type) const
+{
+    switch (type)
+    {
+    case ItemType::Hoe: return u8"\u9504\u5934";
+    case ItemType::WateringCan: return u8"\u6c34\u58f6";
+    case ItemType::Scythe: return u8"\u9570\u5200";
+    case ItemType::Axe: return u8"\u65a7\u5934";
+    case ItemType::SeedTurnip: return u8"\u841d\u535c\u79cd\u5b50";
+    case ItemType::SeedPotato: return u8"\u571f\u8c46\u79cd\u5b50";
+    case ItemType::SeedCorn: return u8"\u7389\u7c73\u79cd\u5b50";
+    case ItemType::SeedTomato: return u8"\u756a\u8304\u79cd\u5b50";
+    case ItemType::SeedPumpkin: return u8"\u5357\u74dc\u79cd\u5b50";
+    case ItemType::SeedBlueberry: return u8"\u84dd\u8393\u79cd\u5b50";
+    default: return u8"\u672a\u77e5\u7269\u54c1";
     }
 }
 
@@ -962,6 +936,8 @@ void GameScene::updateChopping(float delta)
         {
             tree.node->removeFromParent();
         }
+        // 清除碰撞
+        mapLayer_->clearCollisionAt(tree.tileCoord);
         trees_.erase(trees_.begin() + choppingIndex_);
         choppingIndex_ = -1;
         choppingTimer_ = 0.0f;
@@ -981,5 +957,6 @@ void GameScene::backToMenu()
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, scene));
 
 }
+
 
 

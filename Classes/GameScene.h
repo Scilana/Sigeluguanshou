@@ -179,6 +179,7 @@ private:
     void selectItemByIndex(int idx);
     std::string getItemName(ItemType type) const;
     int getCropIdForItem(ItemType type) const;
+    std::string getItemNameChinese(ItemType type) const;
 
     // 树木
     struct Tree

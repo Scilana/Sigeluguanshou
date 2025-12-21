@@ -1,91 +1,101 @@
-#pragma once
-#ifndef __MAP_LAYER_H__
-#define __MAP_LAYER_H__
-
-#include "cocos2d.h"
-
-/**
- * @brief µØÍ¼²ãÀà
- *
- * ¸ºÔğ£º
- * - ¼ÓÔØºÍÏÔÊ¾TMXµØÍ¼
- * - Ìá¹©µØÍ¼ĞÅÏ¢£¨´óĞ¡¡¢Åö×²µÈ£©
- * - µØÍ¼Ïà¹ØµÄ²éÑ¯¹¦ÄÜ
- */
-class MapLayer : public cocos2d::Layer
-{
-public:
+#pragma once
+#ifndef __MAP_LAYER_H__
+#define __MAP_LAYER_H__
+
+#include "cocos2d.h"
+
+/**
+ * @brief åœ°å›¾å±‚ç±»
+ *
+ * è´Ÿè´£ï¼š
+ * - åŠ è½½å’Œæ˜¾ç¤ºTMXåœ°å›¾
+ * - æä¾›åœ°å›¾ä¿¡æ¯ï¼ˆå¤§å°ã€ç¢°æ’ç­‰ï¼‰
+ * - åœ°å›¾ç›¸å…³çš„æŸ¥è¯¢åŠŸèƒ½
+ */
+class MapLayer : public cocos2d::Layer
+{
+public:
+    /**
+     * @brief åˆ›å»ºåœ°å›¾å±‚
+     * @param tmxFile TMXæ–‡ä»¶è·¯å¾„
+     * @return MapLayerå¯¹è±¡
+     */
+    static MapLayer* create(const std::string& tmxFile);
+
+    /**
+     * @brief åˆå§‹åŒ–
+     * @param tmxFile TMXæ–‡ä»¶è·¯å¾„
+     */
+    bool init(const std::string& tmxFile);
+
+    /**
+     * @brief è·å–TMXåœ°å›¾å¯¹è±¡
+     */
+    cocos2d::TMXTiledMap* getTMXMap() const { return tmxMap_; }
+
+    /**
+     * @brief è·å–åœ°å›¾å¤§å°ï¼ˆåƒç´ ï¼‰
+     */
+    cocos2d::Size getMapSize() const;
+
+    /**
+     * @brief è·å–åœ°å›¾å¤§å°ï¼ˆæ ¼å­æ•°ï¼‰
+     */
+    cocos2d::Size getMapSizeInTiles() const;
+
+    /**
+     * @brief è·å–ç“¦ç‰‡å¤§å°
+     */
+    cocos2d::Size getTileSize() const;
+
     /**
-     * @brief ´´½¨µØÍ¼²ã
-     * @param tmxFile TMXÎÄ¼şÂ·¾¶
-     * @return MapLayer¶ÔÏó
-     */
-    static MapLayer* create(const std::string& tmxFile);
-
-    /**
-     * @brief ³õÊ¼»¯
-     * @param tmxFile TMXÎÄ¼şÂ·¾¶
-     */
-    bool init(const std::string& tmxFile);
-
-    /**
-     * @brief »ñÈ¡TMXµØÍ¼¶ÔÏó
-     */
-    cocos2d::TMXTiledMap* getTMXMap() const { return tmxMap_; }
-
-    /**
-     * @brief »ñÈ¡µØÍ¼´óĞ¡£¨ÏñËØ£©
-     */
-    cocos2d::Size getMapSize() const;
-
-    /**
-     * @brief »ñÈ¡µØÍ¼´óĞ¡£¨¸ñ×ÓÊı£©
-     */
-    cocos2d::Size getMapSizeInTiles() const;
-
-    /**
-     * @brief »ñÈ¡ÍßÆ¬´óĞ¡
-     */
-    cocos2d::Size getTileSize() const;
-
-    /**
-     * @brief ¼ì²éÄ³¸öÎ»ÖÃÊÇ·ñ¿ÉĞĞ×ß
-     * @param position ÊÀ½ç×ø±êÎ»ÖÃ
-     * @return true = ¿ÉĞĞ×ß£¬false = ²»¿ÉĞĞ×ß
+     * @brief æ£€æŸ¥æŸä¸ªä½ç½®æ˜¯å¦å¯è¡Œèµ°
+     * @param position ä¸–ç•Œåæ ‡ä½ç½®
+     * @return true = å¯è¡Œèµ°ï¼Œfalse = ä¸å¯è¡Œèµ°
      */
     bool isWalkable(const cocos2d::Vec2& position) const;
 
     /**
-     * @brief ½«ÊÀ½ç×ø±ê×ª»»ÎªÍßÆ¬×ø±ê
-     * @param position ÊÀ½ç×ø±ê
-     * @return ÍßÆ¬×ø±ê
+     * @brief ç“¦ç‰‡åæ ‡æ˜¯å¦å­˜åœ¨ç¢°æ’
      */
-    cocos2d::Vec2 positionToTileCoord(const cocos2d::Vec2& position) const;
+    bool hasCollisionAt(const cocos2d::Vec2& tileCoord) const;
 
     /**
-     * @brief ½«ÍßÆ¬×ø±ê×ª»»ÎªÊÀ½ç×ø±ê
-     * @param tileCoord ÍßÆ¬×ø±ê
-     * @return ÊÀ½ç×ø±ê
+     * @brief æ¸…é™¤ç¢°æ’ç“¦ç‰‡ï¼ˆç”¨äºç æ ‘åç§»é™¤ç¢°æ’ï¼‰
      */
-    cocos2d::Vec2 tileCoordToPosition(const cocos2d::Vec2& tileCoord) const;
-
-private:
-    // TMXµØÍ¼¶ÔÏó
-    cocos2d::TMXTiledMap* tmxMap_;
-
-    // Åö×²²ã£¨ÓÃÓÚ¼ì²â²»¿ÉĞĞ×ßµÄÇøÓò£©
-    cocos2d::TMXLayer* collisionLayer_;
+    void clearCollisionAt(const cocos2d::Vec2& tileCoord);
 
     /**
-     * @brief ¼ÓÔØTMXµØÍ¼
-     * @param tmxFile TMXÎÄ¼şÂ·¾¶
+     * @brief å°†ä¸–ç•Œåæ ‡è½¬æ¢ä¸ºç“¦ç‰‡åæ ‡
+     * @param position ä¸–ç•Œåæ ‡
+     * @return ç“¦ç‰‡åæ ‡
      */
-    bool loadTMXMap(const std::string& tmxFile);
-
-    /**
-     * @brief ³õÊ¼»¯Åö×²²ã
-     */
-    void initCollisionLayer();
-};
-
+    cocos2d::Vec2 positionToTileCoord(const cocos2d::Vec2& position) const;
+
+    /**
+     * @brief å°†ç“¦ç‰‡åæ ‡è½¬æ¢ä¸ºä¸–ç•Œåæ ‡
+     * @param tileCoord ç“¦ç‰‡åæ ‡
+     * @return ä¸–ç•Œåæ ‡
+     */
+    cocos2d::Vec2 tileCoordToPosition(const cocos2d::Vec2& tileCoord) const;
+
+private:
+    // TMXåœ°å›¾å¯¹è±¡
+    cocos2d::TMXTiledMap* tmxMap_;
+
+    // ç¢°æ’å±‚ï¼ˆç”¨äºæ£€æµ‹ä¸å¯è¡Œèµ°çš„åŒºåŸŸï¼‰
+    cocos2d::TMXLayer* collisionLayer_;
+
+    /**
+     * @brief åŠ è½½TMXåœ°å›¾
+     * @param tmxFile TMXæ–‡ä»¶è·¯å¾„
+     */
+    bool loadTMXMap(const std::string& tmxFile);
+
+    /**
+     * @brief åˆå§‹åŒ–ç¢°æ’å±‚
+     */
+    void initCollisionLayer();
+};
+
 #endif // __MAP_LAYER_H__
