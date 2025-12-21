@@ -2,6 +2,8 @@
 #include "MenuScene.h"
 #include "FarmManager.h"
 #include <cmath>
+#include <queue>
+#include <unordered_set>
 
 USING_NS_CC;
 
@@ -388,7 +390,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        u8"1-0: \u5207\u6362\u7269\u54c1 | J: \u4f7f\u7528\u5f53\u524d\u7269\u54c1 | K: \u6dcb\u6c34 | ESC: \u83dc\u5355",
+        "1-0: Switch item | J: Use | K: Water | ESC: Menu",
         "Arial", 18
     );
 
@@ -421,7 +423,7 @@ void GameScene::initUI()
     uiLayer_->addChild(actionLabel_, 1);
 
     // ===== 当前物品显示 =====
-    itemLabel_ = Label::createWithSystemFont(u8"\u5f53\u524d\u7269\u54c1: \u9504\u5934 (1-0\u5207\u6362)", "Arial", 18);
+    itemLabel_ = Label::createWithSystemFont("Current item: Hoe (1-0 to switch)", "Arial", 18);
     itemLabel_->setAnchorPoint(Vec2(0, 0.5f));
     itemLabel_->setPosition(Vec2(
         origin.x + 20,
@@ -709,26 +711,30 @@ void GameScene::handleFarmAction(bool waterOnly)
             result = farmManager_->harvestTile(tileCoord);
             break;
         case ItemType::Axe: {
-            int idx = findTreeIndex(tileCoord);
-            if (idx >= 0) {
-                startChopTree(idx);
-                result = {true, "Chopping tree... (2s)"};
-            } else if (mapLayer_->hasCollisionAt(tileCoord)) {
-                Vec2 pos = mapLayer_->tileCoordToPosition(tileCoord);
-                auto node = DrawNode::create();
-                Size tileSize = mapLayer_->getTileSize();
-                float halfW = tileSize.width / 2.0f;
-                float halfH = tileSize.height / 2.0f;
-                Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
-                Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
-                node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.7f));
-                mapLayer_->addChild(node, 15);
-                trees_.push_back(Tree{ tileCoord, node });
-                startChopTree(static_cast<int>(trees_.size()) - 1);
-                result = {true, "Chopping tree... (2s)"};
-            } else {
+            // 在当前及8方向查找带碰撞的格子，收集其连通块，只有小块（<=8格）才认定为树
+            cocos2d::Vec2 target = tileCoord;
+            if (!findNearbyCollisionTile(tileCoord, target)) {
                 result = {false, "No tree to chop here"};
+                break;
             }
+
+            std::vector<Vec2> component = collectCollisionComponent(target);
+            const size_t kMaxTreeTiles = 8;
+            if (component.empty() || component.size() > kMaxTreeTiles) {
+                result = {false, "No tree to chop here"};
+                break;
+            }
+
+            for (const auto& t : component) {
+                mapLayer_->clearCollisionAt(t);
+                mapLayer_->clearBaseTileAt(t);
+                int idx = findTreeIndex(t);
+                if (idx >= 0 && trees_[idx].node) {
+                    trees_[idx].node->removeFromParent();
+                    trees_.erase(trees_.begin() + idx);
+                }
+            }
+            result = {true, "Tree chopped"};
             break;
         }
         case ItemType::SeedTurnip:
@@ -749,6 +755,72 @@ void GameScene::handleFarmAction(bool waterOnly)
 
     Color3B color = result.success ? Color3B(120, 230, 140) : Color3B(255, 180, 120);
     showActionMessage(result.message, color);
+}
+
+std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
+{
+    std::vector<Vec2> out;
+    if (!mapLayer_ || !mapLayer_->hasCollisionAt(start))
+        return out;
+
+    Size mapSize = mapLayer_->getMapSizeInTiles();
+    auto key = [](int x, int y) -> long long { return (static_cast<long long>(y) << 32) | (static_cast<unsigned long long>(x) & 0xffffffffULL); };
+
+    std::queue<Vec2> q;
+    std::unordered_set<long long> visited;
+    q.push(start);
+    visited.insert(key(static_cast<int>(start.x), static_cast<int>(start.y)));
+
+    const Vec2 dirs[4] = { Vec2(1,0), Vec2(-1,0), Vec2(0,1), Vec2(0,-1) };
+    while (!q.empty())
+    {
+        Vec2 t = q.front();
+        q.pop();
+        out.push_back(t);
+
+        for (const auto& d : dirs)
+        {
+            int nx = static_cast<int>(t.x + d.x);
+            int ny = static_cast<int>(t.y + d.y);
+            if (nx < 0 || ny < 0 || nx >= mapSize.width || ny >= mapSize.height)
+                continue;
+
+            long long k = key(nx, ny);
+            if (visited.count(k))
+                continue;
+
+            Vec2 nt(static_cast<float>(nx), static_cast<float>(ny));
+            if (mapLayer_->hasCollisionAt(nt))
+            {
+                visited.insert(k);
+                q.push(nt);
+            }
+        }
+    }
+
+    return out;
+}
+
+bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) const
+{
+    if (!mapLayer_)
+        return false;
+
+    const Vec2 offsets[9] = {
+        Vec2(0,0), Vec2(1,0), Vec2(-1,0), Vec2(0,1), Vec2(0,-1),
+        Vec2(1,1), Vec2(1,-1), Vec2(-1,1), Vec2(-1,-1)
+    };
+
+    for (const auto& off : offsets)
+    {
+        Vec2 candidate = centerTile + off;
+        if (mapLayer_->hasCollisionAt(candidate))
+        {
+            outTile = candidate;
+            return true;
+        }
+    }
+    return false;
 }
 
 void GameScene::showActionMessage(const std::string& text, const Color3B& color)
@@ -817,10 +889,10 @@ void GameScene::selectItemByIndex(int idx)
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format(u8"\u5f53\u524d\u7269\u54c1: %s (1-0\u5207\u6362)", nameZh.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-0 to switch)", nameZh.c_str()));
     }
 
-    showActionMessage(StringUtils::format(u8"\u5207\u6362\u5230 %s", nameZh.c_str()), Color3B(180, 220, 255));
+    showActionMessage(StringUtils::format("Switched to %s", nameZh.c_str()), Color3B(180, 220, 255));
 }
 
 std::string GameScene::getItemName(ItemType type) const
@@ -843,20 +915,8 @@ std::string GameScene::getItemName(ItemType type) const
 
 std::string GameScene::getItemNameChinese(ItemType type) const
 {
-    switch (type)
-    {
-    case ItemType::Hoe: return u8"\u9504\u5934";
-    case ItemType::WateringCan: return u8"\u6c34\u58f6";
-    case ItemType::Scythe: return u8"\u9570\u5200";
-    case ItemType::Axe: return u8"\u65a7\u5934";
-    case ItemType::SeedTurnip: return u8"\u841d\u535c\u79cd\u5b50";
-    case ItemType::SeedPotato: return u8"\u571f\u8c46\u79cd\u5b50";
-    case ItemType::SeedCorn: return u8"\u7389\u7c73\u79cd\u5b50";
-    case ItemType::SeedTomato: return u8"\u756a\u8304\u79cd\u5b50";
-    case ItemType::SeedPumpkin: return u8"\u5357\u74dc\u79cd\u5b50";
-    case ItemType::SeedBlueberry: return u8"\u84dd\u8393\u79cd\u5b50";
-    default: return u8"\u672a\u77e5\u7269\u54c1";
-    }
+    // For simplicity, reuse English names to avoid encoding issues
+    return getItemName(type);
 }
 
 int GameScene::getCropIdForItem(ItemType type) const

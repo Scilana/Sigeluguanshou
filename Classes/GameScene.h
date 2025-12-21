@@ -180,6 +180,8 @@ private:
     std::string getItemName(ItemType type) const;
     int getCropIdForItem(ItemType type) const;
     std::string getItemNameChinese(ItemType type) const;
+    std::vector<cocos2d::Vec2> collectCollisionComponent(const cocos2d::Vec2& start) const;
+    bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
 
     // 树木
     struct Tree
