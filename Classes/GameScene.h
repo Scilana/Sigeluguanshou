@@ -1,99 +1,161 @@
 #ifndef __GAME_SCENE_H__
+
 #define __GAME_SCENE_H__
 
 #include "cocos2d.h"
+
+#include <string>
 #include "MapLayer.h"
 #include "Player.h"
+#include "FarmManager.h"
 
 /**
- * @brief ÓÎÏ·³¡¾°Àà£¨×Ü¿ØÖÆ£©
+
+ * @brief æ¸¸æˆåœºæ™¯ç±»ï¼ˆæ€»æ§åˆ¶ï¼‰
+
  *
- * Ö°Ôğ£º
- * - ×éºÏµØÍ¼²ã¡¢Íæ¼Ò¡¢ÉãÏñ»ú
- * - ³¡¾°¼¶±ğµÄ¹ÜÀíºÍĞ­µ÷
- * - ÉãÏñ»ú¸úËæÍæ¼Ò
- * - ²»¸ºÔğ¾ßÌåµÄ»æÍ¼¹¤×÷
+
+ * èŒè´£ï¼š
+
+ * - ç»„åˆåœ°å›¾å±‚ã€ç©å®¶ã€æ‘„åƒæœº
+
+ * - åœºæ™¯çº§åˆ«çš„ç®¡ç†å’Œåè°ƒ
+
+ * - æ‘„åƒæœºè·Ÿéšç©å®¶
+
+ * - ä¸è´Ÿè´£å…·ä½“çš„ç»˜å›¾å·¥ä½œ
+
  */
+
 class GameScene : public cocos2d::Scene
+
 {
+
 public:
+
     /**
-     * @brief ´´½¨³¡¾°
+
+     * @brief åˆ›å»ºåœºæ™¯
+
      */
+
     static cocos2d::Scene* createScene();
 
     /**
-     * @brief ³õÊ¼»¯
+
+     * @brief åˆå§‹åŒ–
+
      */
+
     virtual bool init() override;
 
     /**
-     * @brief ¸üĞÂº¯Êı
-     * @param delta Ê±¼äÔöÁ¿
+
+     * @brief æ›´æ–°å‡½æ•°
+
+     * @param delta æ—¶é—´å¢é‡
+
      */
+
     virtual void update(float delta) override;
 
     CREATE_FUNC(GameScene);
 
 private:
-    // µØÍ¼²ã
+    // åœ°å›¾å±‚
     MapLayer* mapLayer_;
 
-    // Íæ¼Ò
+    // å†œåœºç®¡ç†
+    FarmManager* farmManager_;
+
+    // ç©å®¶
     Player* player_;
 
-    // UI²ã£¨ÓÃÓÚÏÔÊ¾HUDµÈ£©
+    // UIå±‚ï¼ˆç”¨äºæ˜¾ç¤ºHUDç­‰ï¼‰
+
     cocos2d::Layer* uiLayer_;
 
-    // UIÔªËØ
+    // UIå…ƒç´ 
+
     cocos2d::Label* timeLabel_;
     cocos2d::Label* moneyLabel_;
-    cocos2d::Label* positionLabel_;  // ÏÔÊ¾Íæ¼ÒÎ»ÖÃ£¨µ÷ÊÔÓÃ£©
+    cocos2d::Label* positionLabel_;  // æ˜¾ç¤ºç©å®¶ä½ç½®ï¼ˆè°ƒè¯•ç”¨ï¼‰
+    cocos2d::Label* actionLabel_;    // æ˜¾ç¤ºå†œåœºæ“ä½œæç¤º
 
     /**
-     * @brief ³õÊ¼»¯µØÍ¼
+     * @brief åˆå§‹åŒ–åœ°å›¾
      */
     void initMap();
 
     /**
-     * @brief ³õÊ¼»¯Íæ¼Ò
+     * @brief åˆå§‹åŒ–å†œç”°ç®¡ç†
+     */
+    void initFarm();
+
+    /**
+     * @brief åˆå§‹åŒ–ç©å®¶
      */
     void initPlayer();
 
     /**
-     * @brief ³õÊ¼»¯UI
+
+     * @brief åˆå§‹åŒ–UI
+
      */
+
     void initUI();
 
     /**
-     * @brief ³õÊ¼»¯ÉãÏñ»ú
+
+     * @brief åˆå§‹åŒ–æ‘„åƒæœº
+
      */
+
     void initCamera();
 
     /**
-     * @brief ³õÊ¼»¯¿ØÖÆ
+
+     * @brief åˆå§‹åŒ–æ§åˆ¶
+
      */
+
     void initControls();
 
     /**
-     * @brief ¸üĞÂÉãÏñ»úÎ»ÖÃ£¨¸úËæÍæ¼Ò£©
+
+     * @brief æ›´æ–°æ‘„åƒæœºä½ç½®ï¼ˆè·Ÿéšç©å®¶ï¼‰
+
      */
+
     void updateCamera();
 
     /**
-     * @brief ¸üĞÂUIÏÔÊ¾
+
+     * @brief æ›´æ–°UIæ˜¾ç¤º
+
      */
     void updateUI();
 
     /**
-     * @brief ·µ»Ø²Ëµ¥
+     * @brief è¿”å›èœå•
      */
     void backToMenu();
 
     /**
-     * @brief ESC¼ü»Øµ÷
+     * @brief ESCé”®å›è°ƒ
      */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+
+    /**
+     * @brief å¤„ç†å†œç”°åŠ¨ä½œï¼ˆJ: till/plant/harvestï¼ŒK: waterï¼‰
+     * @param waterOnly true=ä»…æµ‡æ°´ï¼Œfalse=æŒ‰é¡ºåºæ”¶è·/ç§æ¤/è€•åœ°
+     */
+    void handleFarmAction(bool waterOnly);
+
+    /**
+     * @brief æ˜¾ç¤ºä¸€æ¬¡æ€§çš„æ“ä½œæç¤º
+     */
+    void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
 };
 
 #endif // __GAME_SCENE_H__

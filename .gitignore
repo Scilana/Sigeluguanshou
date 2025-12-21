@@ -6,6 +6,8 @@ Debug.win32/
 Release.win32/
 x64/
 .vs/
+build32/
+build64/
 
 # 忽略VS产生的临时垃圾文件
 *.sdf

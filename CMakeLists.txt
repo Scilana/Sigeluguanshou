@@ -34,6 +34,7 @@ list(APPEND GAME_SOURCE
      Classes/GameScene.cpp
      Classes/Player.cpp
      Classes/MapLayer.cpp
+     Classes/FarmManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -42,6 +43,7 @@ list(APPEND GAME_HEADER
      Classes/GameScene.h
      Classes/Player.h
      Classes/MapLayer.h
+     Classes/FarmManager.h
      )
 
 if(ANDROID)
