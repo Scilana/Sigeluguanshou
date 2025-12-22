@@ -9,6 +9,8 @@
 #include "Player.h"
 #include "FarmManager.h"
 #include "FishingLayer.h"
+#include "InventoryManager.h"
+#include "InventoryUI.h"
 
 /**
 
@@ -71,6 +73,10 @@ private:
 
     // 玩家
     Player* player_;
+
+    // 背包系统
+    InventoryManager* inventory_;
+    InventoryUI* inventoryUI_;
 
     // UI层（用于显示HUD等）
 
@@ -144,6 +150,16 @@ private:
     void backToMenu();
 
     /**
+     * @brief 打开/关闭背包
+     */
+    void toggleInventory();
+
+    /**
+     * @brief 关闭背包回调
+     */
+    void onInventoryClosed();
+
+    /**
      * @brief ESC键回调
      */
 
@@ -189,32 +205,12 @@ private:
      * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
      */
 // ... existing code ...
-    // 物品栏
-    enum class ItemType
-    {
-        Hoe,
-        WateringCan,
-        Scythe,
-        Axe,
-        Pickaxe,
-        FishingRod, // Added Fishing Rod
-        SeedTurnip,
-// ... existing code ...
-        SeedPotato,
-        SeedCorn,
-        SeedTomato,
-        SeedPumpkin,
-        SeedBlueberry,
-        Wood
-    };
-
+    // 物品栏（使用 InventoryManager 中定义的 ItemType）
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
     void initToolbar();
     void selectItemByIndex(int idx);
-    std::string getItemName(ItemType type) const;
     int getCropIdForItem(ItemType type) const;
-    std::string getItemNameChinese(ItemType type) const;
     std::vector<cocos2d::Vec2> collectCollisionComponent(const cocos2d::Vec2& start) const;
     bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
 

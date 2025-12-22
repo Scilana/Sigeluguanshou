@@ -250,29 +250,6 @@ void MenuScene::startGameCallback(Ref* sender)
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    // 创建半透明提示框
-    auto messageBg = LayerColor::create(Color4B(0, 0, 0, 200), 500, 100);
-    messageBg->setPosition(Vec2(
-        (visibleSize.width - 500) / 2,
-        (visibleSize.height - 100) / 2
-    ));
-    this->addChild(messageBg, 100);
-
-    auto label = Label::createWithSystemFont("Game Scene Coming Soon!", "Arial", 40);
-    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-    label->setColor(Color3B::WHITE);
-    label->enableShadow(Color4B(0, 0, 0, 255), Size(2, -2), 0);
-    this->addChild(label, 101);
-
-    // 2秒后移除
-    auto removeAction = Sequence::create(
-        DelayTime::create(1.0f),
-        RemoveSelf::create(),
-        nullptr
-    );
-    messageBg->runAction(removeAction);
-    label->runAction(removeAction->clone());
-
     // Uncomment when GameScene is ready
     
     auto scene = GameScene::createScene();

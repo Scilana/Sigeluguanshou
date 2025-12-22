@@ -36,6 +36,8 @@ list(APPEND GAME_SOURCE
      Classes/MapLayer.cpp
      Classes/FarmManager.cpp
      Classes/FishingLayer.cpp
+     Classes/InventoryManager.cpp
+     Classes/InventoryUI.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -46,6 +48,8 @@ list(APPEND GAME_HEADER
      Classes/MapLayer.h
      Classes/FarmManager.h
      Classes/FishingLayer.h
+     Classes/InventoryManager.h
+     Classes/InventoryUI.h
      )
 
 if(ANDROID)

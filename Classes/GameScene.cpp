@@ -34,6 +34,8 @@ bool GameScene::init()
     farmManager_ = nullptr;
     player_ = nullptr;
     uiLayer_ = nullptr;
+    inventory_ = nullptr;
+    inventoryUI_ = nullptr;
 
     initMap();
     initFarm();
@@ -42,6 +44,14 @@ bool GameScene::init()
     initCamera();
     initUI();
     initControls();
+
+    // 初始化背包系统
+    inventory_ = InventoryManager::create();
+    if (inventory_)
+    {
+        this->addChild(inventory_, 0);
+        CCLOG("InventoryManager initialized");
+    }
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -398,7 +408,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | ESC: Menu",
         "Arial", 18
     );
 
@@ -499,6 +509,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
     case EventKeyboard::KeyCode::KEY_ESCAPE:
         backToMenu();
+        break;
+    case EventKeyboard::KeyCode::KEY_B:
+        toggleInventory();
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -1085,7 +1098,27 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData)
 
 void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
 {
-    // 创建掉落物精灵
+    // 添加到背包系统
+    if (inventory_)
+    {
+        bool added = inventory_->addItem(type, count);
+        if (added)
+        {
+            // 显示收集提示
+            std::string message = StringUtils::format(
+                "+%d %s",
+                count,
+                InventoryManager::getItemName(type).c_str()
+            );
+            showActionMessage(message, Color3B(120, 230, 140));
+        }
+        else
+        {
+            showActionMessage("Inventory full!", Color3B(255, 180, 120));
+        }
+    }
+
+    // 创建掉落物精灵（视觉效果）
     std::string itemImage;
     switch (type) {
     case ItemType::Wood:
@@ -1136,8 +1169,7 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
         countLabel->runAction(labelFade);
     }
 
-    // TODO: 实际游戏中应该将物品添加到背包系统
-    CCLOG("Collected %d x %s", count, getItemName(type).c_str());
+    CCLOG("Collected %d x %s", count, InventoryManager::getItemName(type).c_str());
 }
 
 void GameScene::updateChopping(float delta)
@@ -1271,43 +1303,16 @@ void GameScene::selectItemByIndex(int idx)
         return;
 
     selectedItemIndex_ = idx;
-    std::string name = getItemName(toolbarItems_[selectedItemIndex_]);
-    std::string nameZh = getItemNameChinese(toolbarItems_[selectedItemIndex_]);
+    std::string name = InventoryManager::getItemName(toolbarItems_[selectedItemIndex_]);
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", nameZh.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", name.c_str()));
     }
 
-    showActionMessage(StringUtils::format("Switched to %s", nameZh.c_str()), Color3B(180, 220, 255));
+    showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
 }
 
-std::string GameScene::getItemName(ItemType type) const
-{
-    switch (type)
-    {
-    case ItemType::Hoe: return "Hoe";
-    case ItemType::WateringCan: return "Watering Can";
-    case ItemType::Scythe: return "Scythe";
-    case ItemType::Axe: return "Axe";
-    case ItemType::Pickaxe: return "Pickaxe";
-    case ItemType::FishingRod: return "Fishing Rod";
-    case ItemType::SeedTurnip: return "Turnip Seed";
-    case ItemType::SeedPotato: return "Potato Seed";
-    case ItemType::SeedCorn: return "Corn Seed";
-    case ItemType::SeedTomato: return "Tomato Seed";
-    case ItemType::SeedPumpkin: return "Pumpkin Seed";
-    case ItemType::SeedBlueberry: return "Blueberry Seed";
-    case ItemType::Wood:return "Wood";
-    default: return "Unknown";
-    }
-}
-
-std::string GameScene::getItemNameChinese(ItemType type) const
-{
-    // For simplicity, reuse English names to avoid encoding issues
-    return getItemName(type);
-}
 
 int GameScene::getCropIdForItem(ItemType type) const
 {
@@ -1478,6 +1483,67 @@ void GameScene::backToMenu()
 
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, scene));
 
+}
+
+// ========== 背包系统相关 ==========
+
+void GameScene::toggleInventory()
+{
+    if (!inventory_)
+    {
+        CCLOG("ERROR: Inventory not initialized!");
+        return;
+    }
+
+    // 如果背包已经打开，关闭它
+    if (inventoryUI_)
+    {
+        inventoryUI_->close();
+        return;
+    }
+
+    // 创建背包UI
+    inventoryUI_ = InventoryUI::create(inventory_);
+    if (!inventoryUI_)
+    {
+        CCLOG("ERROR: Failed to create InventoryUI!");
+        return;
+    }
+
+    // 设置关闭回调
+    inventoryUI_->setCloseCallback([this]() {
+        onInventoryClosed();
+    });
+
+    // 添加到场景（高 Z-order 确保在顶层）
+    this->addChild(inventoryUI_, 2000);
+
+    // 设置全局 Z-order（确保在摄像机控制之外）
+    inventoryUI_->setGlobalZOrder(2000);
+
+    // 调整位置跟随摄像机
+    auto camera = this->getDefaultCamera();
+    if (camera)
+    {
+        Vec3 cameraPos = camera->getPosition3D();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 uiPos = Vec2(
+            cameraPos.x - visibleSize.width / 2,
+            cameraPos.y - visibleSize.height / 2
+        );
+        inventoryUI_->setPosition(uiPos);
+    }
+
+    // 播放显示动画
+    inventoryUI_->show();
+
+    CCLOG("Inventory opened");
+}
+
+void GameScene::onInventoryClosed()
+{
+    inventoryUI_ = nullptr;
+    CCLOG("Inventory closed");
 }
 
 
