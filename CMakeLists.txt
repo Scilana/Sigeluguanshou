@@ -35,6 +35,7 @@ list(APPEND GAME_SOURCE
      Classes/Player.cpp
      Classes/MapLayer.cpp
      Classes/FarmManager.cpp
+     Classes/FishingLayer.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -44,6 +45,7 @@ list(APPEND GAME_HEADER
      Classes/Player.h
      Classes/MapLayer.h
      Classes/FarmManager.h
+     Classes/FishingLayer.h
      )
 
 if(ANDROID)

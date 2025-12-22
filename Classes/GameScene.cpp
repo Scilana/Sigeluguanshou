@@ -43,6 +43,14 @@ bool GameScene::init()
     initUI();
     initControls();
 
+    // --- 【Fishing Inputs】 ---
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseDown = CC_CALLBACK_1(GameScene::onMouseDown, this);
+    auto mouseUpListener = EventListenerMouse::create();
+    mouseUpListener->onMouseUp = CC_CALLBACK_1(GameScene::onMouseUp, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseUpListener, this);
+
     // 启动更新
     this->scheduleUpdate();
 
@@ -434,6 +442,31 @@ void GameScene::initUI()
 
     initToolbar();
 
+    // ===== 钓鱼 UI 初始化 (跟随玩家) =====
+    if (player_)
+    {
+        chargeBarBg_ = Sprite::create();
+        chargeBarBg_->setTextureRect(Rect(0, 0, 50, 8));
+        chargeBarBg_->setColor(Color3B::GRAY);
+        chargeBarBg_->setPosition(Vec2(16, 70)); 
+        chargeBarBg_->setVisible(false);
+        player_->addChild(chargeBarBg_);
+
+        chargeBarFg_ = Sprite::create();
+        chargeBarFg_->setTextureRect(Rect(0, 0, 0, 8));
+        chargeBarFg_->setColor(Color3B::GREEN);
+        chargeBarFg_->setAnchorPoint(Vec2(0, 0));
+        chargeBarFg_->setPosition(Vec2(0, 0));
+        chargeBarBg_->addChild(chargeBarFg_);
+
+        exclamationMark_ = Sprite::create();
+        exclamationMark_->setTextureRect(Rect(0, 0, 10, 30));
+        exclamationMark_->setColor(Color3B::YELLOW);
+        exclamationMark_->setPosition(Vec2(16, 90)); 
+        exclamationMark_->setVisible(false);
+        player_->addChild(exclamationMark_);
+    }
+
     CCLOG("UI initialized - using simple fixed layer method");
 
 }
@@ -503,6 +536,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_0:
         selectItemByIndex(9);
         break;
+    case EventKeyboard::KeyCode::KEY_MINUS: // Allow selecting item 10
+        selectItemByIndex(10);
+        break;
     default:
         break;
     }
@@ -525,6 +561,9 @@ void GameScene::update(float delta)
 
     // 处理砍树计时
     updateChopping(delta);
+
+    // 更新钓鱼状态
+    updateFishingState(delta);
 
 }
 
@@ -1164,6 +1203,7 @@ void GameScene::initToolbar()
         ItemType::WateringCan,
         ItemType::Scythe,
         ItemType::Axe,
+        ItemType::FishingRod, // ID 4 (index 4)
         ItemType::SeedTurnip,
         ItemType::SeedPotato,
         ItemType::SeedCorn,
@@ -1207,6 +1247,7 @@ std::string GameScene::getItemName(ItemType type) const
     case ItemType::WateringCan: return "Watering Can";
     case ItemType::Scythe: return "Scythe";
     case ItemType::Axe: return "Axe";
+    case ItemType::FishingRod: return "Fishing Rod";
     case ItemType::SeedTurnip: return "Turnip Seed";
     case ItemType::SeedPotato: return "Potato Seed";
     case ItemType::SeedCorn: return "Corn Seed";
@@ -1238,6 +1279,242 @@ int GameScene::getCropIdForItem(ItemType type) const
     }
 }
 
+<<<<<<< HEAD
+void GameScene::initTrees()
+{
+    trees_.clear();
+    pendingChops_.clear();
+
+    if (!mapLayer_)
+        return;
+
+    // Place a few sample trees (debug draw only)
+    std::vector<Vec2> sampleTiles = { Vec2(8, 8), Vec2(10, 12), Vec2(12, 9) };
+
+    Size tileSize = mapLayer_->getTileSize();
+    float halfW = tileSize.width / 2.0f;
+    float halfH = tileSize.height / 2.0f;
+
+    for (const auto& t : sampleTiles)
+    {
+        Vec2 pos = mapLayer_->tileCoordToPosition(t);
+        auto node = DrawNode::create();
+        Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
+        Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
+        node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.9f));
+        node->drawSolidCircle(pos, 10.0f, 0, 12, 1.0f, 1.0f, Color4F(0.1f, 0.5f, 0.1f, 0.9f));
+        mapLayer_->addChild(node, 15);
+
+        trees_.push_back(Tree{ t, node });
+    }
+}
+
+int GameScene::findTreeIndex(const Vec2& tile) const
+{
+    for (int i = 0; i < static_cast<int>(trees_.size()); ++i)
+    {
+        if (trees_[i].tileCoord == tile)
+            return i;
+    }
+    return -1;
+}
+
+void GameScene::updateChopping(float delta)
+{
+    if (pendingChops_.empty())
+        return;
+
+    // 逆序遍历以便安全删除
+    for (int i = static_cast<int>(pendingChops_.size()) - 1; i >= 0; --i)
+    {
+        pendingChops_[i].timer -= delta;
+        if (pendingChops_[i].timer <= 0.0f)
+        {
+            int fillGid = 0;
+            for (const auto& t : pendingChops_[i].tiles)
+            {
+                static const Vec2 neigh[8] = { Vec2(1,0),Vec2(-1,0),Vec2(0,1),Vec2(0,-1),Vec2(1,1),Vec2(1,-1),Vec2(-1,1),Vec2(-1,-1) };
+                for (const auto& n : neigh)
+                {
+                    Vec2 test = t + n;
+                    if (!mapLayer_->hasCollisionAt(test))
+                    {
+                        int gid = mapLayer_->getBaseTileGID(test);
+                        if (gid != 0) { fillGid = gid; break; }
+                    }
+                }
+                if (fillGid != 0) break;
+            }
+
+            for (const auto& t : pendingChops_[i].tiles)
+            {
+                mapLayer_->clearCollisionAt(t);
+                if (fillGid != 0)
+                    mapLayer_->setBaseTileGID(t, fillGid);
+
+                int idx = findTreeIndex(t);
+                if (idx >= 0 && trees_[idx].node)
+                {
+                    trees_[idx].node->removeFromParent();
+                    trees_.erase(trees_.begin() + idx);
+                }
+            }
+
+            pendingChops_.erase(pendingChops_.begin() + i);
+            showActionMessage("Tree chopped", Color3B(200, 255, 200));
+        }
+    }
+}
+
+// ==========================================
+// Fishing Logic Restoration
+// ==========================================
+
+void GameScene::onMouseDown(Event* event)
+{
+    EventMouse* e = (EventMouse*)event;
+    if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
+    {
+        // Check current item
+        if (toolbarItems_.empty()) return;
+        
+        ItemType current = ItemType::Hoe;
+        if (selectedItemIndex_ >= 0 && selectedItemIndex_ < (int)toolbarItems_.size()) {
+            current = toolbarItems_[selectedItemIndex_];
+        }
+
+        // Fishing Rod Logic
+        if (current == ItemType::FishingRod)
+        {
+            if (fishingState_ == FishingState::NONE)
+            {
+                 if (isFishing_) return;
+                 fishingState_ = FishingState::CHARGING;
+                 chargePower_ = 0.0f;
+                 CCLOG("Start Charging...");
+            }
+            else if (fishingState_ == FishingState::BITING)
+            {
+                 CCLOG("HOOKED!");
+                 if (exclamationMark_) exclamationMark_->setVisible(false);
+                 startFishing(); 
+            }
+            else if (fishingState_ == FishingState::WAITING)
+            {
+                 CCLOG("Pulled too early!");
+                 fishingState_ = FishingState::NONE;
+                 showActionMessage("Too early!", Color3B::RED);
+            }
+            return; 
+        }
+
+        // Mouse click for farming? 
+        // The new architecture uses Keyboard J/K for farm actions.
+        // But we can keep mouse click for debugging or if user wants it.
+        // For now, let's just log the click debug info the user liked.
+        
+        Vec2 clickPos = e->getLocationInView();
+        clickPos.y = Director::getInstance()->getWinSize().height - clickPos.y; 
+        Vec3 cameraPos = this->getDefaultCamera()->getPosition3D();
+        Vec2 worldPos = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
+        
+        CCLOG("Click Debug: Screen(%.1f, %.1f) -> World(%.1f, %.1f)", clickPos.x, clickPos.y, worldPos.x, worldPos.y);
+        if (mapLayer_) {
+            Vec2 t = mapLayer_->positionToTileCoord(worldPos);
+            CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
+        }
+    }
+}
+
+void GameScene::onMouseUp(Event* event)
+{
+    EventMouse* e = (EventMouse*)event;
+    if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
+    {
+        if (fishingState_ == FishingState::CHARGING)
+        {
+            fishingState_ = FishingState::WAITING;
+            if (chargeBarBg_) chargeBarBg_->setVisible(false);
+            
+            // Wait 1.0 - 4.0s
+            waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
+            CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
+        }
+    }
+}
+
+void GameScene::updateFishingState(float delta)
+{
+    if (fishingState_ == FishingState::CHARGING)
+    {
+        chargePower_ += delta * 1.5f; 
+        if (chargePower_ > 1.0f) chargePower_ = 1.0f;
+        
+        if (chargeBarBg_) chargeBarBg_->setVisible(true);
+        if (chargeBarFg_) {
+            chargeBarFg_->setTextureRect(Rect(0, 0, 50 * chargePower_, 8));
+            chargeBarFg_->setColor(Color3B(255 * chargePower_, 255 * (1-chargePower_) + 100, 0));
+        }
+    }
+    else if (fishingState_ == FishingState::WAITING)
+    {
+        waitTimer_ -= delta;
+        if (waitTimer_ <= 0)
+        {
+            fishingState_ = FishingState::BITING;
+            biteTimer_ = 1.0f; 
+            if (exclamationMark_) exclamationMark_->setVisible(true);
+            CCLOG("Fish bit! Click now!");
+        }
+    }
+    else if (fishingState_ == FishingState::BITING)
+    {
+        biteTimer_ -= delta;
+        if (biteTimer_ <= 0)
+        {
+            fishingState_ = FishingState::NONE;
+            if (exclamationMark_) exclamationMark_->setVisible(false);
+            CCLOG("Missed...");
+            showActionMessage("Missed...", Color3B::GRAY);
+        }
+    }
+}
+
+void GameScene::startFishing()
+{
+    isFishing_ = true;
+    fishingState_ = FishingState::REELING; 
+
+    if (player_) player_->setMoveSpeed(0); // Using new setMoveSpeed API
+
+    auto fishingLayer = FishingLayer::create();
+    fishingLayer->setFinishCallback([this](bool success) {
+        this->isFishing_ = false;
+        this->fishingState_ = FishingState::NONE; 
+        
+        if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
+        if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
+        if (this->player_) this->player_->setMoveSpeed(150.0f); // Restore speed (was hardcoded, assumed 150)
+
+        if (success)
+        {
+            CCLOG("Fishing SUCCESS!");
+            showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+            // No inventory addItem API anymore? 
+            // We can't add item to Toolbar easily if it's full/fixed.
+            // For now just show message.
+        }
+        else
+        {
+            CCLOG("Fishing FAILED.");
+            showActionMessage("Fish got away...", Color3B::RED);
+        }
+    });
+
+    this->addChild(fishingLayer, 100);
+}
+=======
+>>>>>>> a10b7a57c69d3b2f25f07e8c66a1c6fb4f6fd8ca
 // ========== 返回菜单 ==========
 
 void GameScene::backToMenu()
