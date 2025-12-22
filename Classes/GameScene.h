@@ -8,6 +8,7 @@
 #include "MapLayer.h"
 #include "Player.h"
 #include "FarmManager.h"
+#include "FishingLayer.h"
 
 /**
 
@@ -145,7 +146,7 @@ private:
     /**
      * @brief ESC键回调
      */
-    void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+
 
     /**
      * @brief 处理农田动作（J: till/plant/harvest，K: water）
@@ -158,6 +159,36 @@ private:
      */
     void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
 
+    /**
+     * @brief ESC键回调
+     */
+    void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+
+    // 【Fishing Restored】鼠标事件
+    void onMouseDown(cocos2d::Event* event);
+    void onMouseUp(cocos2d::Event* event);
+
+    // Fishing Logic
+    void startFishing();
+    void updateFishingState(float delta);
+
+    enum class FishingState { NONE, CHARGING, WAITING, BITING, REELING };
+    FishingState fishingState_ = FishingState::NONE;
+    float chargePower_ = 0.0f;
+    float fishingTimer_ = 0.0f; // For generic timer use if needed
+    float waitTimer_ = 0.0f;
+    float biteTimer_ = 0.0f;
+    bool isFishing_ = false;
+
+    cocos2d::Sprite* chargeBarBg_ = nullptr;
+    cocos2d::Sprite* chargeBarFg_ = nullptr;
+    cocos2d::Sprite* exclamationMark_ = nullptr;
+
+    /**
+     * @brief 处理农田动作（J: till/plant/harvest，K: water）
+     * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
+     */
+// ... existing code ...
     // 物品栏
     enum class ItemType
     {
@@ -165,7 +196,9 @@ private:
         WateringCan,
         Scythe,
         Axe,
+        FishingRod, // Added Fishing Rod
         SeedTurnip,
+// ... existing code ...
         SeedPotato,
         SeedCorn,
         SeedTomato,
