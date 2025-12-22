@@ -203,7 +203,8 @@ private:
         SeedCorn,
         SeedTomato,
         SeedPumpkin,
-        SeedBlueberry
+        SeedBlueberry,
+        Wood
     };
 
     std::vector<ItemType> toolbarItems_;
@@ -233,6 +234,26 @@ private:
     std::vector<PendingChop> pendingChops_;
     void initTrees();
     int findTreeIndex(const cocos2d::Vec2& tile) const;
+
+    // 砍树数据结构（核心）
+    struct TreeChopData
+    {
+        cocos2d::Vec2 tileCoord;
+        std::vector<cocos2d::Vec2> tiles;
+        cocos2d::Sprite* treeSprite;
+        float chopTimer;
+        int chopCount;
+        static const int CHOPS_NEEDED = 3;
+    };
+    std::vector<TreeChopData> activeChops_;
+
+    // 砍树相关函数
+    cocos2d::Sprite* createTreeSprite(const std::vector<cocos2d::Vec2>& tiles);
+    void playTreeShakeAnimation(cocos2d::Sprite* treeSprite);
+    void playTreeFallAnimation(TreeChopData* chopData);
+    void spawnItem(ItemType type, const cocos2d::Vec2& position, int count);
+
+
     void updateChopping(float delta);
 };
 
