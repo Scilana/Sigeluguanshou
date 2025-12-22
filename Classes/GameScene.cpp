@@ -539,6 +539,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_MINUS: // Allow selecting item 10
         selectItemByIndex(10);
         break;
+    case EventKeyboard::KeyCode::KEY_EQUAL: // Allow selecting item 11
+        selectItemByIndex(11);
+        break;
     default:
         break;
     }
@@ -813,6 +816,45 @@ void GameScene::handleFarmAction(bool waterOnly)
                 result = { true, "Chopping... (" +
                     std::to_string(TreeChopData::CHOPS_NEEDED - 1) + " more)" };
             }
+            break;
+        }
+        case ItemType::Pickaxe: {
+            // Mine rocks: detect collision tile, verify rock GID, then clear it.
+            Vec2 target = tileCoord;
+            if (!findNearbyCollisionTile(tileCoord, target)) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            static const std::unordered_set<int> rockGids = {
+                // Rock / ore tiles used in farm.tmx (bottom rows of tileset5)
+                45019, 45020, 45021,
+                45025, 45026, 45027, 45028, 45030,
+                45069, 45070, 45071, 45072, 45073,
+                45075, 45076, 45077, 45078, 45079, 45080, 45081,
+                45125, 45126, 45157, 45170, 45171, 45172, 45173, 45175, 45176,
+                45179, 45180, 45181, 45185,
+                45220, 45223, 45224, 45225, 45226
+            };
+
+            int baseGid = mapLayer_->getBaseTileGID(target);
+            if (rockGids.find(baseGid) == rockGids.end()) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            std::vector<Vec2> component = collectCollisionComponent(target);
+            if (component.empty()) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            for (const auto& t : component) {
+                mapLayer_->clearCollisionAt(t);
+                mapLayer_->clearBaseTileAt(t);
+            }
+
+            result = { true, "Rock broken!" };
             break;
         }
         case ItemType::SeedTurnip:
@@ -1203,7 +1245,8 @@ void GameScene::initToolbar()
         ItemType::WateringCan,
         ItemType::Scythe,
         ItemType::Axe,
-        ItemType::FishingRod, // ID 4 (index 4)
+        ItemType::Pickaxe,
+        ItemType::FishingRod, // ID 5 (index 5)
         ItemType::SeedTurnip,
         ItemType::SeedPotato,
         ItemType::SeedCorn,
@@ -1233,7 +1276,7 @@ void GameScene::selectItemByIndex(int idx)
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0 to switch)", nameZh.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", nameZh.c_str()));
     }
 
     showActionMessage(StringUtils::format("Switched to %s", nameZh.c_str()), Color3B(180, 220, 255));
@@ -1247,6 +1290,7 @@ std::string GameScene::getItemName(ItemType type) const
     case ItemType::WateringCan: return "Watering Can";
     case ItemType::Scythe: return "Scythe";
     case ItemType::Axe: return "Axe";
+    case ItemType::Pickaxe: return "Pickaxe";
     case ItemType::FishingRod: return "Fishing Rod";
     case ItemType::SeedTurnip: return "Turnip Seed";
     case ItemType::SeedPotato: return "Potato Seed";
@@ -1278,97 +1322,6 @@ int GameScene::getCropIdForItem(ItemType type) const
     default: return -1;
     }
 }
-
-<<<<<<< HEAD
-void GameScene::initTrees()
-{
-    trees_.clear();
-    pendingChops_.clear();
-
-    if (!mapLayer_)
-        return;
-
-    // Place a few sample trees (debug draw only)
-    std::vector<Vec2> sampleTiles = { Vec2(8, 8), Vec2(10, 12), Vec2(12, 9) };
-
-    Size tileSize = mapLayer_->getTileSize();
-    float halfW = tileSize.width / 2.0f;
-    float halfH = tileSize.height / 2.0f;
-
-    for (const auto& t : sampleTiles)
-    {
-        Vec2 pos = mapLayer_->tileCoordToPosition(t);
-        auto node = DrawNode::create();
-        Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
-        Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
-        node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.9f));
-        node->drawSolidCircle(pos, 10.0f, 0, 12, 1.0f, 1.0f, Color4F(0.1f, 0.5f, 0.1f, 0.9f));
-        mapLayer_->addChild(node, 15);
-
-        trees_.push_back(Tree{ t, node });
-    }
-}
-
-int GameScene::findTreeIndex(const Vec2& tile) const
-{
-    for (int i = 0; i < static_cast<int>(trees_.size()); ++i)
-    {
-        if (trees_[i].tileCoord == tile)
-            return i;
-    }
-    return -1;
-}
-
-void GameScene::updateChopping(float delta)
-{
-    if (pendingChops_.empty())
-        return;
-
-    // 逆序遍历以便安全删除
-    for (int i = static_cast<int>(pendingChops_.size()) - 1; i >= 0; --i)
-    {
-        pendingChops_[i].timer -= delta;
-        if (pendingChops_[i].timer <= 0.0f)
-        {
-            int fillGid = 0;
-            for (const auto& t : pendingChops_[i].tiles)
-            {
-                static const Vec2 neigh[8] = { Vec2(1,0),Vec2(-1,0),Vec2(0,1),Vec2(0,-1),Vec2(1,1),Vec2(1,-1),Vec2(-1,1),Vec2(-1,-1) };
-                for (const auto& n : neigh)
-                {
-                    Vec2 test = t + n;
-                    if (!mapLayer_->hasCollisionAt(test))
-                    {
-                        int gid = mapLayer_->getBaseTileGID(test);
-                        if (gid != 0) { fillGid = gid; break; }
-                    }
-                }
-                if (fillGid != 0) break;
-            }
-
-            for (const auto& t : pendingChops_[i].tiles)
-            {
-                mapLayer_->clearCollisionAt(t);
-                if (fillGid != 0)
-                    mapLayer_->setBaseTileGID(t, fillGid);
-
-                int idx = findTreeIndex(t);
-                if (idx >= 0 && trees_[idx].node)
-                {
-                    trees_[idx].node->removeFromParent();
-                    trees_.erase(trees_.begin() + idx);
-                }
-            }
-
-            pendingChops_.erase(pendingChops_.begin() + i);
-            showActionMessage("Tree chopped", Color3B(200, 255, 200));
-        }
-    }
-}
-
-// ==========================================
-// Fishing Logic Restoration
-// ==========================================
 
 void GameScene::onMouseDown(Event* event)
 {
@@ -1513,8 +1466,6 @@ void GameScene::startFishing()
 
     this->addChild(fishingLayer, 100);
 }
-=======
->>>>>>> a10b7a57c69d3b2f25f07e8c66a1c6fb4f6fd8ca
 // ========== 返回菜单 ==========
 
 void GameScene::backToMenu()

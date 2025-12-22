@@ -196,6 +196,7 @@ private:
         WateringCan,
         Scythe,
         Axe,
+        Pickaxe,
         FishingRod, // Added Fishing Rod
         SeedTurnip,
 // ... existing code ...
