@@ -254,6 +254,15 @@ std::string InventoryManager::getItemName(ItemType itemType)
     case ItemType::Pumpkin: return "Pumpkin";
     case ItemType::Blueberry: return "Blueberry";
     case ItemType::Fish: return "Fish";
+    // 矿石
+    case ItemType::CopperOre: return "Copper Ore";
+    case ItemType::SilverOre: return "Silver Ore";
+    case ItemType::GoldOre: return "Gold Ore";
+    // 武器
+    case ItemType::WoodenSword: return "Wooden Sword";
+    case ItemType::IronSword: return "Iron Sword";
+    case ItemType::GoldSword: return "Gold Sword";
+    case ItemType::DiamondSword: return "Diamond Sword";
     default: return "Unknown";
     }
 }
@@ -282,6 +291,15 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     case ItemType::Pumpkin: return "Fresh pumpkin";
     case ItemType::Blueberry: return "Fresh blueberry";
     case ItemType::Fish: return "Fresh fish";
+    // 矿石
+    case ItemType::CopperOre: return "Common ore, worth 50 gold";
+    case ItemType::SilverOre: return "Valuable ore, worth 150 gold";
+    case ItemType::GoldOre: return "Precious ore, worth 500 gold";
+    // 武器
+    case ItemType::WoodenSword: return "Basic sword, 10 attack";
+    case ItemType::IronSword: return "Sturdy sword, 25 attack";
+    case ItemType::GoldSword: return "Elegant sword, 40 attack";
+    case ItemType::DiamondSword: return "Legendary sword, 60 attack";
     default: return "";
     }
 }
@@ -292,6 +310,13 @@ bool InventoryManager::isStackable(ItemType itemType)
     if (itemType == ItemType::Hoe || itemType == ItemType::WateringCan ||
         itemType == ItemType::Scythe || itemType == ItemType::Axe ||
         itemType == ItemType::Pickaxe || itemType == ItemType::FishingRod)
+    {
+        return false;
+    }
+
+    // 武器不可堆叠
+    if (itemType == ItemType::WoodenSword || itemType == ItemType::IronSword ||
+        itemType == ItemType::GoldSword || itemType == ItemType::DiamondSword)
     {
         return false;
     }

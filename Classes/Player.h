@@ -3,101 +3,91 @@
 
 #include "cocos2d.h"
 
+// å‰å‘å£°æ˜
+class MapLayer;
+
 /**
- * @brief Íæ¼ÒÀà
- *
- * ¸ºÔğ£º
- * - Íæ¼Ò½ÇÉ«µÄÏÔÊ¾
- * - WASD¼üÅÌ¿ØÖÆ
- * - ÒÆ¶¯Âß¼­
- * - Åö×²¼ì²â
+ * @brief ç©å®¶ç±»
  */
 class Player : public cocos2d::Sprite
 {
 public:
-    /**
-     * @brief ´´½¨Íæ¼Ò
-     * @return Player¶ÔÏó
-     */
     static Player* create();
-
-    /**
-     * @brief ³õÊ¼»¯
-     */
-    virtual bool init() override;
-
-    /**
-     * @brief ¸üĞÂº¯Êı
-     * @param delta Ê±¼äÔöÁ¿
-     */
+    virtual bool init();
     virtual void update(float delta) override;
 
     /**
-     * @brief ÉèÖÃÒÆ¶¯ËÙ¶È
-     * @param speed ËÙ¶È£¨ÏñËØ/Ãë£©
-     */
-    void setMoveSpeed(float speed);
-
-    /**
-     * @brief »ñÈ¡ÒÆ¶¯ËÙ¶È
-     */
-    float getMoveSpeed() const { return moveSpeed_; }
-
-    /**
-     * @brief ÉèÖÃµØÍ¼²ãÒıÓÃ£¨ÓÃÓÚÅö×²¼ì²â£©
-     * @param mapLayer µØÍ¼²ãÖ¸Õë
-     */
-    void setMapLayer(class MapLayer* mapLayer);
-
-    /**
-     * @brief ÆôÓÃ¼üÅÌ¿ØÖÆ
+     * @brief å¯ç”¨é”®ç›˜æ§åˆ¶
      */
     void enableKeyboardControl();
 
     /**
-     * @brief ½ûÓÃ¼üÅÌ¿ØÖÆ
+     * @brief è®¾ç½®åœ°å›¾å±‚ï¼ˆç”¨äºç¢°æ’æ£€æµ‹ï¼‰
      */
-    void disableKeyboardControl();
-
-private:
-    // µØÍ¼²ãÒıÓÃ£¨ÓÃÓÚÅö×²¼ì²â£©
-    class MapLayer* mapLayer_;
-
-    // ÒÆ¶¯ËÙ¶È£¨ÏñËØ/Ãë£©
-    float moveSpeed_;
-
-    // µ±Ç°ÒÆ¶¯·½Ïò
-    cocos2d::Vec2 moveDirection_;
-
-    // ¼üÅÌ×´Ì¬
-    bool keyW_;
-    bool keyA_;
-    bool keyS_;
-    bool keyD_;
-
-    // ¼üÅÌ¼àÌıÆ÷
-    cocos2d::EventListenerKeyboard* keyboardListener_;
+    void setMapLayer(MapLayer* mapLayer);
 
     /**
-     * @brief °´¼ü°´ÏÂ»Øµ÷
+     * @brief è®¾ç½®ç§»åŠ¨é€Ÿåº¦
+     */
+    void setMoveSpeed(float speed) { moveSpeed_ = speed; }
+
+    // ========== æˆ˜æ–—ç³»ç»Ÿ ==========
+
+    /**
+     * @brief å—åˆ°ä¼¤å®³
+     */
+    void takeDamage(int damage);
+
+    /**
+     * @brief æ˜¯å¦å¤„äºæ— æ•ŒçŠ¶æ€
+     */
+    bool isInvulnerable() const { return isInvulnerable_; }
+
+    /**
+     * @brief å½“å‰è¡€é‡
+     */
+    int getHp() const { return hp_; }
+
+    /**
+     * @brief è·å–ç©å®¶æœå‘
+     */
+    cocos2d::Vec2 getFacingDirection() const { return facingDirection_; }
+
+private:
+    float moveSpeed_;
+    cocos2d::Vec2 moveDirection_;
+    cocos2d::Vec2 facingDirection_;
+    bool isMoving_;
+    
+    // æŒ‰é”®çŠ¶æ€æ ‡å¿—ï¼ˆè§£å†³åœºæ™¯åˆ‡æ¢å¯¼è‡´çš„æŒ‰é”®çŠ¶æ€ä¸ä¸€è‡´é—®é¢˜ï¼‰
+    bool isUpPressed_;
+    bool isDownPressed_;
+    bool isLeftPressed_;
+    bool isRightPressed_;
+
+    // åœ°å›¾å¼•ç”¨
+    MapLayer* mapLayer_;
+
+    // æˆ˜æ–—å±æ€§
+    int hp_;
+    int maxHp_;
+    bool isInvulnerable_;
+    float invulnerableTimer_;
+
+    /**
+     * @brief é”®ç›˜æŒ‰ä¸‹
      */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
 
     /**
-     * @brief °´¼üÊÍ·Å»Øµ÷
+     * @brief é”®ç›˜æŠ¬èµ·
      */
     void onKeyReleased(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
 
     /**
-     * @brief ¸üĞÂÒÆ¶¯·½Ïò
+     * @brief æ›´æ–°ç§»åŠ¨
      */
-    void updateMoveDirection();
-
-    /**
-     * @brief ÒÆ¶¯Íæ¼Ò
-     * @param delta Ê±¼äÔöÁ¿
-     */
-    void movePlayer(float delta);
+    void updateMovement(float delta);
 };
 
 #endif // __PLAYER_H__

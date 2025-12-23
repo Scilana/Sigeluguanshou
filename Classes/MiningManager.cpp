@@ -50,50 +50,47 @@ void MiningManager::initMineralDefs()
         1001,
         "Stone",
         1,                      // 1次敲击
-        ItemType::None,         // 不掉落物品（或可以掉落石头）
+        ItemType::None,         // 不掉落物品
         0, 0,
         1                       // 1点经验
     };
 
-    // 铜矿石 - GID 示例：1002
-    mineralDefs_[1002] = MineralDef{
-        1002,
-        "Copper Ore",
-        3,                      // 3次敲击
-        ItemType::Wood,         // 临时使用 Wood，你可以添加新的 ItemType::CopperOre
-        1, 3,                   // 掉落1-3个
-        5                       // 5点经验
-    };
+    // 铜矿石 - GID 示例：1002, 521-555 (mine_minerals.tsx 的铜矿)
+    // GID 521-555 范围内的都是铜矿
+    for (int gid = 521; gid <= 555; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Copper Ore",
+            3,                      // 3次敲击
+            ItemType::CopperOre,    // 掉落铜矿石
+            1, 3,                   // 掉落1-3个
+            5                       // 5点经验
+        };
+    }
 
-    // 铁矿石 - GID 示例：1003
-    mineralDefs_[1003] = MineralDef{
-        1003,
-        "Iron Ore",
-        5,                      // 5次敲击
-        ItemType::Wood,         // 临时使用 Wood
-        1, 2,
-        10
-    };
+    // 银矿石 - GID 示例：574-608
+    for (int gid = 574; gid <= 608; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Silver Ore",
+            5,                      // 5次敲击
+            ItemType::SilverOre,    // 掉落银矿石
+            1, 2,                   // 掉落1-2个
+            10                      // 10点经验
+        };
+    }
 
-    // 金矿石 - GID 示例：1004
-    mineralDefs_[1004] = MineralDef{
-        1004,
-        "Gold Ore",
-        8,                      // 8次敲击
-        ItemType::Wood,         // 临时使用 Wood
-        1, 1,
-        20
-    };
-
-    // 宝石 - GID 示例：1005
-    mineralDefs_[1005] = MineralDef{
-        1005,
-        "Gemstone",
-        10,                     // 10次敲击
-        ItemType::Wood,         // 临时使用 Wood
-        1, 1,
-        50
-    };
+    // 金矿石 - GID 示例：649-723
+    for (int gid = 649; gid <= 723; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Gold Ore",
+            8,                      // 8次敲击
+            ItemType::GoldOre,      // 掉落金矿石
+            1, 1,                   // 掉落1个
+            20                      // 20点经验
+        };
+    }
 
     CCLOG("Mineral definitions initialized: %d types", (int)mineralDefs_.size());
 }

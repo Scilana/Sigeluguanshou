@@ -41,6 +41,12 @@ list(APPEND GAME_SOURCE
      Classes/MineScene.cpp
      Classes/MineLayer.cpp
      Classes/MiningManager.cpp
+     Classes/Monster.cpp
+     Classes/Slime.cpp
+     Classes/Zombie.cpp
+     Classes/Weapon.cpp
+     Classes/TreasureChest.cpp
+     Classes/ElevatorUI.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -56,6 +62,12 @@ list(APPEND GAME_HEADER
      Classes/MineScene.h
      Classes/MineLayer.h
      Classes/MiningManager.h
+     Classes/Monster.h
+     Classes/Slime.h
+     Classes/Zombie.h
+     Classes/Weapon.h
+     Classes/TreasureChest.h
+     Classes/ElevatorUI.h
      )
 
 if(ANDROID)

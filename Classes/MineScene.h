@@ -8,6 +8,14 @@
 #include "Player.h"
 #include "MiningManager.h"
 #include "InventoryManager.h"
+#include "Monster.h"
+#include "TreasureChest.h"
+#include "Weapon.h"
+#include "InventoryUI.h"
+
+// 前向声明
+class Slime;
+class Zombie;
 
 /**
  * @brief 矿洞场景类
@@ -16,6 +24,7 @@
  * - 管理矿洞地图层
  * - 控制玩家在矿洞中的行为
  * - 处理挖矿逻辑
+ * - 怪物和宝箱管理
  * - 摄像机跟随
  */
 class MineScene : public cocos2d::Scene
@@ -52,6 +61,17 @@ private:
 
     // 背包系统（共享引用）
     InventoryManager* inventory_;
+    InventoryUI* inventoryUI_;
+    
+    // 物品栏（使用 InventoryManager 中定义的 ItemType）
+    std::vector<ItemType> toolbarItems_;
+    int selectedItemIndex_;
+    void initToolbar();
+    void selectItemByIndex(int idx);
+    
+    // 打开/关闭背包
+    void toggleInventory();
+    void onInventoryClosed();
 
     // UI层
     cocos2d::Layer* uiLayer_;
@@ -65,6 +85,18 @@ private:
 
     // 当前矿洞层数
     int currentFloor_;
+
+    // ========== 怪物系统 ==========
+    std::vector<Monster*> monsters_;
+    float monsterSpawnTimer_;
+
+    // ========== 宝箱系统 ==========
+    std::vector<TreasureChest*> chests_;
+
+    // ========== 武器/攻击系统 ==========
+    ItemType currentWeapon_;
+    float attackCooldown_;
+    float currentAttackCooldown_;
 
     /**
      * @brief 初始化地图
@@ -97,6 +129,16 @@ private:
     void initControls();
 
     /**
+     * @brief 初始化怪物
+     */
+    void initMonsters();
+
+    /**
+     * @brief 初始化宝箱
+     */
+    void initChests();
+
+    /**
      * @brief 更新摄像机（跟随玩家）
      */
     void updateCamera();
@@ -107,9 +149,24 @@ private:
     void updateUI();
 
     /**
+     * @brief 更新怪物
+     */
+    void updateMonsters(float delta);
+
+    /**
      * @brief 处理挖矿动作
      */
     void handleMiningAction();
+
+    /**
+     * @brief 处理攻击动作
+     */
+    void handleAttackAction();
+
+    /**
+     * @brief 处理宝箱交互
+     */
+    void handleChestInteraction();
 
     /**
      * @brief 显示操作提示
@@ -135,6 +192,26 @@ private:
      * @brief 检查是否在楼梯位置
      */
     bool isPlayerOnStairs() const;
+
+    /**
+     * @brief 生成怪物（根据楼层）
+     */
+    void spawnMonster();
+
+    /**
+     * @brief 获取怪物生成概率
+     */
+    float getMonsterSpawnChance() const;
+
+    /**
+     * @brief 获取宝箱生成概率
+     */
+    float getChestSpawnChance() const;
+
+    /**
+     * @brief 获取随机可行走位置
+     */
+    cocos2d::Vec2 getRandomWalkablePosition() const;
 };
 
 #endif // __MINE_SCENE_H__
