@@ -767,8 +767,8 @@ void GameScene::handleFarmAction(bool waterOnly)
         case ItemType::Scythe:
             result = farmManager_->harvestTile(tileCoord);
             break;
-        case ItemType::Axe: {
-            // ========== 砍树逻辑（改进版）==========
+         case ItemType::Axe: {
+            // ========== 砍树逻辑（第3刀替换版）==========
             Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
                 result = { false, "No tree to chop here" };
@@ -776,20 +776,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             }
 
             std::vector<Vec2> component = collectCollisionComponent(target);
-            const size_t kMaxTreeTiles = 8;
-            if (component.empty() || component.size() > kMaxTreeTiles) {
-                result = { false, "No tree to chop here" };
-                break;
-            }
-
-            // 检查 GID 白名单
-            static const int treeGids[] = { 43793, 43920, 43108, 43109, 43558, 43608, 44445, 43158 };
-            int baseGid = mapLayer_->getBaseTileGID(component.front());
-            bool isTree = false;
-            for (int gid : treeGids) {
-                if (baseGid == gid) { isTree = true; break; }
-            }
-            if (!isTree) {
+            if (component.empty() || component.size() > 10) {
                 result = { false, "No tree to chop here" };
                 break;
             }
@@ -803,34 +790,68 @@ void GameScene::handleFarmAction(bool waterOnly)
                 }
             }
 
-            if (existingChop) {
-                // 继续砍已存在的树
-                existingChop->chopCount++;
-                playTreeShakeAnimation(existingChop->treeSprite);
+            // 定义何时替换为 Sprite (第 3 刀)
+            const int REPLACE_THRESHOLD = 3;
 
-                if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
-                    // 砍倒树
-                    playTreeFallAnimation(existingChop);
-                    result = { true, "Timber!" };
+            if (existingChop) {
+                // --- 已经在砍了 (第 2, 3, 4... 刀) ---
+                existingChop->chopCount++;
+                existingChop->chopTimer = 0.0f; // 重置超时计时
+
+                // 【关键逻辑】如果是第 3 刀，且还没有 Sprite，立刻进行替换！
+                if (existingChop->chopCount == REPLACE_THRESHOLD && existingChop->treeSprite == nullptr) {
+                    CCLOG("第3刀！替换瓦片为Sprite...");
+                    existingChop->treeSprite = createTreeSprite(existingChop->tiles); // 这会清除瓦片并生成Sprite
+                    showActionMessage("Tree is loose!", Color3B::YELLOW);
+                }
+
+                // 如果 Sprite 已经存在（即 >= 3刀），播放摇晃动画
+                if (existingChop->treeSprite) {
+                    playTreeShakeAnimation(existingChop->treeSprite);
                 }
                 else {
-                    result = { true, "Chopping... (" +
-                        std::to_string(TreeChopData::CHOPS_NEEDED - existingChop->chopCount) + " more)" };
+                    // 如果还不到3刀（还是瓦片），只显示简单的撞击文字
+                    Vec2 pos = mapLayer_->tileCoordToPosition(target);
+                    // 简单的偏移，让字显示在上方
+                    pos.x += mapLayer_->getTileSize().width / 2;
+                    pos.y += mapLayer_->getTileSize().height;
+
+                    // 这里由于没有Sprite拿不到位置，我们简单弹个全局字，或者你可以加个临时的Label
+                    showActionMessage("Thump! (" + std::to_string(existingChop->chopCount) + ")", Color3B::WHITE);
+                }
+
+                // 检查是否砍倒 (假设需要 6 刀)
+                if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
+                    if (existingChop->treeSprite) {
+                        playTreeFallAnimation(existingChop);
+                        result = { true, "Timber!" };
+                    }
+                    else {
+                        // 防御性编程：万一数值设置错了，没生成Sprite就倒了
+                        result = { true, "Tree destroyed (No anim)" };
+                        // 这里应该补一个清理瓦片的逻辑，以防万一
+                    }
+                }
+                else {
+                    result = { true, "" };
                 }
             }
             else {
-                // 开始砍新树
+                // --- 第 1 刀 (新砍伐) ---
                 TreeChopData newChop;
                 newChop.tileCoord = component.front();
                 newChop.tiles = component;
                 newChop.chopCount = 1;
                 newChop.chopTimer = 0.0f;
-                newChop.treeSprite = createTreeSprite(component);
+
+                // 【关键】第1刀不生成 Sprite，设为 nullptr
+                newChop.treeSprite = nullptr;
+
                 activeChops_.push_back(newChop);
 
-                playTreeShakeAnimation(activeChops_.back().treeSprite);
-                result = { true, "Chopping... (" +
-                    std::to_string(TreeChopData::CHOPS_NEEDED - 1) + " more)" };
+                // 第1刀的反馈
+                showActionMessage("Thump! (1)", Color3B::WHITE);
+                result = { true, "" };
             }
             break;
         }
@@ -895,33 +916,59 @@ void GameScene::handleFarmAction(bool waterOnly)
 
 // ========== 砍树相关函数 ==========
 
-std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
+// ========== 辅助函数定义 (必须在 handleFarmAction 外部) ==========
+
+std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const //收集所有连在一起的树木瓦片
 {
     std::vector<Vec2> out;
     if (!mapLayer_ || !mapLayer_->hasCollisionAt(start))
         return out;
 
+    // 【关键】定义树木的 GID 白名单（3x3树的所有GID）
+    // 顶部: 43557-43559, 中间: 43607-43609, 底部: 43657-43659
+    static const std::vector<int> treeGids = {
+        43557, 43558, 43559,  // 顶部
+        43607, 43608, 43609,  // 中间
+        43657, 43658, 43659   // 底部（树根层）
+    };
+
+    // 检查起始点是否是树（防止砍到石头）
+    int startGid = mapLayer_->getBaseTileGID(start);
+    bool isStartTree = false;
+    for (int id : treeGids) {
+        if (id == startGid) {
+            isStartTree = true;
+            break;
+        }
+    }
+
+    if (!isStartTree)
+        return out; // 如果起始点不是树，直接返回空
+
     Size mapSize = mapLayer_->getMapSizeInTiles();
     auto key = [](int x, int y) -> long long {
-        return (static_cast<long long>(y) << 32) | (static_cast<unsigned long long>(x) & 0xffffffffULL);
+        return (static_cast<long long>(y) << 32) |
+            (static_cast<unsigned long long>(x) & 0xffffffffULL);
         };
 
     std::queue<Vec2> q;
     std::unordered_set<long long> visited;
+
     q.push(start);
     visited.insert(key(static_cast<int>(start.x), static_cast<int>(start.y)));
 
-    const Vec2 dirs[4] = { Vec2(1,0), Vec2(-1,0), Vec2(0,1), Vec2(0,-1) };
-    while (!q.empty())
-    {
+    const Vec2 dirs[4] = { Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1) };
+
+    while (!q.empty()) {
         Vec2 t = q.front();
         q.pop();
         out.push_back(t);
 
-        for (const auto& d : dirs)
-        {
+        for (const auto& d : dirs) {
             int nx = static_cast<int>(t.x + d.x);
             int ny = static_cast<int>(t.y + d.y);
+
+            // 边界检查
             if (nx < 0 || ny < 0 || nx >= mapSize.width || ny >= mapSize.height)
                 continue;
 
@@ -930,10 +977,22 @@ std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
                 continue;
 
             Vec2 nt(static_cast<float>(nx), static_cast<float>(ny));
-            if (mapLayer_->hasCollisionAt(nt))
-            {
-                visited.insert(k);
-                q.push(nt);
+
+            // 【关键修改】同时检查：1.是否有碰撞 2.是否是树木ID
+            if (mapLayer_->hasCollisionAt(nt)) {
+                int nextGid = mapLayer_->getBaseTileGID(nt);
+                bool isNextTree = false;
+                for (int id : treeGids) {
+                    if (id == nextGid) {
+                        isNextTree = true;
+                        break;
+                    }
+                }
+
+                if (isNextTree) {
+                    visited.insert(k);
+                    q.push(nt);
+                }
             }
         }
     }
@@ -941,191 +1000,345 @@ std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
     return out;
 }
 
-bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) const
-{
+bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) const {
     if (!mapLayer_)
         return false;
 
-    const Vec2 offsets[9] = {
-        Vec2(0,0), Vec2(1,0), Vec2(-1,0), Vec2(0,1), Vec2(0,-1),
-        Vec2(1,1), Vec2(1,-1), Vec2(-1,1), Vec2(-1,-1)
+    // 只检测3个方向：左、右、脚下
+    const Vec2 offsets[3] = {
+        Vec2(0, 0),   // 玩家脚下
+        Vec2(1, 0),   // 右边
+        Vec2(-1, 0)   // 左边
     };
 
-    for (const auto& off : offsets)
-    {
+    const int TREE_ROOT_GID = 43658; // 树根的实际GID (tileset id=901)
+
+    for (const auto& off : offsets) {
         Vec2 candidate = centerTile + off;
-        if (mapLayer_->hasCollisionAt(candidate))
-        {
-            outTile = candidate;
-            return true;
+
+        // 检查是否有碰撞 AND GID是否是树根
+        if (mapLayer_->hasCollisionAt(candidate)) {
+            int gid = mapLayer_->getBaseTileGID(candidate);
+            if (gid == TREE_ROOT_GID) {
+                outTile = candidate;
+                CCLOG("发现树根于位置: (%.0f, %.0f), GID=%d", candidate.x, candidate.y, gid);
+                return true;
+            }
         }
     }
+
     return false;
 }
 
-Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles)
-{
+Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
     if (tiles.empty() || !mapLayer_)
         return nullptr;
 
-    // 1. 计算树的边界
     Size tileSize = mapLayer_->getTileSize();
-    float minX = FLT_MAX, minY = FLT_MAX, maxX = -FLT_MAX, maxY = -FLT_MAX;
 
-    for (const auto& tile : tiles) {
-        Vec2 pos = mapLayer_->tileCoordToPosition(tile);
-        minX = std::min(minX, pos.x);
-        minY = std::min(minY, pos.y);
-        maxX = std::max(maxX, pos.x + tileSize.width);
-        maxY = std::max(maxY, pos.y + tileSize.height);
+    // ==========================================
+    // 1. 找到真正的树根（GID = 43658）
+    // ==========================================
+    Vec2 rootTile(-1, -1);
+    const int TREE_ROOT_GID = 43658; // 树根的实际GID
+
+    for (const auto& t : tiles) {
+        int gid = mapLayer_->getBaseTileGID(t);
+        if (gid == TREE_ROOT_GID) {
+            rootTile = t;
+            break;
+        }
     }
 
-    // 2. 隐藏原瓦片（需要在 MapLayer 中实现 hideTile）
-    for (const auto& tile : tiles) {
-        // mapLayer_->hideTile(tile);  // 如果你实现了这个函数
-        // 临时方案：设置为透明 GID
-        mapLayer_->setBaseTileGID(tile, 0);
+    // 如果没找到树根GID，使用Y最大的作为fallback
+    if (rootTile.x < 0) {
+        rootTile = tiles[0];
+        for (const auto& t : tiles) {
+            if (t.y > rootTile.y) rootTile = t;
+        }
+        CCLOG("Warning: Tree root GID 43658 not found, using fallback position");
     }
 
-    // 3. 创建树精灵
-    auto treeSprite = Sprite::create("items/tree_full.png");  // ← 需要这个PNG
+    // 算出树根格子在屏幕上的像素位置
+    Vec2 rootTilePos = mapLayer_->tileCoordToPosition(rootTile);
+
+    // 计算出生点：树根格子的【底边中点】
+    Vec2 spawnPosition = Vec2(rootTilePos.x + tileSize.width / 2.0f, rootTilePos.y);
+
+    // ==========================================
+    // ==========================================
+    // 2. 强制清理整棵树的3x3范围
+    // ==========================================
+    int rootTx = static_cast<int>(rootTile.x);
+    int rootTy = static_cast<int>(rootTile.y);
+
+    // 采样草地颜色
+    int grassGID = 1; // 默认值
+
+    // 【修改点】不再取树根右边，而是取地图上固定的安全草地坐标 (30, 14)
+    Vec2 samplePos = Vec2(30, 14);
+
+    int detectedGID = mapLayer_->getBaseTileGID(samplePos);
+    if (detectedGID > 0) grassGID = detectedGID;
+
+    // 清理3x3范围：以树根为基准，左右各1格，向上2格
+    for (int x = rootTx - 1; x <= rootTx + 1; ++x) {
+        for (int y = rootTy - 2; y <= rootTy; ++y) {
+            Vec2 target(x, y);
+
+            if (x >= 0 && y >= 0 &&
+                x < mapLayer_->getMapSize().width &&
+                y < mapLayer_->getMapSize().height)
+            {
+                mapLayer_->setBaseTileGID(target, grassGID);
+            }
+        }
+    }
+
+    // ==========================================
+    // 3. 创建并强制缩放替身 (96x96)
+    // ==========================================
+    auto treeSprite = Sprite::create("images/items/tree_full.png");
     if (!treeSprite) {
-        // 如果没有图片，创建一个占位符
-        treeSprite = Sprite::create();
-        auto drawNode = DrawNode::create();
-        drawNode->drawSolidRect(
-            Vec2(-16, 0),
-            Vec2(16, 64),
-            Color4F(0.4f, 0.25f, 0.1f, 1.0f)
-        );
-        treeSprite->addChild(drawNode);
+        CCLOG("Error: tree_full.png not found!");
+        return nullptr;
     }
 
-    // 4. 设置位置和锚点
-    Vec2 centerPos((minX + maxX) / 2, minY);  // 底部中心
-    treeSprite->setPosition(centerPos);
-    treeSprite->setAnchorPoint(Vec2(0.5f, 0.0f));  // 锚点在底部，便于旋转倒塌
+    float targetWidth = 96.0f;
+    float targetHeight = 96.0f;
+    Size textureSize = treeSprite->getContentSize();
 
-    // 5. 添加到场景
+    float scaleX = targetWidth / textureSize.width;
+    float scaleY = targetHeight / textureSize.height;
+
+    treeSprite->setScaleX(scaleX);
+    treeSprite->setScaleY(scaleY);
+
+    // ==========================================
+    // 4. 关键定位（锚点在底部中心）
+    // ==========================================
+    treeSprite->setAnchorPoint(Vec2(0.5f, 0.0f));
+    treeSprite->setPosition(spawnPosition);
+
+    // 保存树根位置到sprite的userData，方便后续放树桩
+    treeSprite->setUserData((void*)new Vec2(rootTile));
+
     this->addChild(treeSprite, 100);
+
+    CCLOG("生成树木: 树根(%d, %d) GID=43658 | 清理3x3 | 尺寸96x96", rootTx, rootTy);
 
     return treeSprite;
 }
 
-void GameScene::playTreeShakeAnimation(Sprite* treeSprite)
-{
+void GameScene::playTreeShakeAnimation(Sprite* treeSprite) {
     if (!treeSprite)
         return;
 
     // 停止之前的动画
     treeSprite->stopAllActions();
 
-    // 震动动画：左右摇晃
-    auto shake1 = RotateTo::create(0.05f, -8);
-    auto shake2 = RotateTo::create(0.05f, 8);
-    auto shake3 = RotateTo::create(0.05f, -5);
-    auto shake4 = RotateTo::create(0.05f, 5);
-    auto shake5 = RotateTo::create(0.05f, 0);
+    // 增强版震动动画：更长时间、更大幅度
+    auto shake1 = RotateTo::create(0.08f, -12);   // 增加角度和时间
+    auto shake2 = RotateTo::create(0.08f, 12);
+    auto shake3 = RotateTo::create(0.08f, -10);
+    auto shake4 = RotateTo::create(0.08f, 10);
+    auto shake5 = RotateTo::create(0.08f, -6);
+    auto shake6 = RotateTo::create(0.08f, 6);
+    auto shake7 = RotateTo::create(0.08f, -3);
+    auto shake8 = RotateTo::create(0.08f, 3);
+    auto shake9 = RotateTo::create(0.08f, 0);
 
-    auto sequence = Sequence::create(shake1, shake2, shake3, shake4, shake5, nullptr);
-    treeSprite->runAction(sequence);
+    // 增加树叶飘落效果（可选）
+    auto scaleUp = ScaleTo::create(0.1f, 1.05f, 1.05f);
+    auto scaleDown = ScaleTo::create(0.1f, 1.0f, 1.0f);
+    auto scaleSeq = Sequence::create(scaleUp, scaleDown, nullptr);
 
-    // 可选：添加音效
-    // AudioEngine::play2d("sounds/tree_chop.mp3", false, 0.5f);
+    auto shakeSeq = Sequence::create(
+        shake1, shake2, shake3, shake4, shake5,
+        shake6, shake7, shake8, shake9, nullptr
+    );
+
+    // 同时执行摇晃和缩放
+    auto spawn = Spawn::create(shakeSeq, scaleSeq, nullptr);
+    treeSprite->runAction(spawn);
+
+    // 添加震动提示文字
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto camera = this->getDefaultCamera();
+    Vec3 camPos = camera->getPosition3D();
+
+    auto hitLabel = Label::createWithSystemFont("CHOP!", "Arial", 30);
+    hitLabel->setPosition(Vec2(
+        treeSprite->getPosition().x,
+        treeSprite->getPosition().y + 120
+    ));
+    hitLabel->setColor(Color3B(255, 100, 100));
+    this->addChild(hitLabel, 200);
+
+    auto labelSeq = Sequence::create(
+        ScaleTo::create(0.1f, 1.3f),
+        ScaleTo::create(0.1f, 1.0f),
+        DelayTime::create(0.3f),
+        FadeOut::create(0.3f),
+        RemoveSelf::create(),
+        nullptr
+    );
+    hitLabel->runAction(labelSeq);
 }
 
-void GameScene::playTreeFallAnimation(TreeChopData* chopData)
-{
+void GameScene::playTreeFallAnimation(TreeChopData* chopData) {
     if (!chopData || !chopData->treeSprite)
         return;
 
     auto treeSprite = chopData->treeSprite;
 
-    // 保存需要的数据（避免指针失效）
+    // 保存关键数据
     Vec2 savedTileCoord = chopData->tileCoord;
     std::vector<Vec2> savedTiles = chopData->tiles;
 
-    // 1. 旋转倒塌（绕底部旋转90度）
-    auto rotate = RotateTo::create(1.0f, 90);
+    // 从sprite的userData中获取真正的树根位置
+    Vec2* pRootTile = static_cast<Vec2*>(treeSprite->getUserData());
+    Vec2 actualRootTile = pRootTile ? *pRootTile : savedTileCoord;
 
-    // 2. 同时淡出
-    auto fadeOut = FadeOut::create(1.0f);
+    // ==========================================
+    // 增强版倒下动画
+    // ==========================================
 
-    // 3. 动画结束后清理
-    auto cleanup = CallFunc::create([this, savedTileCoord, savedTiles, treeSprite]() {
-        // 移除精灵
-        if (treeSprite) {
-            treeSprite->removeFromParent();
+    // 第一阶段：树开始倾斜（0.3秒）
+    auto tiltStart = RotateTo::create(0.3f, -15);
+
+    // 第二阶段：加速倒下（0.8秒）
+    auto fallDown = RotateTo::create(0.8f, 90);
+
+    // 第三阶段：砸地反弹效果（0.2秒）
+    auto bounce = Sequence::create(
+        RotateTo::create(0.1f, 95),  // 稍微过头
+        RotateTo::create(0.1f, 90),  // 反弹回来
+        nullptr
+    );
+
+    // 位置动画：树倒下时会向右移动
+    Vec2 currentPos = treeSprite->getPosition();
+    auto moveRight = MoveTo::create(0.8f, Vec2(currentPos.x + 48, currentPos.y));
+
+    // 缩放动画：倒下时稍微压扁（增加重量感）
+    auto scaleSeq = Sequence::create(
+        DelayTime::create(0.3f),
+        ScaleTo::create(0.8f, 1.0f, 0.95f),  // 稍微压扁
+        nullptr
+    );
+
+    // 淡出延迟：等树完全倒下后再淡出
+    auto fadeSeq = Sequence::create(
+        DelayTime::create(1.1f),  // 等倒下动画完成
+        FadeOut::create(0.5f),    // 慢慢淡出
+        nullptr
+    );
+
+    // 组合所有动画
+    auto rotateSeq = Sequence::create(tiltStart, fallDown, bounce, nullptr);
+    auto spawnAnim = Spawn::create(rotateSeq, moveRight, scaleSeq, fadeSeq, nullptr);
+
+    // ==========================================
+    // 添加特效
+    // ==========================================
+
+    // "TIMBER!" 文字特效
+    auto timberLabel = Label::createWithSystemFont("TIMBER!", "Arial", 40);
+    timberLabel->setPosition(Vec2(
+        treeSprite->getPosition().x,
+        treeSprite->getPosition().y + 150
+    ));
+    timberLabel->setColor(Color3B(255, 200, 50));
+    this->addChild(timberLabel, 200);
+
+    auto labelAnim = Sequence::create(
+        Spawn::create(
+            ScaleTo::create(0.3f, 1.5f),
+            JumpBy::create(0.3f, Vec2(0, 0), 30, 1),
+            nullptr
+        ),
+        DelayTime::create(0.5f),
+        FadeOut::create(0.5f),
+        RemoveSelf::create(),
+        nullptr
+    );
+    timberLabel->runAction(labelAnim);
+
+
+    // ==========================================
+    // 清理工作（延迟执行）
+    // ==========================================
+    auto cleanup = CallFunc::create([this, actualRootTile, savedTiles, treeSprite]() {
+        // --- A. 清理userData ---
+        Vec2* pData = static_cast<Vec2*>(treeSprite->getUserData());
+        if (pData) {
+            delete pData;
+            treeSprite->setUserData(nullptr);
         }
 
-        // 1. 在树的底部位置放置树桩
-        Vec2 stumpTile = savedTiles.empty() ? savedTileCoord : savedTiles.front();
+        // --- B. 计算树桩位置（只在真正的树根位置）---
+        Vec2 rootTilePos = mapLayer_->tileCoordToPosition(actualRootTile);
+        Size tileSize = mapLayer_->getTileSize();
+        Vec2 stumpPos = Vec2(rootTilePos.x + tileSize.width / 2.0f, rootTilePos.y);
 
-        // 创建树桩精灵
-        auto stump = Sprite::create("items/tree_stump.png");
+        // --- C. 移除倒下的树 ---
+        treeSprite->removeFromParent();
+
+        // --- D. 生成【唯一】树桩（只在树根GID=43658的位置）---
+        auto stump = Sprite::create("images/items/tree_stump.png");
         if (stump) {
-            Vec2 stumpPos = mapLayer_->tileCoordToPosition(stumpTile);
             stump->setPosition(stumpPos);
             stump->setAnchorPoint(Vec2(0.5f, 0.0f));
+
+            // 树桩缩放到32x32（1个tile大小）
+            Size stumpSize = stump->getContentSize();
+            float stumpScale = 32.0f / std::max(stumpSize.width, stumpSize.height);
+            stump->setScale(stumpScale);
+
             mapLayer_->addChild(stump, 5);
+
+            // 树桩出现动画
+            stump->setOpacity(0);
+            stump->runAction(FadeIn::create(0.3f));
+
+            CCLOG("树桩已放置在树根位置: (%d, %d)",
+                static_cast<int>(actualRootTile.x),
+                static_cast<int>(actualRootTile.y));
         }
 
-        // 2. 移除所有瓦片的碰撞
-        for (const auto& tile : savedTiles) {
-            mapLayer_->clearCollisionAt(tile);
-        }
-
-        // 3. 掉落木材
-        Vec2 dropPos = mapLayer_->tileCoordToPosition(savedTileCoord);
+        // --- E. 掉落木材（在树桩位置）---
         int woodCount = 3 + (rand() % 3);
-        spawnItem(ItemType::Wood, dropPos, woodCount);
+        spawnItem(ItemType::Wood, stumpPos, woodCount);
 
-        // 4. 从 activeChops_ 中移除
+        // --- F. 清理砍树数据 ---
         activeChops_.erase(
             std::remove_if(activeChops_.begin(), activeChops_.end(),
-                [savedTileCoord](const TreeChopData& c) {
-                    return c.tileCoord == savedTileCoord;
+                [actualRootTile](const TreeChopData& c) {
+                    return c.tileCoord == actualRootTile;
                 }),
-            activeChops_.end()
-        );
+            activeChops_.end());
 
-        showActionMessage("Wood collected!", Color3B(200, 255, 200));
+        showActionMessage("Tree chopped! Got wood!", Color3B(200, 255, 200));
         });
 
-    // 4. 组合动画
-    auto spawn = Spawn::create(rotate, fadeOut, nullptr);
-    auto sequence = Sequence::create(spawn, cleanup, nullptr);
-    treeSprite->runAction(sequence);
+    // 执行完整动画序列
+    auto fullSequence = Sequence::create(
+        spawnAnim,              // 倒下动画（1.6秒）
+        DelayTime::create(0.3f), // 等0.3秒让淡出完成
+        cleanup,                // 清理和生成树桩
+        nullptr
+    );
+
+    treeSprite->runAction(fullSequence);
 }
 
-
-void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
-{
-    // 添加到背包系统
-    if (inventory_)
-    {
-        bool added = inventory_->addItem(type, count);
-        if (added)
-        {
-            // 显示收集提示
-            std::string message = StringUtils::format(
-                "+%d %s",
-                count,
-                InventoryManager::getItemName(type).c_str()
-            );
-            showActionMessage(message, Color3B(120, 230, 140));
-        }
-        else
-        {
-            showActionMessage("Inventory full!", Color3B(255, 180, 120));
-        }
-    }
-
-    // 创建掉落物精灵（视觉效果）
+void GameScene::spawnItem(ItemType type, const Vec2& position, int count) {
+    // 创建掉落物精灵
     std::string itemImage;
     switch (type) {
     case ItemType::Wood:
-        itemImage = "items/wood.png";  // ← 需要这个PNG
+        itemImage = "items/wood.png"; // ← 需要这个PNG
         break;
     default:
         itemImage = "items/unknown.png";
@@ -1137,7 +1350,8 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
         // 如果没有图片，创建占位符
         item = Sprite::create();
         auto drawNode = DrawNode::create();
-        drawNode->drawSolidCircle(Vec2::ZERO, 10, 0, 16, Color4F(0.6f, 0.4f, 0.2f, 1.0f));
+        drawNode->drawSolidCircle(Vec2::ZERO, 10, 0, 16,
+            Color4F(0.6f, 0.4f, 0.2f, 1.0f));
         item->addChild(drawNode);
     }
 
@@ -1155,28 +1369,22 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
     // 显示数量标签
     if (count > 1) {
         auto countLabel = Label::createWithSystemFont(
-            StringUtils::format("+%d", count),
-            "Arial",
-            20
-        );
+            StringUtils::format("+%d", count), "Arial", 20);
         countLabel->setPosition(Vec2(position.x, position.y + 40));
         countLabel->setColor(Color3B(255, 255, 100));
         this->addChild(countLabel, 51);
 
-        auto labelFade = Sequence::create(
-            DelayTime::create(0.5f),
-            FadeOut::create(0.5f),
-            RemoveSelf::create(),
-            nullptr
-        );
+        auto labelFade =
+            Sequence::create(DelayTime::create(0.5f), FadeOut::create(0.5f),
+                RemoveSelf::create(), nullptr);
         countLabel->runAction(labelFade);
     }
 
-    CCLOG("Collected %d x %s", count, InventoryManager::getItemName(type).c_str());
+    // TODO: 实际游戏中应该将物品添加到背包系统
+    CCLOG("Collected %d x %s", count, getItemName(type).c_str());
 }
 
-void GameScene::updateChopping(float delta)
-{
+void GameScene::updateChopping(float delta) {
     // 这个函数现在主要用于清理超时的砍树任务（可选）
     // 新版本中通过点击次数触发，不需要倒计时
 
@@ -1203,8 +1411,7 @@ void GameScene::updateChopping(float delta)
 }
 
 // ========== 树木调试显示 ==========
-void GameScene::initTrees()
-{
+void GameScene::initTrees() {
     trees_.clear();
     activeChops_.clear();
 
@@ -1219,24 +1426,22 @@ void GameScene::initTrees()
     float halfW = tileSize.width / 2.0f;
     float halfH = tileSize.height / 2.0f;
 
-    for (const auto& t : sampleTiles)
-    {
+    for (const auto& t : sampleTiles) {
         Vec2 pos = mapLayer_->tileCoordToPosition(t);
         auto node = DrawNode::create();
         Vec2 bl(pos.x - halfW + 2, pos.y - halfH + 2);
         Vec2 tr(pos.x + halfW - 2, pos.y + halfH - 2);
         node->drawSolidRect(bl, tr, Color4F(0.2f, 0.6f, 0.2f, 0.9f));
-        node->drawSolidCircle(pos, 10.0f, 0, 12, 1.0f, 1.0f, Color4F(0.1f, 0.5f, 0.1f, 0.9f));
+        node->drawSolidCircle(pos, 10.0f, 0, 12, 1.0f, 1.0f,
+            Color4F(0.1f, 0.5f, 0.1f, 0.9f));
         mapLayer_->addChild(node, 15);
 
         trees_.push_back(Tree{ t, node });
     }
 }
 
-int GameScene::findTreeIndex(const Vec2& tile) const
-{
-    for (int i = 0; i < static_cast<int>(trees_.size()); ++i)
-    {
+int GameScene::findTreeIndex(const Vec2& tile) const {
+    for (int i = 0; i < static_cast<int>(trees_.size()); ++i) {
         if (trees_[i].tileCoord == tile)
             return i;
     }
