@@ -11,6 +11,7 @@
 #include "FishingLayer.h"
 #include "InventoryManager.h"
 #include "InventoryUI.h"
+#include "MineScene.h"
 
 /**
 
@@ -158,6 +159,11 @@ private:
      * @brief 关闭背包回调
      */
     void onInventoryClosed();
+
+    /**
+     * @brief 进入矿洞
+     */
+    void enterMine();
 
     /**
      * @brief ESC键回调

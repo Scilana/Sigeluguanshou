@@ -408,7 +408,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -512,6 +512,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
+        break;
+    case EventKeyboard::KeyCode::KEY_M:
+        enterMine();
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -1544,6 +1547,24 @@ void GameScene::onInventoryClosed()
 {
     inventoryUI_ = nullptr;
     CCLOG("Inventory closed");
+}
+
+void GameScene::enterMine()
+{
+    CCLOG("Entering mine...");
+
+    // 创建矿洞场景，传入当前的背包实例和第1层
+    auto mineScene = MineScene::createScene(inventory_, 1);
+    if (mineScene)
+    {
+        // 使用淡入淡出过渡效果
+        auto transition = TransitionFade::create(1.0f, mineScene);
+        Director::getInstance()->replaceScene(transition);
+    }
+    else
+    {
+        CCLOG("ERROR: Failed to create mine scene!");
+    }
 }
 
 

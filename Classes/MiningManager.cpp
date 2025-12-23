@@ -1,0 +1,224 @@
+#include "MiningManager.h"
+
+USING_NS_CC;
+
+MiningManager* MiningManager::create(MineLayer* mineLayer, InventoryManager* inventory)
+{
+    MiningManager* ret = new (std::nothrow) MiningManager();
+    if (ret && ret->init(mineLayer, inventory))
+    {
+        ret->autorelease();
+        return ret;
+    }
+    else
+    {
+        delete ret;
+        ret = nullptr;
+        return nullptr;
+    }
+}
+
+bool MiningManager::init(MineLayer* mineLayer, InventoryManager* inventory)
+{
+    if (!Node::init())
+        return false;
+
+    mineLayer_ = mineLayer;
+    inventory_ = inventory;
+    miningExp_ = 0;
+
+    if (!mineLayer_ || !inventory_)
+    {
+        CCLOG("ERROR: MiningManager requires valid MineLayer and InventoryManager!");
+        return false;
+    }
+
+    // 初始化矿物定义
+    initMineralDefs();
+
+    CCLOG("MiningManager initialized");
+    return true;
+}
+
+void MiningManager::initMineralDefs()
+{
+    // 注意：这里的 GID 需要根据你的 tileset 实际情况调整
+    // 这里使用示例 GID，你需要在 Tiled 中查看实际的 GID 值
+
+    // 石头（普通）- GID 示例：1001
+    mineralDefs_[1001] = MineralDef{
+        1001,
+        "Stone",
+        1,                      // 1次敲击
+        ItemType::None,         // 不掉落物品（或可以掉落石头）
+        0, 0,
+        1                       // 1点经验
+    };
+
+    // 铜矿石 - GID 示例：1002
+    mineralDefs_[1002] = MineralDef{
+        1002,
+        "Copper Ore",
+        3,                      // 3次敲击
+        ItemType::Wood,         // 临时使用 Wood，你可以添加新的 ItemType::CopperOre
+        1, 3,                   // 掉落1-3个
+        5                       // 5点经验
+    };
+
+    // 铁矿石 - GID 示例：1003
+    mineralDefs_[1003] = MineralDef{
+        1003,
+        "Iron Ore",
+        5,                      // 5次敲击
+        ItemType::Wood,         // 临时使用 Wood
+        1, 2,
+        10
+    };
+
+    // 金矿石 - GID 示例：1004
+    mineralDefs_[1004] = MineralDef{
+        1004,
+        "Gold Ore",
+        8,                      // 8次敲击
+        ItemType::Wood,         // 临时使用 Wood
+        1, 1,
+        20
+    };
+
+    // 宝石 - GID 示例：1005
+    mineralDefs_[1005] = MineralDef{
+        1005,
+        "Gemstone",
+        10,                     // 10次敲击
+        ItemType::Wood,         // 临时使用 Wood
+        1, 1,
+        50
+    };
+
+    CCLOG("Mineral definitions initialized: %d types", (int)mineralDefs_.size());
+}
+
+MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
+{
+    // 检查是否有矿物
+    if (!mineLayer_->isMineralAt(tileCoord))
+    {
+        return { false, "No mineral here" };
+    }
+
+    // 获取矿物 GID
+    int gid = mineLayer_->getMineralGID(tileCoord);
+
+    // 查找矿物定义
+    const MineralDef* mineralDef = getMineralDef(gid);
+    if (!mineralDef)
+    {
+        // 如果没有定义，使用默认值（1次敲击，不掉落）
+        CCLOG("Unknown mineral GID: %d, using default", gid);
+        mineLayer_->clearMineralAt(tileCoord);
+        mineLayer_->clearCollisionAt(tileCoord);
+        return { true, "Mineral broken!" };
+    }
+
+    // 生成瓦片键
+    long long key = getTileKey(tileCoord);
+
+    // 查找或创建进度
+    auto it = activeMinings_.find(key);
+    if (it == activeMinings_.end())
+    {
+        // 新矿物，创建进度
+        MineralProgress progress;
+        progress.tileCoord = tileCoord;
+        progress.hitCount = 1;
+        progress.requiredHits = mineralDef->hitPoints;
+        activeMinings_[key] = progress;
+
+        if (progress.requiredHits <= 1)
+        {
+            // 一次就破坏
+            mineLayer_->clearMineralAt(tileCoord);
+            mineLayer_->clearCollisionAt(tileCoord);
+            dropItems(tileCoord, *mineralDef);
+            activeMinings_.erase(key);
+            addExp(mineralDef->expReward);
+            return { true, mineralDef->name + " broken!" };
+        }
+        else
+        {
+            return { true, "Mining... (" + std::to_string(progress.requiredHits - 1) + " more)" };
+        }
+    }
+    else
+    {
+        // 继续敲击
+        it->second.hitCount++;
+
+        if (it->second.hitCount >= it->second.requiredHits)
+        {
+            // 破坏矿物
+            mineLayer_->clearMineralAt(tileCoord);
+            mineLayer_->clearCollisionAt(tileCoord);
+            dropItems(tileCoord, *mineralDef);
+            activeMinings_.erase(it);
+            addExp(mineralDef->expReward);
+            return { true, mineralDef->name + " broken!" };
+        }
+        else
+        {
+            int remaining = it->second.requiredHits - it->second.hitCount;
+            return { true, "Mining... (" + std::to_string(remaining) + " more)" };
+        }
+    }
+}
+
+const MiningManager::MineralDef* MiningManager::getMineralDef(int gid) const
+{
+    auto it = mineralDefs_.find(gid);
+    if (it != mineralDefs_.end())
+    {
+        return &it->second;
+    }
+    return nullptr;
+}
+
+void MiningManager::addExp(int exp)
+{
+    miningExp_ += exp;
+    CCLOG("Mining exp: %d (+%d)", miningExp_, exp);
+}
+
+long long MiningManager::getTileKey(const Vec2& tileCoord) const
+{
+    int x = static_cast<int>(tileCoord.x);
+    int y = static_cast<int>(tileCoord.y);
+    return (static_cast<long long>(y) << 32) | (static_cast<unsigned long long>(x) & 0xffffffffULL);
+}
+
+void MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mineralDef)
+{
+    if (mineralDef.dropItem == ItemType::None)
+        return;
+
+    // 计算掉落数量
+    int dropCount = mineralDef.dropMinCount;
+    if (mineralDef.dropMaxCount > mineralDef.dropMinCount)
+    {
+        dropCount += rand() % (mineralDef.dropMaxCount - mineralDef.dropMinCount + 1);
+    }
+
+    // 添加到背包
+    if (inventory_)
+    {
+        bool added = inventory_->addItem(mineralDef.dropItem, dropCount);
+        if (added)
+        {
+            CCLOG("Collected %d x %s", dropCount,
+                  InventoryManager::getItemName(mineralDef.dropItem).c_str());
+        }
+        else
+        {
+            CCLOG("Inventory full! Could not collect items");
+        }
+    }
+}
