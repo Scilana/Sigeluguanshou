@@ -79,16 +79,25 @@ void MapLayer::initCollisionLayer()
     if (!tmxMap_)
         return;
 
+    // 尝试查找 "Collision" 层（农场地图）
     collisionLayer_ = tmxMap_->getLayer("Collision");
     if (collisionLayer_)
     {
         collisionLayer_->setVisible(false);
         CCLOG("Collision layer found and hidden");
+        return;
     }
-    else
+
+    // 尝试查找 "Buildings" 层（矿洞地图）
+    collisionLayer_ = tmxMap_->getLayer("Buildings");
+    if (collisionLayer_)
     {
-        CCLOG("Warning: No collision layer found (layer name should be 'Collision')");
+        collisionLayer_->setVisible(false);
+        CCLOG("Buildings layer found and used as collision layer (hidden)");
+        return;
     }
+
+    CCLOG("Warning: No collision layer found (tried 'Collision' and 'Buildings')");
 }
 
 Size MapLayer::getMapSize() const
