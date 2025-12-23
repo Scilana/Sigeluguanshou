@@ -1,6 +1,7 @@
 #include "GameScene.h"
 #include "MenuScene.h"
 #include "FarmManager.h"
+#include "ElevatorUI.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -514,7 +515,18 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         toggleInventory();
         break;
     case EventKeyboard::KeyCode::KEY_M:
-        enterMine();
+        if (isPlayerNearElevator())
+        {
+            enterMine();
+        }
+        else
+        {
+            showActionMessage("Elevator is too far!", Color3B::RED);
+            // 调试显示位置
+            CCLOG("Player at (%.1f, %.1f), Elevator at (%.1f, %.1f)", 
+                player_->getPosition().x, player_->getPosition().y, 
+                ELEVATOR_POS.x, ELEVATOR_POS.y);
+        }
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -1756,20 +1768,74 @@ void GameScene::onInventoryClosed()
 
 void GameScene::enterMine()
 {
-    CCLOG("Entering mine...");
+    CCLOG("Opening elevator UI...");
 
-    // 创建矿洞场景，传入当前的背包实例和第1层
-    auto mineScene = MineScene::createScene(inventory_, 1);
-    if (mineScene)
+    // 创建电梯楼层选择UI
+    auto elevatorUI = ElevatorUI::create();
+    if (!elevatorUI)
     {
-        // 使用淡入淡出过渡效果
-        auto transition = TransitionFade::create(1.0f, mineScene);
-        Director::getInstance()->replaceScene(transition);
+        CCLOG("ERROR: Failed to create ElevatorUI!");
+        return;
+    }
+
+    // 设置楼层选择回调
+    elevatorUI->setFloorSelectCallback([this](int floor) {
+        CCLOG("Floor %d selected, entering mine...", floor);
+
+        if (floor == 0)
+        {
+            // 楼层0是农场（地面），不需要切换场景
+            showActionMessage("Already on the farm!", Color3B(200, 200, 200));
+            return;
+        }
+
+        // 创建矿洞场景，传入背包实例和选择的楼层
+        auto mineScene = MineScene::createScene(inventory_, floor);
+        if (mineScene)
+        {
+            auto transition = TransitionFade::create(0.5f, mineScene);
+            Director::getInstance()->replaceScene(transition);
+        }
+        else
+        {
+            CCLOG("ERROR: Failed to create mine scene for floor %d!", floor);
+        }
+    });
+
+    // 添加到UI层（uiLayer_ 会随摄像机移动，所以这里只需添加到它上面）
+    if (uiLayer_)
+    {
+        elevatorUI->setPosition(Vec2::ZERO);
+        uiLayer_->addChild(elevatorUI, 2000); 
     }
     else
     {
-        CCLOG("ERROR: Failed to create mine scene!");
+        // 回退逻辑
+        this->addChild(elevatorUI, 2500);
+        auto camera = this->getDefaultCamera();
+        if (camera)
+        {
+            Vec3 cameraPos = camera->getPosition3D();
+            auto visibleSize = Director::getInstance()->getVisibleSize();
+            Vec2 uiPos = Vec2(
+                cameraPos.x - visibleSize.width / 2,
+                cameraPos.y - visibleSize.height / 2
+            );
+            elevatorUI->setPosition(uiPos);
+        }
     }
+
+    elevatorUI->show();
+}
+
+bool GameScene::isPlayerNearElevator() const
+{
+    if (!player_) return false;
+    
+    // 检查距离
+    float distance = player_->getPosition().distance(ELEVATOR_POS);
+    // 允许100像素误差
+    return distance < 100.0f; 
 }
 
 
