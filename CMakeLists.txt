@@ -40,7 +40,6 @@ list(APPEND GAME_SOURCE
      Classes/InventoryUI.cpp
      Classes/MineScene.cpp
      Classes/MineLayer.cpp
-     Classes/MiningManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -55,7 +54,6 @@ list(APPEND GAME_HEADER
      Classes/InventoryUI.h
      Classes/MineScene.h
      Classes/MineLayer.h
-     Classes/MiningManager.h
      )
 
 if(ANDROID)
