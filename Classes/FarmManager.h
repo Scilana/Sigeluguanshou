@@ -22,6 +22,7 @@ public:
     {
         bool success;
         std::string message;
+        int cropId = -1;
     };
 
     static FarmManager* create(MapLayer* mapLayer);

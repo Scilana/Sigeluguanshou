@@ -2,6 +2,7 @@
 #include "MenuScene.h"
 #include "FarmManager.h"
 #include "ElevatorUI.h"
+#include "MarketUI.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -37,6 +38,7 @@ bool GameScene::init()
     uiLayer_ = nullptr;
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
+    marketUI_ = nullptr;
 
     initMap();
     initFarm();
@@ -53,6 +55,7 @@ bool GameScene::init()
         this->addChild(inventory_, 0);
         CCLOG("InventoryManager initialized");
     }
+    marketState_.init();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -409,7 +412,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | M: Mine | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | P: Market | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -513,6 +516,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
+        break;
+    case EventKeyboard::KeyCode::KEY_P:
+        toggleMarket();
         break;
     case EventKeyboard::KeyCode::KEY_L:
         // 直接进入矿洞（使用 Mines/1.tmx）
@@ -734,6 +740,11 @@ void GameScene::updateUI()
 
     }
 
+    if (moneyLabel_ && inventory_)
+    {
+        moneyLabel_->setString(StringUtils::format("Gold: %d", inventory_->getMoney()));
+    }
+
     // 如果有地图层，也显示瓦片坐标
 
     if (mapLayer_)
@@ -761,7 +772,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     tileCoord.x = std::round(tileCoord.x);
     tileCoord.y = std::round(tileCoord.y);
 
-    FarmManager::ActionResult result{ false, "Unavailable" };
+    FarmManager::ActionResult result{ false, "Unavailable", -1 };
     ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
 
     if (waterOnly) {
@@ -769,7 +780,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             result = farmManager_->waterTile(tileCoord);
         }
         else {
-            result = { false, "Need watering can to water" };
+            result = { false, "Need watering can to water", -1 };
         }
     }
     else {
@@ -782,18 +793,34 @@ void GameScene::handleFarmAction(bool waterOnly)
             break;
         case ItemType::Scythe:
             result = farmManager_->harvestTile(tileCoord);
+            if (result.success && inventory_)
+            {
+                ItemType harvestItem = getItemTypeForCropId(result.cropId);
+                if (harvestItem != ItemType::None)
+                {
+                    if (inventory_->addItem(harvestItem, 1))
+                    {
+                        result.message = StringUtils::format("Harvested %s (+1)", InventoryManager::getItemName(harvestItem).c_str());
+                        if (inventoryUI_) inventoryUI_->refresh();
+                    }
+                    else
+                    {
+                        result.message = "Inventory full!";
+                    }
+                }
+            }
             break;
          case ItemType::Axe: {
             // ========== 砍树逻辑（第3刀替换版）==========
             Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No tree to chop here" };
+                result = { false, "No tree to chop here", -1 };
                 break;
             }
 
             std::vector<Vec2> component = collectCollisionComponent(target);
             if (component.empty() || component.size() > 10) {
-                result = { false, "No tree to chop here" };
+                result = { false, "No tree to chop here", -1 };
                 break;
             }
 
@@ -840,16 +867,16 @@ void GameScene::handleFarmAction(bool waterOnly)
                 if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
                     if (existingChop->treeSprite) {
                         playTreeFallAnimation(existingChop);
-                        result = { true, "Timber!" };
+                        result = { true, "Timber!", -1 };
                     }
                     else {
                         // 防御性编程：万一数值设置错了，没生成Sprite就倒了
-                        result = { true, "Tree destroyed (No anim)" };
+                        result = { true, "Tree destroyed (No anim)", -1 };
                         // 这里应该补一个清理瓦片的逻辑，以防万一
                     }
                 }
                 else {
-                    result = { true, "" };
+                    result = { true, "", -1 };
                 }
             }
             else {
@@ -867,7 +894,7 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                 // 第1刀的反馈
                 showActionMessage("Thump! (1)", Color3B::WHITE);
-                result = { true, "" };
+                result = { true, "", -1 };
             }
             break;
         }
@@ -875,7 +902,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             // Mine rocks: detect collision tile, verify rock GID, then clear it.
             Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
@@ -892,13 +919,13 @@ void GameScene::handleFarmAction(bool waterOnly)
 
             int baseGid = mapLayer_->getBaseTileGID(target);
             if (rockGids.find(baseGid) == rockGids.end()) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
             std::vector<Vec2> component = collectCollisionComponent(target);
             if (component.empty()) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
@@ -907,7 +934,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                 mapLayer_->clearBaseTileAt(t);
             }
 
-            result = { true, "Rock broken!" };
+            result = { true, "Rock broken!", -1 };
             break;
         }
         case ItemType::SeedTurnip:
@@ -916,12 +943,23 @@ void GameScene::handleFarmAction(bool waterOnly)
         case ItemType::SeedTomato:
         case ItemType::SeedPumpkin:
         case ItemType::SeedBlueberry: {
+            if (!inventory_ || !inventory_->hasItem(current, 1))
+            {
+                result = { false, "No seeds left", -1 };
+                break;
+            }
             int cropId = getCropIdForItem(current);
             result = farmManager_->plantSeed(tileCoord, cropId);
+            if (result.success && inventory_)
+            {
+                inventory_->removeItem(current, 1);
+                result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
+                if (inventoryUI_) inventoryUI_->refresh();
+            }
             break;
         }
         default:
-            result = { false, "Unknown item action" };
+            result = { false, "Unknown item action", -1 };
             break;
         }
     }
@@ -1552,6 +1590,20 @@ int GameScene::getCropIdForItem(ItemType type) const
     }
 }
 
+ItemType GameScene::getItemTypeForCropId(int cropId) const
+{
+    switch (cropId)
+    {
+    case 0: return ItemType::Turnip;
+    case 1: return ItemType::Potato;
+    case 2: return ItemType::Corn;
+    case 3: return ItemType::Tomato;
+    case 4: return ItemType::Pumpkin;
+    case 5: return ItemType::Blueberry;
+    default: return ItemType::None;
+    }
+}
+
 void GameScene::onMouseDown(Event* event)
 {
     EventMouse* e = (EventMouse*)event;
@@ -1768,6 +1820,56 @@ void GameScene::onInventoryClosed()
 {
     inventoryUI_ = nullptr;
     CCLOG("Inventory closed");
+}
+
+void GameScene::toggleMarket()
+{
+    if (!inventory_)
+    {
+        CCLOG("ERROR: Inventory not initialized!");
+        return;
+    }
+
+    if (marketUI_)
+    {
+        marketUI_->close();
+        return;
+    }
+
+    marketUI_ = MarketUI::create(inventory_, &marketState_, farmManager_);
+    if (!marketUI_)
+    {
+        CCLOG("ERROR: Failed to create MarketUI!");
+        return;
+    }
+
+    marketUI_->setCloseCallback([this]() {
+        onMarketClosed();
+    });
+
+    this->addChild(marketUI_, 2200);
+    marketUI_->setGlobalZOrder(2200);
+
+    auto camera = this->getDefaultCamera();
+    if (camera)
+    {
+        Vec3 cameraPos = camera->getPosition3D();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 uiPos = Vec2(
+            cameraPos.x - visibleSize.width / 2,
+            cameraPos.y - visibleSize.height / 2
+        );
+        marketUI_->setPosition(uiPos);
+    }
+
+    marketUI_->show();
+    CCLOG("Market opened");
+}
+
+void GameScene::onMarketClosed()
+{
+    marketUI_ = nullptr;
+    CCLOG("Market closed");
 }
 
 void GameScene::enterMine()
