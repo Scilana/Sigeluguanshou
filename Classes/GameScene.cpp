@@ -514,6 +514,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
         break;
+    case EventKeyboard::KeyCode::KEY_L:
+        // 直接进入矿洞（使用 Mines/1.tmx）
+        enterMine();
+        break;
     case EventKeyboard::KeyCode::KEY_M:
         if (isPlayerNearElevator())
         {
@@ -523,8 +527,8 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         {
             showActionMessage("Elevator is too far!", Color3B::RED);
             // 调试显示位置
-            CCLOG("Player at (%.1f, %.1f), Elevator at (%.1f, %.1f)", 
-                player_->getPosition().x, player_->getPosition().y, 
+            CCLOG("Player at (%.1f, %.1f), Elevator at (%.1f, %.1f)",
+                player_->getPosition().x, player_->getPosition().y,
                 ELEVATOR_POS.x, ELEVATOR_POS.y);
         }
         break;

@@ -77,15 +77,8 @@ void MineScene::initMap()
 {
     CCLOG("Initializing mine map...");
 
-    CCLOG("Initializing mine map...");
-
-    // 根据楼层加载不同地图
-    // 限制在1-4层
-    int mapIndex = currentFloor_;
-    if (mapIndex > 4) mapIndex = 4;
-    if (mapIndex < 1) mapIndex = 1;
-    
-    std::string mapFile = StringUtils::format("map/mine_floor%d.tmx", mapIndex);
+    // 使用新的 Mines 文件夹中的地图
+    std::string mapFile = StringUtils::format("map/Mines/%d.tmx", currentFloor_);
 
     mineLayer_ = MineLayer::create(mapFile);
     if (mineLayer_)
@@ -93,64 +86,117 @@ void MineScene::initMap()
         this->addChild(mineLayer_, 0);
         CCLOG("Mine layer added to scene (Floor %d)", currentFloor_);
 
-        // 调整 Front 层的 Z-order，使其显示在玩家上方
+        // 处理所有图层的 Z-order，确保正确的渲染顺序
+        // 渲染顺序（从下到上）：Front -> Back -> Buildings -> 玩家(Z=10) -> mine1
         auto tmxMap = mineLayer_->getTMXMap();
         if (tmxMap)
         {
-            CCLOG("TMX Map position: (%.2f, %.2f), Z-order: %d",
-                  tmxMap->getPosition().x, tmxMap->getPosition().y,
-                  tmxMap->getLocalZOrder());
+            Size mapSize = tmxMap->getMapSize();
+            Size tileSize = tmxMap->getTileSize();
+            CCLOG("TMX Map info:");
+            CCLOG("  - Position: (%.2f, %.2f)", tmxMap->getPosition().x, tmxMap->getPosition().y);
+            CCLOG("  - Z-order: %d", tmxMap->getLocalZOrder());
+            CCLOG("  - Map size: %.0f x %.0f tiles", mapSize.width, mapSize.height);
+            CCLOG("  - Tile size: %.0f x %.0f px", tileSize.width, tileSize.height);
+            CCLOG("  - Total size: %.0f x %.0f px", mapSize.width * tileSize.width, mapSize.height * tileSize.height);
 
+            // 处理 Front 层（放在最底层，Back 下面）
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
                 CCLOG("✓ Front layer found!");
                 CCLOG("  - Position: (%.2f, %.2f)", frontLayer->getPosition().x, frontLayer->getPosition().y);
                 CCLOG("  - Visible: %s", frontLayer->isVisible() ? "YES" : "NO");
-                CCLOG("  - Opacity: %d", frontLayer->getOpacity());
+                CCLOG("  - Original opacity: %d", frontLayer->getOpacity());
                 CCLOG("  - Layer Size: (%.0f, %.0f)", frontLayer->getLayerSize().width, frontLayer->getLayerSize().height);
-                CCLOG("  - Original Z-order: %d", frontLayer->getLocalZOrder());
 
-                // 核心问题：
-                // - mineLayer_ 在 scene 中 Z=0，包含 tmxMap
-                // - player_ 在 scene 中 Z=10
-                // - Front 层是 tmxMap 的子节点，所以它的渲染顺序受 tmxMap 的 Z-order 限制
-                // - 即使设置 Front 层 Z=100，有效 Z 仍然是 0 + 100 = 100（在 mineLayer 范围内）
-                // - 而 player_ 是场景的直接子节点，Z=10，会遮挡 mineLayer 中的所有内容
-
-                // 解决方案：把 Front 层从 tmxMap 移到场景，设置更高的 Z-order
-                Vec2 layerPosInMap = frontLayer->getPosition();
-                Vec2 mapPosInMineLayer = tmxMap->getPosition();
-                Vec2 mineLayerPosInScene = mineLayer_->getPosition();
-
-                // 计算 Front 层在场景中的绝对位置
-                Vec2 frontPosInScene = mineLayerPosInScene + mapPosInMineLayer + layerPosInMap;
-
-                CCLOG("  - Calculating position:");
-                CCLOG("    Front in map: (%.2f, %.2f)", layerPosInMap.x, layerPosInMap.y);
-                CCLOG("    Map in mineLayer: (%.2f, %.2f)", mapPosInMineLayer.x, mapPosInMineLayer.y);
-                CCLOG("    MineLayer in scene: (%.2f, %.2f)", mineLayerPosInScene.x, mineLayerPosInScene.y);
-                CCLOG("    Front in scene: (%.2f, %.2f)", frontPosInScene.x, frontPosInScene.y);
-
-                // 从 tmxMap 中移除 Front 层
-                frontLayer->retain();
-                tmxMap->removeChild(frontLayer, false);
-
-                // 设置在场景中的绝对位置
-                frontLayer->setPosition(frontPosInScene);
-
-                // 添加到场景，Z-order 设为 20（高于玩家的 10）
-                this->addChild(frontLayer, 20);
-                frontLayer->release();
-
-                CCLOG("✓ Front layer moved to scene:");
-                CCLOG("  - New parent: Scene (not tmxMap)");
-                CCLOG("  - Position in scene: (%.2f, %.2f)", frontPosInScene.x, frontPosInScene.y);
-                CCLOG("  - Z-order in scene: 20 (player is 10)");
+                // Front 层保留在 tmxMap 中，设置为最底层
+                frontLayer->setLocalZOrder(-200);  // 最底层
+                frontLayer->setVisible(true);  // 确保可见
+                frontLayer->setOpacity(255);   // 确保完全不透明
+                CCLOG("✓ Front layer set to Z-order -200 (below Back), opacity: 255");
             }
             else
             {
                 CCLOG("✗ WARNING: Front layer not found in TMX map");
+            }
+
+            // 处理 Back 层（背景，在 Front 上面）
+            auto backLayer = tmxMap->getLayer("Back");
+            if (backLayer)
+            {
+                CCLOG("✓ Back layer found - keeping in tmxMap");
+                CCLOG("  - Original opacity: %d", backLayer->getOpacity());
+                CCLOG("  - Layer size: %.0f x %.0f tiles", backLayer->getLayerSize().width, backLayer->getLayerSize().height);
+
+                // 采样一些瓦片来检查是否有数据
+                int sampleCount = 0;
+                int nonZeroCount = 0;
+                for (int y = 0; y < backLayer->getLayerSize().height && y < 5; y++)
+                {
+                    for (int x = 0; x < backLayer->getLayerSize().width && x < 10; x++)
+                    {
+                        int gid = backLayer->getTileGIDAt(Vec2(x, y));
+                        sampleCount++;
+                        if (gid != 0)
+                        {
+                            nonZeroCount++;
+                            if (nonZeroCount <= 3)  // 只打印前3个
+                            {
+                                CCLOG("    Sample tile at (%d,%d): GID=%d", x, y, gid);
+                            }
+                        }
+                    }
+                }
+                CCLOG("  - Tile sampling: %d/%d tiles are non-zero in top-left area", nonZeroCount, sampleCount);
+
+                backLayer->setLocalZOrder(-100);  // 在 Front 上面
+                backLayer->setVisible(true);
+                backLayer->setOpacity(255);  // 确保完全不透明
+
+                CCLOG("  - Back layer visible: %s, opacity: %d",
+                      backLayer->isVisible() ? "YES" : "NO",
+                      backLayer->getOpacity());
+            }
+
+            // 处理 Buildings 层（墙壁/碰撞层，在 Back 上面）
+            auto buildingsLayer = tmxMap->getLayer("Buildings");
+            if (buildingsLayer)
+            {
+                CCLOG("✓ Buildings layer found!");
+                CCLOG("  - Visible: %s", buildingsLayer->isVisible() ? "YES" : "NO");
+                CCLOG("  - Original opacity: %d", buildingsLayer->getOpacity());
+                CCLOG("  - Layer Size: (%.0f, %.0f)", buildingsLayer->getLayerSize().width, buildingsLayer->getLayerSize().height);
+
+                buildingsLayer->setLocalZOrder(-50);  // 在 Back 上面
+                buildingsLayer->setVisible(true);  // 确保可见
+                buildingsLayer->setOpacity(255);  // 确保完全不透明
+                CCLOG("✓ Buildings layer set to Z-order -50, forced visible, opacity: 255");
+            }
+            else
+            {
+                CCLOG("✗ WARNING: Buildings layer not found in TMX map");
+            }
+
+            // 处理 mine1 层（矿石贴图，放在玩家下方，让玩家能遮住矿石）
+            auto mine1Layer = tmxMap->getLayer("mine1");
+            if (mine1Layer)
+            {
+                CCLOG("✓ mine1 layer found!");
+                CCLOG("  - Position: (%.2f, %.2f)", mine1Layer->getPosition().x, mine1Layer->getPosition().y);
+                CCLOG("  - Visible: %s", mine1Layer->isVisible() ? "YES" : "NO");
+                CCLOG("  - Original opacity: %d", mine1Layer->getOpacity());
+                CCLOG("  - Layer Size: (%.0f, %.0f)", mine1Layer->getLayerSize().width, mine1Layer->getLayerSize().height);
+
+                // mine1 层保留在 tmxMap 中，设置在 Buildings 和玩家之间
+                mine1Layer->setLocalZOrder(-25);  // 在 Buildings(-50) 上面，但在玩家(10)下面
+                mine1Layer->setVisible(true);
+                mine1Layer->setOpacity(255);  // 确保完全不透明
+                CCLOG("✓ mine1 layer set to Z-order -25 (above Buildings, below Player), opacity: 255");
+            }
+            else
+            {
+                CCLOG("✗ WARNING: mine1 layer not found in TMX map");
             }
         }
         else
@@ -179,26 +225,72 @@ void MineScene::initPlayer()
     player_ = Player::create();
     if (player_)
     {
-        // 设置玩家初始位置（矿洞入口/楼梯处）
-        // 假设楼梯在地图上方或特定位置
-        // 这里简单设置为地图中心偏下
+        CCLOG("Initializing player in mine...");
+
         if (mineLayer_)
         {
+            // 获取地图大小（像素）
             Size mapSize = mineLayer_->getMapSize();
-            Vec2 startPos = Vec2(mapSize.width / 2, mapSize.height - 150);
-            
-            // 如果该位置有碰撞，尝试找附近位置
-            if (!mineLayer_->isWalkable(startPos))
+            CCLOG("Map size: (%.2f, %.2f) pixels", mapSize.width, mapSize.height);
+
+            // 计算地图中心点（像素坐标）
+            Vec2 mapCenter = Vec2(mapSize.width / 2, mapSize.height / 2);
+            CCLOG("Map center: (%.2f, %.2f)", mapCenter.x, mapCenter.y);
+
+            // 从中心开始螺旋搜索，寻找第一个可行走的位置
+            Vec2 startPos = mapCenter;
+            bool foundWalkable = false;
+
+            // 先检查中心点是否可行走
+            if (mineLayer_->isWalkable(mapCenter))
             {
+                foundWalkable = true;
+                startPos = mapCenter;
+                CCLOG("✓ Center position is walkable");
+            }
+            else
+            {
+                CCLOG("Center position not walkable, searching nearby...");
+
+                // 螺旋搜索半径（像素）
+                for (int radius = 16; radius < 320 && !foundWalkable; radius += 16)
+                {
+                    // 每个半径检查 8 个方向
+                    for (int angle = 0; angle < 360 && !foundWalkable; angle += 45)
+                    {
+                        float rad = angle * M_PI / 180.0f;
+                        Vec2 testPos = mapCenter + Vec2(cos(rad) * radius, sin(rad) * radius);
+
+                        // 检查是否在地图范围内
+                        if (testPos.x >= 0 && testPos.x < mapSize.width &&
+                            testPos.y >= 0 && testPos.y < mapSize.height)
+                        {
+                            if (mineLayer_->isWalkable(testPos))
+                            {
+                                startPos = testPos;
+                                foundWalkable = true;
+                                CCLOG("✓ Found walkable position at (%.2f, %.2f), radius: %d",
+                                      testPos.x, testPos.y, radius);
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (!foundWalkable)
+            {
+                CCLOG("✗ WARNING: Could not find walkable position, trying random...");
                 startPos = getRandomWalkablePosition();
             }
 
             player_->setPosition(startPos);
+            CCLOG("✓ Player positioned at (%.2f, %.2f)", startPos.x, startPos.y);
         }
         else
         {
             auto visibleSize = Director::getInstance()->getVisibleSize();
             player_->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
+            CCLOG("✗ WARNING: No map layer, using screen center");
         }
 
         player_->enableKeyboardControl();
@@ -208,6 +300,7 @@ void MineScene::initPlayer()
         }
 
         this->addChild(player_, 10);
+        CCLOG("✓ Player added to scene");
     }
     else
     {
@@ -732,15 +825,15 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_ESCAPE:
         backToFarm();
         break;
-        
+
     case EventKeyboard::KeyCode::KEY_J:
         handleMiningAction();
         break;
-        
+
     case EventKeyboard::KeyCode::KEY_SPACE:
         handleChestInteraction();
         break;
-        
+
     case EventKeyboard::KeyCode::KEY_ENTER:
     case EventKeyboard::KeyCode::KEY_KP_ENTER:
         if (isPlayerOnStairs())
@@ -752,15 +845,24 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
             showActionMessage("Not on stairs!", Color3B::GRAY);
         }
         break;
-        
+
     case EventKeyboard::KeyCode::KEY_M:
         // 显示电梯UI（如果需要）
         // 或者直接返回农场
         backToFarm();
         break;
-        
-    case EventKeyboard::KeyCode::KEY_TAB:
+
+    case EventKeyboard::KeyCode::KEY_Q:
+        // 切换到上一个矿洞场景
+        goToPreviousFloor();
+        break;
+
     case EventKeyboard::KeyCode::KEY_E:
+        // 切换到下一个矿洞场景
+        goToNextFloor();
+        break;
+
+    case EventKeyboard::KeyCode::KEY_TAB:
     case EventKeyboard::KeyCode::KEY_I:
         toggleInventory();
         break;
@@ -776,7 +878,7 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_8: selectItemByIndex(7); break;
     case EventKeyboard::KeyCode::KEY_9: selectItemByIndex(8); break;
     case EventKeyboard::KeyCode::KEY_0: selectItemByIndex(9); break;
-        
+
     default:
         break;
     }
@@ -788,11 +890,34 @@ void MineScene::backToFarm()
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
 }
 
+void MineScene::goToPreviousFloor()
+{
+    int prevFloor = currentFloor_ - 1;
+
+    // 限制在 1-5 层之间循环
+    if (prevFloor < 1)
+    {
+        prevFloor = 5;  // 从第 1 层按 Q 回到第 5 层
+    }
+
+    CCLOG("Switching to previous floor: %d -> %d", currentFloor_, prevFloor);
+    auto prevScene = MineScene::createScene(inventory_, prevFloor);
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, prevScene));
+}
+
 void MineScene::goToNextFloor()
 {
     int nextFloor = currentFloor_ + 1;
+
+    // 限制在 1-5 层之间循环
+    if (nextFloor > 5)
+    {
+        nextFloor = 1;  // 从第 5 层按 E 回到第 1 层
+    }
+
+    CCLOG("Switching to next floor: %d -> %d", currentFloor_, nextFloor);
     auto nextScene = MineScene::createScene(inventory_, nextFloor);
-    Director::getInstance()->replaceScene(TransitionFade::create(1.0f, nextScene));
+    Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
 }
 
 bool MineScene::isPlayerOnStairs() const
