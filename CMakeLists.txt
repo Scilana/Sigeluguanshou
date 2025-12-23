@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1)
+cmake_minimum_required(VERSION 3.10)
 
 set(APP_NAME Sigeluguanshou)
 
@@ -35,6 +35,11 @@ list(APPEND GAME_SOURCE
      Classes/Player.cpp
      Classes/MapLayer.cpp
      Classes/FarmManager.cpp
+     Classes/FishingLayer.cpp
+     Classes/InventoryManager.cpp
+     Classes/InventoryUI.cpp
+     Classes/MineScene.cpp
+     Classes/MineLayer.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -44,6 +49,11 @@ list(APPEND GAME_HEADER
      Classes/Player.h
      Classes/MapLayer.h
      Classes/FarmManager.h
+     Classes/FishingLayer.h
+     Classes/InventoryManager.h
+     Classes/InventoryUI.h
+     Classes/MineScene.h
+     Classes/MineLayer.h
      )
 
 if(ANDROID)

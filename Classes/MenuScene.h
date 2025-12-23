@@ -12,8 +12,8 @@ public:
     // °´Å¥»Øµ÷
     void startGameCallback(cocos2d::Ref* sender);
     void continueGameCallback(cocos2d::Ref* sender);
+    void coopCallback(cocos2d::Ref* sender);
     void exitGameCallback(cocos2d::Ref* sender);
-    void settingsCallback(cocos2d::Ref* sender);
 
     CREATE_FUNC(MenuScene);
 

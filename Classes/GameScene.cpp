@@ -34,6 +34,8 @@ bool GameScene::init()
     farmManager_ = nullptr;
     player_ = nullptr;
     uiLayer_ = nullptr;
+    inventory_ = nullptr;
+    inventoryUI_ = nullptr;
 
     initMap();
     initFarm();
@@ -42,6 +44,22 @@ bool GameScene::init()
     initCamera();
     initUI();
     initControls();
+
+    // 初始化背包系统
+    inventory_ = InventoryManager::create();
+    if (inventory_)
+    {
+        this->addChild(inventory_, 0);
+        CCLOG("InventoryManager initialized");
+    }
+
+    // --- 【Fishing Inputs】 ---
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseDown = CC_CALLBACK_1(GameScene::onMouseDown, this);
+    auto mouseUpListener = EventListenerMouse::create();
+    mouseUpListener->onMouseUp = CC_CALLBACK_1(GameScene::onMouseUp, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseUpListener, this);
 
     // 启动更新
     this->scheduleUpdate();
@@ -390,7 +408,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -434,6 +452,31 @@ void GameScene::initUI()
 
     initToolbar();
 
+    // ===== 钓鱼 UI 初始化 (跟随玩家) =====
+    if (player_)
+    {
+        chargeBarBg_ = Sprite::create();
+        chargeBarBg_->setTextureRect(Rect(0, 0, 50, 8));
+        chargeBarBg_->setColor(Color3B::GRAY);
+        chargeBarBg_->setPosition(Vec2(16, 70)); 
+        chargeBarBg_->setVisible(false);
+        player_->addChild(chargeBarBg_);
+
+        chargeBarFg_ = Sprite::create();
+        chargeBarFg_->setTextureRect(Rect(0, 0, 0, 8));
+        chargeBarFg_->setColor(Color3B::GREEN);
+        chargeBarFg_->setAnchorPoint(Vec2(0, 0));
+        chargeBarFg_->setPosition(Vec2(0, 0));
+        chargeBarBg_->addChild(chargeBarFg_);
+
+        exclamationMark_ = Sprite::create();
+        exclamationMark_->setTextureRect(Rect(0, 0, 10, 30));
+        exclamationMark_->setColor(Color3B::YELLOW);
+        exclamationMark_->setPosition(Vec2(16, 90)); 
+        exclamationMark_->setVisible(false);
+        player_->addChild(exclamationMark_);
+    }
+
     CCLOG("UI initialized - using simple fixed layer method");
 
 }
@@ -466,6 +509,12 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
     case EventKeyboard::KeyCode::KEY_ESCAPE:
         backToMenu();
+        break;
+    case EventKeyboard::KeyCode::KEY_B:
+        toggleInventory();
+        break;
+    case EventKeyboard::KeyCode::KEY_M:
+        enterMine();
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -503,6 +552,12 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_0:
         selectItemByIndex(9);
         break;
+    case EventKeyboard::KeyCode::KEY_MINUS: // Allow selecting item 10
+        selectItemByIndex(10);
+        break;
+    case EventKeyboard::KeyCode::KEY_EQUAL: // Allow selecting item 11
+        selectItemByIndex(11);
+        break;
     default:
         break;
     }
@@ -525,6 +580,9 @@ void GameScene::update(float delta)
 
     // 处理砍树计时
     updateChopping(delta);
+
+    // 更新钓鱼状态
+    updateFishingState(delta);
 
 }
 
@@ -776,6 +834,45 @@ void GameScene::handleFarmAction(bool waterOnly)
             }
             break;
         }
+        case ItemType::Pickaxe: {
+            // Mine rocks: detect collision tile, verify rock GID, then clear it.
+            Vec2 target = tileCoord;
+            if (!findNearbyCollisionTile(tileCoord, target)) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            static const std::unordered_set<int> rockGids = {
+                // Rock / ore tiles used in farm.tmx (bottom rows of tileset5)
+                45019, 45020, 45021,
+                45025, 45026, 45027, 45028, 45030,
+                45069, 45070, 45071, 45072, 45073,
+                45075, 45076, 45077, 45078, 45079, 45080, 45081,
+                45125, 45126, 45157, 45170, 45171, 45172, 45173, 45175, 45176,
+                45179, 45180, 45181, 45185,
+                45220, 45223, 45224, 45225, 45226
+            };
+
+            int baseGid = mapLayer_->getBaseTileGID(target);
+            if (rockGids.find(baseGid) == rockGids.end()) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            std::vector<Vec2> component = collectCollisionComponent(target);
+            if (component.empty()) {
+                result = { false, "No rock to mine here" };
+                break;
+            }
+
+            for (const auto& t : component) {
+                mapLayer_->clearCollisionAt(t);
+                mapLayer_->clearBaseTileAt(t);
+            }
+
+            result = { true, "Rock broken!" };
+            break;
+        }
         case ItemType::SeedTurnip:
         case ItemType::SeedPotato:
         case ItemType::SeedCorn:
@@ -1004,7 +1101,27 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData)
 
 void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
 {
-    // 创建掉落物精灵
+    // 添加到背包系统
+    if (inventory_)
+    {
+        bool added = inventory_->addItem(type, count);
+        if (added)
+        {
+            // 显示收集提示
+            std::string message = StringUtils::format(
+                "+%d %s",
+                count,
+                InventoryManager::getItemName(type).c_str()
+            );
+            showActionMessage(message, Color3B(120, 230, 140));
+        }
+        else
+        {
+            showActionMessage("Inventory full!", Color3B(255, 180, 120));
+        }
+    }
+
+    // 创建掉落物精灵（视觉效果）
     std::string itemImage;
     switch (type) {
     case ItemType::Wood:
@@ -1055,8 +1172,7 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count)
         countLabel->runAction(labelFade);
     }
 
-    // TODO: 实际游戏中应该将物品添加到背包系统
-    CCLOG("Collected %d x %s", count, getItemName(type).c_str());
+    CCLOG("Collected %d x %s", count, InventoryManager::getItemName(type).c_str());
 }
 
 void GameScene::updateChopping(float delta)
@@ -1164,6 +1280,8 @@ void GameScene::initToolbar()
         ItemType::WateringCan,
         ItemType::Scythe,
         ItemType::Axe,
+        ItemType::Pickaxe,
+        ItemType::FishingRod, // ID 5 (index 5)
         ItemType::SeedTurnip,
         ItemType::SeedPotato,
         ItemType::SeedCorn,
@@ -1188,41 +1306,16 @@ void GameScene::selectItemByIndex(int idx)
         return;
 
     selectedItemIndex_ = idx;
-    std::string name = getItemName(toolbarItems_[selectedItemIndex_]);
-    std::string nameZh = getItemNameChinese(toolbarItems_[selectedItemIndex_]);
+    std::string name = InventoryManager::getItemName(toolbarItems_[selectedItemIndex_]);
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0 to switch)", nameZh.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", name.c_str()));
     }
 
-    showActionMessage(StringUtils::format("Switched to %s", nameZh.c_str()), Color3B(180, 220, 255));
+    showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
 }
 
-std::string GameScene::getItemName(ItemType type) const
-{
-    switch (type)
-    {
-    case ItemType::Hoe: return "Hoe";
-    case ItemType::WateringCan: return "Watering Can";
-    case ItemType::Scythe: return "Scythe";
-    case ItemType::Axe: return "Axe";
-    case ItemType::SeedTurnip: return "Turnip Seed";
-    case ItemType::SeedPotato: return "Potato Seed";
-    case ItemType::SeedCorn: return "Corn Seed";
-    case ItemType::SeedTomato: return "Tomato Seed";
-    case ItemType::SeedPumpkin: return "Pumpkin Seed";
-    case ItemType::SeedBlueberry: return "Blueberry Seed";
-    case ItemType::Wood:return "Wood";
-    default: return "Unknown";
-    }
-}
-
-std::string GameScene::getItemNameChinese(ItemType type) const
-{
-    // For simplicity, reuse English names to avoid encoding issues
-    return getItemName(type);
-}
 
 int GameScene::getCropIdForItem(ItemType type) const
 {
@@ -1238,6 +1331,149 @@ int GameScene::getCropIdForItem(ItemType type) const
     }
 }
 
+void GameScene::onMouseDown(Event* event)
+{
+    EventMouse* e = (EventMouse*)event;
+    if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
+    {
+        // Check current item
+        if (toolbarItems_.empty()) return;
+        
+        ItemType current = ItemType::Hoe;
+        if (selectedItemIndex_ >= 0 && selectedItemIndex_ < (int)toolbarItems_.size()) {
+            current = toolbarItems_[selectedItemIndex_];
+        }
+
+        // Fishing Rod Logic
+        if (current == ItemType::FishingRod)
+        {
+            if (fishingState_ == FishingState::NONE)
+            {
+                 if (isFishing_) return;
+                 fishingState_ = FishingState::CHARGING;
+                 chargePower_ = 0.0f;
+                 CCLOG("Start Charging...");
+            }
+            else if (fishingState_ == FishingState::BITING)
+            {
+                 CCLOG("HOOKED!");
+                 if (exclamationMark_) exclamationMark_->setVisible(false);
+                 startFishing(); 
+            }
+            else if (fishingState_ == FishingState::WAITING)
+            {
+                 CCLOG("Pulled too early!");
+                 fishingState_ = FishingState::NONE;
+                 showActionMessage("Too early!", Color3B::RED);
+            }
+            return; 
+        }
+
+        // Mouse click for farming? 
+        // The new architecture uses Keyboard J/K for farm actions.
+        // But we can keep mouse click for debugging or if user wants it.
+        // For now, let's just log the click debug info the user liked.
+        
+        Vec2 clickPos = e->getLocationInView();
+        clickPos.y = Director::getInstance()->getWinSize().height - clickPos.y; 
+        Vec3 cameraPos = this->getDefaultCamera()->getPosition3D();
+        Vec2 worldPos = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
+        
+        CCLOG("Click Debug: Screen(%.1f, %.1f) -> World(%.1f, %.1f)", clickPos.x, clickPos.y, worldPos.x, worldPos.y);
+        if (mapLayer_) {
+            Vec2 t = mapLayer_->positionToTileCoord(worldPos);
+            CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
+        }
+    }
+}
+
+void GameScene::onMouseUp(Event* event)
+{
+    EventMouse* e = (EventMouse*)event;
+    if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
+    {
+        if (fishingState_ == FishingState::CHARGING)
+        {
+            fishingState_ = FishingState::WAITING;
+            if (chargeBarBg_) chargeBarBg_->setVisible(false);
+            
+            // Wait 1.0 - 4.0s
+            waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
+            CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
+        }
+    }
+}
+
+void GameScene::updateFishingState(float delta)
+{
+    if (fishingState_ == FishingState::CHARGING)
+    {
+        chargePower_ += delta * 1.5f; 
+        if (chargePower_ > 1.0f) chargePower_ = 1.0f;
+        
+        if (chargeBarBg_) chargeBarBg_->setVisible(true);
+        if (chargeBarFg_) {
+            chargeBarFg_->setTextureRect(Rect(0, 0, 50 * chargePower_, 8));
+            chargeBarFg_->setColor(Color3B(255 * chargePower_, 255 * (1-chargePower_) + 100, 0));
+        }
+    }
+    else if (fishingState_ == FishingState::WAITING)
+    {
+        waitTimer_ -= delta;
+        if (waitTimer_ <= 0)
+        {
+            fishingState_ = FishingState::BITING;
+            biteTimer_ = 1.0f; 
+            if (exclamationMark_) exclamationMark_->setVisible(true);
+            CCLOG("Fish bit! Click now!");
+        }
+    }
+    else if (fishingState_ == FishingState::BITING)
+    {
+        biteTimer_ -= delta;
+        if (biteTimer_ <= 0)
+        {
+            fishingState_ = FishingState::NONE;
+            if (exclamationMark_) exclamationMark_->setVisible(false);
+            CCLOG("Missed...");
+            showActionMessage("Missed...", Color3B::GRAY);
+        }
+    }
+}
+
+void GameScene::startFishing()
+{
+    isFishing_ = true;
+    fishingState_ = FishingState::REELING; 
+
+    if (player_) player_->setMoveSpeed(0); // Using new setMoveSpeed API
+
+    auto fishingLayer = FishingLayer::create();
+    fishingLayer->setFinishCallback([this](bool success) {
+        this->isFishing_ = false;
+        this->fishingState_ = FishingState::NONE; 
+        
+        if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
+        if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
+        if (this->player_) this->player_->setMoveSpeed(150.0f); // Restore speed (was hardcoded, assumed 150)
+
+        if (success)
+        {
+            CCLOG("Fishing SUCCESS!");
+            showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+            // No inventory addItem API anymore? 
+            // We can't add item to Toolbar easily if it's full/fixed.
+            // For now just show message.
+        }
+        else
+        {
+            CCLOG("Fishing FAILED.");
+            showActionMessage("Fish got away...", Color3B::RED);
+        }
+    });
+
+    this->addChild(fishingLayer, 100);
+}
 // ========== 返回菜单 ==========
 
 void GameScene::backToMenu()
@@ -1250,6 +1486,85 @@ void GameScene::backToMenu()
 
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, scene));
 
+}
+
+// ========== 背包系统相关 ==========
+
+void GameScene::toggleInventory()
+{
+    if (!inventory_)
+    {
+        CCLOG("ERROR: Inventory not initialized!");
+        return;
+    }
+
+    // 如果背包已经打开，关闭它
+    if (inventoryUI_)
+    {
+        inventoryUI_->close();
+        return;
+    }
+
+    // 创建背包UI
+    inventoryUI_ = InventoryUI::create(inventory_);
+    if (!inventoryUI_)
+    {
+        CCLOG("ERROR: Failed to create InventoryUI!");
+        return;
+    }
+
+    // 设置关闭回调
+    inventoryUI_->setCloseCallback([this]() {
+        onInventoryClosed();
+    });
+
+    // 添加到场景（高 Z-order 确保在顶层）
+    this->addChild(inventoryUI_, 2000);
+
+    // 设置全局 Z-order（确保在摄像机控制之外）
+    inventoryUI_->setGlobalZOrder(2000);
+
+    // 调整位置跟随摄像机
+    auto camera = this->getDefaultCamera();
+    if (camera)
+    {
+        Vec3 cameraPos = camera->getPosition3D();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 uiPos = Vec2(
+            cameraPos.x - visibleSize.width / 2,
+            cameraPos.y - visibleSize.height / 2
+        );
+        inventoryUI_->setPosition(uiPos);
+    }
+
+    // 播放显示动画
+    inventoryUI_->show();
+
+    CCLOG("Inventory opened");
+}
+
+void GameScene::onInventoryClosed()
+{
+    inventoryUI_ = nullptr;
+    CCLOG("Inventory closed");
+}
+
+void GameScene::enterMine()
+{
+    CCLOG("Entering mine...");
+
+    // 创建矿洞场景，传入当前的背包实例和第1层
+    auto mineScene = MineScene::createScene(inventory_, 1);
+    if (mineScene)
+    {
+        // 使用淡入淡出过渡效果
+        auto transition = TransitionFade::create(1.0f, mineScene);
+        Director::getInstance()->replaceScene(transition);
+    }
+    else
+    {
+        CCLOG("ERROR: Failed to create mine scene!");
+    }
 }
 
 

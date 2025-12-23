@@ -8,6 +8,10 @@
 #include "MapLayer.h"
 #include "Player.h"
 #include "FarmManager.h"
+#include "FishingLayer.h"
+#include "InventoryManager.h"
+#include "InventoryUI.h"
+#include "MineScene.h"
 
 /**
 
@@ -70,6 +74,10 @@ private:
 
     // 玩家
     Player* player_;
+
+    // 背包系统
+    InventoryManager* inventory_;
+    InventoryUI* inventoryUI_;
 
     // UI层（用于显示HUD等）
 
@@ -143,9 +151,24 @@ private:
     void backToMenu();
 
     /**
+     * @brief 打开/关闭背包
+     */
+    void toggleInventory();
+
+    /**
+     * @brief 关闭背包回调
+     */
+    void onInventoryClosed();
+
+    /**
+     * @brief 进入矿洞
+     */
+    void enterMine();
+
+    /**
      * @brief ESC键回调
      */
-    void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+
 
     /**
      * @brief 处理农田动作（J: till/plant/harvest，K: water）
@@ -158,29 +181,42 @@ private:
      */
     void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
 
-    // 物品栏
-    enum class ItemType
-    {
-        Hoe,
-        WateringCan,
-        Scythe,
-        Axe,
-        SeedTurnip,
-        SeedPotato,
-        SeedCorn,
-        SeedTomato,
-        SeedPumpkin,
-        SeedBlueberry,
-        Wood
-    };
+    /**
+     * @brief ESC键回调
+     */
+    void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
 
+    // 【Fishing Restored】鼠标事件
+    void onMouseDown(cocos2d::Event* event);
+    void onMouseUp(cocos2d::Event* event);
+
+    // Fishing Logic
+    void startFishing();
+    void updateFishingState(float delta);
+
+    enum class FishingState { NONE, CHARGING, WAITING, BITING, REELING };
+    FishingState fishingState_ = FishingState::NONE;
+    float chargePower_ = 0.0f;
+    float fishingTimer_ = 0.0f; // For generic timer use if needed
+    float waitTimer_ = 0.0f;
+    float biteTimer_ = 0.0f;
+    bool isFishing_ = false;
+
+    cocos2d::Sprite* chargeBarBg_ = nullptr;
+    cocos2d::Sprite* chargeBarFg_ = nullptr;
+    cocos2d::Sprite* exclamationMark_ = nullptr;
+
+    /**
+     * @brief 处理农田动作（J: till/plant/harvest，K: water）
+     * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
+     */
+// ... existing code ...
+    // 物品栏（使用 InventoryManager 中定义的 ItemType）
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
     void initToolbar();
     void selectItemByIndex(int idx);
-    std::string getItemName(ItemType type) const;
     int getCropIdForItem(ItemType type) const;
-    std::string getItemNameChinese(ItemType type) const;
     std::vector<cocos2d::Vec2> collectCollisionComponent(const cocos2d::Vec2& start) const;
     bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
 
