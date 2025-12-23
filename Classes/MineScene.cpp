@@ -69,36 +69,65 @@ void MineScene::initMap()
         auto tmxMap = mineLayer_->getTMXMap();
         if (tmxMap)
         {
+            CCLOG("TMX Map position: (%.2f, %.2f), Z-order: %d",
+                  tmxMap->getPosition().x, tmxMap->getPosition().y,
+                  tmxMap->getLocalZOrder());
+
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
-                CCLOG("Front layer found, current position: (%.2f, %.2f)",
-                      frontLayer->getPosition().x, frontLayer->getPosition().y);
+                CCLOG("✓ Front layer found!");
+                CCLOG("  - Position: (%.2f, %.2f)", frontLayer->getPosition().x, frontLayer->getPosition().y);
+                CCLOG("  - Visible: %s", frontLayer->isVisible() ? "YES" : "NO");
+                CCLOG("  - Opacity: %d", frontLayer->getOpacity());
+                CCLOG("  - Layer Size: (%.0f, %.0f)", frontLayer->getLayerSize().width, frontLayer->getLayerSize().height);
+                CCLOG("  - Original Z-order: %d", frontLayer->getLocalZOrder());
 
-                // 保存 Front 层相对于 TMX 地图的位置
+                // 核心问题：
+                // - mineLayer_ 在 scene 中 Z=0，包含 tmxMap
+                // - player_ 在 scene 中 Z=10
+                // - Front 层是 tmxMap 的子节点，所以它的渲染顺序受 tmxMap 的 Z-order 限制
+                // - 即使设置 Front 层 Z=100，有效 Z 仍然是 0 + 100 = 100（在 mineLayer 范围内）
+                // - 而 player_ 是场景的直接子节点，Z=10，会遮挡 mineLayer 中的所有内容
+
+                // 解决方案：把 Front 层从 tmxMap 移到场景，设置更高的 Z-order
                 Vec2 layerPosInMap = frontLayer->getPosition();
-                Vec2 mapPos = tmxMap->getPosition();
-                Vec2 finalPos = mapPos + layerPosInMap;
+                Vec2 mapPosInMineLayer = tmxMap->getPosition();
+                Vec2 mineLayerPosInScene = mineLayer_->getPosition();
 
-                // 移除 Front 层从 TMX 地图
+                // 计算 Front 层在场景中的绝对位置
+                Vec2 frontPosInScene = mineLayerPosInScene + mapPosInMineLayer + layerPosInMap;
+
+                CCLOG("  - Calculating position:");
+                CCLOG("    Front in map: (%.2f, %.2f)", layerPosInMap.x, layerPosInMap.y);
+                CCLOG("    Map in mineLayer: (%.2f, %.2f)", mapPosInMineLayer.x, mapPosInMineLayer.y);
+                CCLOG("    MineLayer in scene: (%.2f, %.2f)", mineLayerPosInScene.x, mineLayerPosInScene.y);
+                CCLOG("    Front in scene: (%.2f, %.2f)", frontPosInScene.x, frontPosInScene.y);
+
+                // 从 tmxMap 中移除 Front 层
                 frontLayer->retain();
-                tmxMap->removeChild(frontLayer);
+                tmxMap->removeChild(frontLayer, false);
 
-                // 设置绝对位置（考虑 TMX 地图的位置）
-                frontLayer->setPosition(finalPos);
+                // 设置在场景中的绝对位置
+                frontLayer->setPosition(frontPosInScene);
 
-                // 重新添加到 mineLayer_，Z-order 设为 20（玩家是 10）
-                // 添加到 mineLayer_ 而不是场景，这样位置计算更准确
-                mineLayer_->addChild(frontLayer, 20);
+                // 添加到场景，Z-order 设为 20（高于玩家的 10）
+                this->addChild(frontLayer, 20);
                 frontLayer->release();
 
-                CCLOG("Front layer repositioned with Z-order 20 at (%.2f, %.2f)",
-                      finalPos.x, finalPos.y);
+                CCLOG("✓ Front layer moved to scene:");
+                CCLOG("  - New parent: Scene (not tmxMap)");
+                CCLOG("  - Position in scene: (%.2f, %.2f)", frontPosInScene.x, frontPosInScene.y);
+                CCLOG("  - Z-order in scene: 20 (player is 10)");
             }
             else
             {
-                CCLOG("WARNING: Front layer not found in TMX map");
+                CCLOG("✗ WARNING: Front layer not found in TMX map");
             }
+        }
+        else
+        {
+            CCLOG("✗ WARNING: TMX map is null");
         }
     }
     else
@@ -134,6 +163,8 @@ void MineScene::initPlayer()
 
     // 从地图中心开始螺旋搜索，寻找第一个可行走的位置
     bool foundWalkable = false;
+    CCLOG("Searching for walkable position from center (%.0f, %.0f)...", mapSize.width / 2, mapSize.height / 2);
+
     for (int radius = 0; radius < 20 && !foundWalkable; radius++)
     {
         for (int dx = -radius; dx <= radius && !foundWalkable; dx++)
@@ -153,7 +184,8 @@ void MineScene::initPlayer()
                     {
                         startTileCoord = testCoord;
                         foundWalkable = true;
-                        CCLOG("Found walkable position at tile (%d, %d)", (int)testCoord.x, (int)testCoord.y);
+                        CCLOG("✓ Found walkable position at tile (%.0f, %.0f), radius: %d",
+                              testCoord.x, testCoord.y, radius);
                     }
                 }
             }
@@ -162,7 +194,7 @@ void MineScene::initPlayer()
 
     if (!foundWalkable)
     {
-        CCLOG("WARNING: Could not find walkable position, using map center");
+        CCLOG("✗ WARNING: Could not find walkable position within 20 tiles, using map center");
     }
 
     Vec2 startPosition = mineLayer_->tileCoordToPosition(startTileCoord);
@@ -171,7 +203,7 @@ void MineScene::initPlayer()
     player_->enableKeyboardControl();  // 启用键盘控制
 
     this->addChild(player_, 10);
-    CCLOG("Player added to mine scene");
+    CCLOG("✓ Player added to mine scene at position (%.2f, %.2f)", startPosition.x, startPosition.y);
 }
 
 void MineScene::initCamera()
@@ -342,7 +374,7 @@ void MineScene::goToPreviousFloor()
 void MineScene::goToNextFloor()
 {
     // 最多 120 层（根据您的地图文件）
-    if (currentFloor_ >= 18)
+    if (currentFloor_ >= 120)
     {
         CCLOG("Already at last floor!");
         return;
