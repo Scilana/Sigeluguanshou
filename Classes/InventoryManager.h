@@ -30,7 +30,16 @@ enum class ItemType
     Tomato,
     Pumpkin,
     Blueberry,
-    Fish
+    Fish,
+    // 矿石类型
+    CopperOre,      // 铜矿石
+    SilverOre,      // 银矿石
+    GoldOre,        // 金矿石
+    // 武器类型
+    WoodenSword,    // 木剑
+    IronSword,      // 铁剑
+    GoldSword,      // 金剑
+    DiamondSword    // 钻石剑
 };
 
 /**

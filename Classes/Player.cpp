@@ -1,99 +1,140 @@
 #include "Player.h"
-#include "MapLayer.h"
+#include "MapLayer.h" 
 
 USING_NS_CC;
 
 Player* Player::create()
 {
-    Player* player = new (std::nothrow) Player();
-    if (player && player->init())
+    Player* ret = new (std::nothrow) Player();
+    if (ret && ret->init())
     {
-        player->autorelease();
-        return player;
+        ret->autorelease();
+        return ret;
     }
-    CC_SAFE_DELETE(player);
-    return nullptr;
+    else
+    {
+        delete ret;
+        ret = nullptr;
+        return nullptr;
+    }
 }
 
 bool Player::init()
 {
-    // Ê¹ÓÃÎÆÀí³õÊ¼»¯£¨Äã¿ÉÒÔÌæ»»ÎªÊµ¼ÊµÄÍæ¼ÒÍ¼Æ¬£©
     if (!Sprite::init())
         return false;
 
-    // ´´½¨¼òµ¥µÄÍæ¼ÒÍâ¹Û£¨32x32µÄºìÉ«·½¿é£©
-    // ºóÆÚ¿ÉÒÔÌæ»»ÎªÕæÊµµÄÍæ¼Ò¾«ÁéÍ¼
-    this->setTextureRect(Rect(0, 0, 32, 32));
-    this->setColor(Color3B(255, 100, 100));  // ºìÉ«
+    if (FileUtils::getInstance()->isFileExist("characters/player.png"))
+    {
+        this->initWithFile("characters/player.png");
+    }
+    else
+    {
+        auto drawNode = DrawNode::create();
+        Vec2 vertices[] = {
+            Vec2(-16, -16),
+            Vec2(16, -16),
+            Vec2(16, 16),
+            Vec2(-16, 16)
+        };
+        drawNode->drawPolygon(vertices, 4, Color4F(0.2f, 0.4f, 0.8f, 1.0f), 1, Color4F::WHITE);
+        this->addChild(drawNode);
+    }
 
-    // ÉèÖÃÃªµãÎªÖĞĞÄ
-    this->setAnchorPoint(Vec2(0.5f, 0.5f));
-
-    // ³õÊ¼»¯³ÉÔ±±äÁ¿
-    mapLayer_ = nullptr;  // µØÍ¼²ãÒıÓÃ£¨ÉÔºóÉèÖÃ£©
-    moveSpeed_ = 200.0f;  // 200ÏñËØ/Ãë
+    moveSpeed_ = 150.0f;
     moveDirection_ = Vec2::ZERO;
+    facingDirection_ = Vec2(0, -1);
+    isMoving_ = false;
+    mapLayer_ = nullptr;
+    
+    isUpPressed_ = false;
+    isDownPressed_ = false;
+    isLeftPressed_ = false;
+    isRightPressed_ = false;
 
-    keyW_ = false;
-    keyA_ = false;
-    keyS_ = false;
-    keyD_ = false;
+    maxHp_ = 100;
+    hp_ = maxHp_;
+    isInvulnerable_ = false;
+    invulnerableTimer_ = 0.0f;
 
-    keyboardListener_ = nullptr;
-
-    // Æô¶¯¸üĞÂ
     this->scheduleUpdate();
 
-    CCLOG("Player created");
     return true;
 }
 
 void Player::update(float delta)
 {
-    // ÒÆ¶¯Íæ¼Ò
-    movePlayer(delta);
+    // æ›´æ–°æˆ˜æ–—çŠ¶æ€
+    if (isInvulnerable_)
+    {
+        invulnerableTimer_ -= delta;
+        if (invulnerableTimer_ <= 0)
+        {
+            isInvulnerable_ = false;
+            this->setOpacity(255);
+        }
+    }
+
+    // æ ¹æ®æŒ‰é”®çŠ¶æ€è®¡ç®—ç§»åŠ¨æ–¹å‘
+    Vec2 dir = Vec2::ZERO;
+    if (isUpPressed_) dir.y += 1;
+    if (isDownPressed_) dir.y -= 1;
+    if (isLeftPressed_) dir.x -= 1;
+    if (isRightPressed_) dir.x += 1;
+    
+    moveDirection_ = dir;
+    isMoving_ = (dir.lengthSquared() > 0);
+
+    // æ›´æ–°æœå‘
+    if (isMoving_)
+    {
+        if (dir.x != 0 || dir.y != 0) {
+            facingDirection_ = dir;
+            facingDirection_.normalize();
+        }
+    }
+
+    // æ›´æ–°ç§»åŠ¨
+    if (isMoving_)
+    {
+        updateMovement(delta);
+    }
 }
 
-void Player::setMoveSpeed(float speed)
+void Player::enableKeyboardControl()
 {
-    moveSpeed_ = speed;
+    auto listener = EventListenerKeyboard::create();
+    listener->onKeyPressed = CC_CALLBACK_2(Player::onKeyPressed, this);
+    listener->onKeyReleased = CC_CALLBACK_2(Player::onKeyReleased, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }
 
 void Player::setMapLayer(MapLayer* mapLayer)
 {
     mapLayer_ = mapLayer;
-    CCLOG("Player: MapLayer reference set for collision detection");
 }
 
-void Player::enableKeyboardControl()
+void Player::takeDamage(int damage)
 {
-    if (keyboardListener_)
-        return;  // ÒÑ¾­ÆôÓÃ
+    if (isInvulnerable_) return;
 
-    // ´´½¨¼üÅÌ¼àÌıÆ÷
-    keyboardListener_ = EventListenerKeyboard::create();
-    keyboardListener_->onKeyPressed = CC_CALLBACK_2(Player::onKeyPressed, this);
-    keyboardListener_->onKeyReleased = CC_CALLBACK_2(Player::onKeyReleased, this);
+    hp_ -= damage;
+    if (hp_ < 0) hp_ = 0;
 
-    // Ìí¼Ó¼àÌıÆ÷
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(keyboardListener_, this);
+    CCLOG("Player took %d damage! HP: %d/%d", damage, hp_, maxHp_);
 
-    CCLOG("Player keyboard control enabled");
-}
-
-void Player::disableKeyboardControl()
-{
-    if (!keyboardListener_)
-        return;
-
-    _eventDispatcher->removeEventListener(keyboardListener_);
-    keyboardListener_ = nullptr;
-
-    // ÖØÖÃ°´¼ü×´Ì¬
-    keyW_ = keyA_ = keyS_ = keyD_ = false;
-    updateMoveDirection();
-
-    CCLOG("Player keyboard control disabled");
+    if (hp_ <= 0)
+    {
+        CCLOG("Player Died!");
+        // TODO: Game Over Logic
+    }
+    else
+    {
+        isInvulnerable_ = true;
+        invulnerableTimer_ = 1.0f;
+        auto blink = Blink::create(1.0f, 5);
+        this->runAction(blink);
+    }
 }
 
 void Player::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
@@ -102,25 +143,23 @@ void Player::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
     case EventKeyboard::KeyCode::KEY_W:
     case EventKeyboard::KeyCode::KEY_UP_ARROW:
-        keyW_ = true;
-        break;
-    case EventKeyboard::KeyCode::KEY_A:
-    case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
-        keyA_ = true;
+        isUpPressed_ = true;
         break;
     case EventKeyboard::KeyCode::KEY_S:
     case EventKeyboard::KeyCode::KEY_DOWN_ARROW:
-        keyS_ = true;
+        isDownPressed_ = true;
+        break;
+    case EventKeyboard::KeyCode::KEY_A:
+    case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
+        isLeftPressed_ = true;
         break;
     case EventKeyboard::KeyCode::KEY_D:
     case EventKeyboard::KeyCode::KEY_RIGHT_ARROW:
-        keyD_ = true;
+        isRightPressed_ = true;
         break;
     default:
         break;
     }
-
-    updateMoveDirection();
 }
 
 void Player::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
@@ -129,124 +168,59 @@ void Player::onKeyReleased(EventKeyboard::KeyCode keyCode, Event* event)
     {
     case EventKeyboard::KeyCode::KEY_W:
     case EventKeyboard::KeyCode::KEY_UP_ARROW:
-        keyW_ = false;
-        break;
-    case EventKeyboard::KeyCode::KEY_A:
-    case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
-        keyA_ = false;
+        isUpPressed_ = false;
         break;
     case EventKeyboard::KeyCode::KEY_S:
     case EventKeyboard::KeyCode::KEY_DOWN_ARROW:
-        keyS_ = false;
+        isDownPressed_ = false;
+        break;
+    case EventKeyboard::KeyCode::KEY_A:
+    case EventKeyboard::KeyCode::KEY_LEFT_ARROW:
+        isLeftPressed_ = false;
         break;
     case EventKeyboard::KeyCode::KEY_D:
     case EventKeyboard::KeyCode::KEY_RIGHT_ARROW:
-        keyD_ = false;
+        isRightPressed_ = false;
         break;
     default:
         break;
     }
-
-    updateMoveDirection();
 }
 
-void Player::updateMoveDirection()
+void Player::updateMovement(float delta)
 {
-    // ¼ÆËãÒÆ¶¯·½Ïò
-    moveDirection_ = Vec2::ZERO;
-
-    if (keyW_) moveDirection_.y += 1.0f;
-    if (keyS_) moveDirection_.y -= 1.0f;
-    if (keyA_) moveDirection_.x -= 1.0f;
-    if (keyD_) moveDirection_.x += 1.0f;
-
-    // ¹éÒ»»¯·½ÏòÏòÁ¿£¨Ê¹¶Ô½ÇÏßÒÆ¶¯ËÙ¶ÈÒ»ÖÂ£©
-    if (moveDirection_.length() > 0)
-    {
-        moveDirection_.normalize();
-    }
-}
-
-void Player::movePlayer(float delta)
-{
-    if (moveDirection_.length() == 0)
-        return;  // Ã»ÓĞÒÆ¶¯
-
-    // ¼ÆËãÒÆ¶¯¾àÀë
-    Vec2 movement = moveDirection_ * moveSpeed_ * delta;
-
-    // ¼ÆËãĞÂÎ»ÖÃ
     Vec2 currentPos = this->getPosition();
-    Vec2 newPos = currentPos + movement;
+    Vec2 direction = moveDirection_;
+    if (direction.lengthSquared() > 0)
+        direction.normalize(); 
 
-    // Èç¹ûÓĞµØÍ¼²ãÒıÓÃ£¬½øĞĞÅö×²¼ì²âºÍ±ß½ç¼ì²é
+    Vec2 nextPos = currentPos + direction * moveSpeed_ * delta;
+
     if (mapLayer_)
     {
-        // »ñÈ¡µØÍ¼´óĞ¡
-        Size mapSize = mapLayer_->getMapSize();
-
-        // Íæ¼Ò´óĞ¡£¨¼ÙÉèÊÇ32x32£©
-        float playerHalfSize = 16.0f;
-
-        // ¼ì²é²¢ÏŞÖÆÔÚµØÍ¼±ß½çÄÚ
-        newPos.x = std::max(playerHalfSize, std::min(newPos.x, mapSize.width - playerHalfSize));
-        newPos.y = std::max(playerHalfSize, std::min(newPos.y, mapSize.height - playerHalfSize));
-
-        // ¼ì²éĞÂÎ»ÖÃÊÇ·ñ¿ÉĞĞ×ß
-        if (mapLayer_->isWalkable(newPos))
+        if (mapLayer_->isWalkable(nextPos))
         {
-            // ¿ÉÒÔÒÆ¶¯
-            this->setPosition(newPos);
+            this->setPosition(nextPos);
         }
         else
         {
-            // µ÷ÊÔ£º¼ÇÂ¼Åö×²
-            static int collisionCount = 0;
-            collisionCount++;
-            if (collisionCount <= 5)  // Ö»´òÓ¡Ç°5´ÎÅö×²
+            Vec2 nextPosX = currentPos + Vec2(direction.x * moveSpeed_ * delta, 0);
+            if (mapLayer_->isWalkable(nextPosX))
             {
-                CCLOG("Collision %d: tried to move from (%.1f, %.1f) to (%.1f, %.1f)",
-                    collisionCount, currentPos.x, currentPos.y, newPos.x, newPos.y);
+                this->setPosition(nextPosX);
             }
-
-            // ²»¿ÉĞĞ×ß£¬³¢ÊÔ·Ö±ğ¼ì²âXºÍY·½Ïò
-            // ÕâÑù¿ÉÒÔÊµÏÖ"»¬Ç½"Ğ§¹û
-
-            // ³¢ÊÔÖ»ÔÚX·½ÏòÒÆ¶¯
-            Vec2 newPosX = Vec2(newPos.x, currentPos.y);
-            // ÏŞÖÆÔÚ±ß½çÄÚ
-            newPosX.x = std::max(playerHalfSize, std::min(newPosX.x, mapSize.width - playerHalfSize));
-
-            if (mapLayer_->isWalkable(newPosX))
-            {
-                this->setPosition(newPosX);
-            }
-            // ³¢ÊÔÖ»ÔÚY·½ÏòÒÆ¶¯
             else
             {
-                Vec2 newPosY = Vec2(currentPos.x, newPos.y);
-                // ÏŞÖÆÔÚ±ß½çÄÚ
-                newPosY.y = std::max(playerHalfSize, std::min(newPosY.y, mapSize.height - playerHalfSize));
-
-                if (mapLayer_->isWalkable(newPosY))
+                Vec2 nextPosY = currentPos + Vec2(0, direction.y * moveSpeed_ * delta);
+                if (mapLayer_->isWalkable(nextPosY))
                 {
-                    this->setPosition(newPosY);
+                    this->setPosition(nextPosY);
                 }
-                // Èç¹ûÁ½¸ö·½Ïò¶¼²»ÄÜÒÆ¶¯£¬ÔòÍ£ÁôÔÚÔ­Î»
             }
         }
     }
     else
     {
-        // Ã»ÓĞµØÍ¼²ãÒıÓÃ£¬Ö±½ÓÒÆ¶¯£¨ÎŞÅö×²¼ì²â£©
-        this->setPosition(newPos);
-
-        // µÚÒ»´Î¾¯¸æ
-        static bool warningShown = false;
-        if (!warningShown)
-        {
-            CCLOG("Warning: Player has no MapLayer reference, collision detection disabled!");
-            warningShown = true;
-        }
+        this->setPosition(nextPos);
     }
 }

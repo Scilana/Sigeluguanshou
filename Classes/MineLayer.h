@@ -27,6 +27,15 @@ public:
      * @param tmxFile TMX 地图文件路径
      */
     bool init(const std::string& tmxFile);
+
+    bool isMineralAt(const cocos2d::Vec2& tileCoord) const;
+    int getMineralGID(const cocos2d::Vec2& tileCoord) const;
+    void clearMineralAt(const cocos2d::Vec2& tileCoord);
+    bool isStairsAt(const cocos2d::Vec2& tileCoord) const;
+
+private:
+    cocos2d::TMXLayer* mineralLayer_{ nullptr };
+    cocos2d::TMXLayer* stairsLayer_{ nullptr };
 };
 
 #endif // __MINE_LAYER_H__

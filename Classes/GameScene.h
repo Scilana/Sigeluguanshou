@@ -1,5 +1,4 @@
 #ifndef __GAME_SCENE_H__
-
 #define __GAME_SCENE_H__
 
 #include "cocos2d.h"
@@ -9,161 +8,99 @@
 #include "Player.h"
 #include "FarmManager.h"
 #include "FishingLayer.h"
-#include "InventoryManager.h"
+#include "InventoryManager.h" // 包含 ItemType 定义
 #include "InventoryUI.h"
 #include "MineScene.h"
 
 /**
-
  * @brief 游戏场景类（总控制）
-
  *
-
  * 职责：
-
  * - 组合地图层、玩家、摄像机
-
  * - 场景级别的管理和协调
-
  * - 摄像机跟随玩家
-
  * - 不负责具体的绘图工作
-
  */
-
 class GameScene : public cocos2d::Scene
-
 {
-
 public:
-
     /**
-
      * @brief 创建场景
-
      */
-
     static cocos2d::Scene* createScene();
 
     /**
-
      * @brief 初始化
-
      */
-
     virtual bool init() override;
 
     /**
-
      * @brief 更新函数
-
      * @param delta 时间增量
-
      */
-
     virtual void update(float delta) override;
 
     CREATE_FUNC(GameScene);
 
 private:
-    // 地图层
-    MapLayer* mapLayer_;
+    // ==========================================
+    // 核心组件
+    // ==========================================
+    MapLayer* mapLayer_;       // 地图层
+    FarmManager* farmManager_; // 农场管理
+    Player* player_;           // 玩家
 
-    // 农场管理
-    FarmManager* farmManager_;
-
-    // 玩家
-    Player* player_;
-
-    // 背包系统
+    // ==========================================
+    // 背包与系统
+    // ==========================================
     InventoryManager* inventory_;
     InventoryUI* inventoryUI_;
 
-    // UI层（用于显示HUD等）
-
+    // ==========================================
+    // UI层与元素
+    // ==========================================
     cocos2d::Layer* uiLayer_;
-
-    // UI元素
-
     cocos2d::Label* timeLabel_;
     cocos2d::Label* moneyLabel_;
     cocos2d::Label* positionLabel_;  // 显示玩家位置（调试用）
     cocos2d::Label* actionLabel_;    // 显示农场操作提示
     cocos2d::Label* itemLabel_;      // 显示当前物品
 
-    /**
-     * @brief 初始化地图
-     */
+    // ==========================================
+    // 初始化函数
+    // ==========================================
     void initMap();
-
-    /**
-     * @brief 初始化农田管理
-     */
     void initFarm();
-
-    /**
-     * @brief 初始化玩家
-     */
     void initPlayer();
-
-    /**
-
-     * @brief 初始化UI
-
-     */
-
     void initUI();
-
-    /**
-
-     * @brief 初始化摄像机
-
-     */
-
     void initCamera();
-
-    /**
-
-     * @brief 初始化控制
-
-     */
-
     void initControls();
+    void initTrees(); // 初始化调试用树木标记
 
-    /**
+    // ==========================================
+    // 更新循环函数
+    // ==========================================
+    void updateCamera(); // 更新摄像机位置（跟随玩家）
+    void updateUI();     // 更新UI显示
 
-     * @brief 更新摄像机位置（跟随玩家）
-
-     */
-
-    void updateCamera();
-
-    /**
-
-     * @brief 更新UI显示
-
-     */
-    void updateUI();
-
-    /**
-     * @brief 返回菜单
-     */
+    // ==========================================
+    // 控制与交互
+    // ==========================================
     void backToMenu();
-
-    /**
-     * @brief 打开/关闭背包
-     */
     void toggleInventory();
-
-    /**
-     * @brief 关闭背包回调
-     */
     void onInventoryClosed();
+    void enterMine();
 
     /**
-     * @brief 进入矿洞
+     * @brief 检查玩家是否在电梯附近
      */
-    void enterMine();
+    bool isPlayerNearElevator() const;
+
+    // 电梯位置（农场地图上的坐标，需根据实际地图调整）
+    // 假设在地图右上角附近 (例如 30*32, 20*32 处)
+    // 根据之前的 mine_floor1.tmx，可能是在某个边缘。
+    // 这里我们定义一个常量，并在 updateUI 中显示位置辅助调试
+    const cocos2d::Vec2 ELEVATOR_POS = cocos2d::Vec2(800, 600);
 
     /**
      * @brief ESC键回调
@@ -185,19 +122,21 @@ private:
      * @brief ESC键回调
      */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
-
-    // 【Fishing Restored】鼠标事件
+    
+    // 鼠标回调 (钓鱼用)
     void onMouseDown(cocos2d::Event* event);
     void onMouseUp(cocos2d::Event* event);
 
-    // Fishing Logic
+    // ==========================================
+    // 钓鱼系统 (Fishing Logic)
+    // ==========================================
     void startFishing();
     void updateFishingState(float delta);
 
     enum class FishingState { NONE, CHARGING, WAITING, BITING, REELING };
     FishingState fishingState_ = FishingState::NONE;
     float chargePower_ = 0.0f;
-    float fishingTimer_ = 0.0f; // For generic timer use if needed
+    float fishingTimer_ = 0.0f;
     float waitTimer_ = 0.0f;
     float biteTimer_ = 0.0f;
     bool isFishing_ = false;
@@ -206,60 +145,79 @@ private:
     cocos2d::Sprite* chargeBarFg_ = nullptr;
     cocos2d::Sprite* exclamationMark_ = nullptr;
 
-    /**
-     * @brief 处理农田动作（J: till/plant/harvest，K: water）
-     * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
-     */
-// ... existing code ...
-    // 物品栏（使用 InventoryManager 中定义的 ItemType）
+    // ==========================================
+    // 农场与工具栏操作
+    // ==========================================
+
+
+    // 快捷栏
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
     void initToolbar();
     void selectItemByIndex(int idx);
     int getCropIdForItem(ItemType type) const;
-    std::vector<cocos2d::Vec2> collectCollisionComponent(const cocos2d::Vec2& start) const;
-    bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
 
-    // 树木
+    // ==========================================
+    // 砍树系统 (New Architecture from GameScene1)
+    // ==========================================
+    
+    /**
+     * @brief 砍树核心数据结构
+     */
+    struct TreeChopData
+    {
+        cocos2d::Vec2 tileCoord;         // 点击的瓦片坐标
+        std::vector<cocos2d::Vec2> tiles;// 整棵树包含的所有瓦片
+        cocos2d::Sprite* treeSprite;     // 替换后的树木精灵
+        float chopTimer;                 // 计时器（用于超时重置）
+        int chopCount;                   // 当前砍伐次数
+        static const int CHOPS_NEEDED = 3; // 砍倒所需的次数
+    };
+    std::vector<TreeChopData> activeChops_; // 当前正在被砍的树
+
+    // 调试用树木结构 (旧)
     struct Tree
     {
         cocos2d::Vec2 tileCoord;
         cocos2d::Node* node;
     };
     std::vector<Tree> trees_;
-
-    struct PendingChop
-    {
-        std::vector<cocos2d::Vec2> tiles;
-        float timer;
-        int fillGid;
-    };
-    std::vector<PendingChop> pendingChops_;
-    void initTrees();
     int findTreeIndex(const cocos2d::Vec2& tile) const;
 
-    // 砍树数据结构（核心）
-    struct TreeChopData
-    {
-        cocos2d::Vec2 tileCoord;
-        std::vector<cocos2d::Vec2> tiles;
-        cocos2d::Sprite* treeSprite;
-        float chopTimer;
-        int chopCount;
-        static const int CHOPS_NEEDED = 3;
-    };
-    std::vector<TreeChopData> activeChops_;
+    /**
+     * @brief 收集与起点相连的所有同类型碰撞组件（用于识别整棵树）
+     */
+    std::vector<cocos2d::Vec2> collectCollisionComponent(const cocos2d::Vec2& start) const;
 
-    // 砍树相关函数
+    /**
+     * @brief 在玩家周围寻找最近的树根碰撞体
+     */
+    bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
+
+    /**
+     * @brief 创建树木精灵（清除瓦片并在原位生成Sprite）
+     */
     cocos2d::Sprite* createTreeSprite(const std::vector<cocos2d::Vec2>& tiles);
+
+    /**
+     * @brief 播放树木摇晃动画
+     */
     void playTreeShakeAnimation(cocos2d::Sprite* treeSprite);
+
+    /**
+     * @brief 播放树木倒下动画
+     */
     void playTreeFallAnimation(TreeChopData* chopData);
+
+    /**
+     * @brief 生成掉落物
+     */
     void spawnItem(ItemType type, const cocos2d::Vec2& position, int count);
 
-
+    /**
+     * @brief 更新砍树状态（如超时重置）
+     */
     void updateChopping(float delta);
 };
 
 #endif // __GAME_SCENE_H__
-
-
