@@ -1,8 +1,10 @@
 #include "MineScene.h"
+#include "MiningManager.h"
 #include "GameScene.h"
 #include "Slime.h"
 #include "Zombie.h"
 #include <cmath>
+#include <algorithm>
 
 USING_NS_CC;
 
@@ -32,6 +34,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     player_ = nullptr;
     uiLayer_ = nullptr;
     inventory_ = inventory;
+    miningManager_ = nullptr;
     currentFloor_ = currentFloor;
     monsterSpawnTimer_ = 0.0f;
     currentWeapon_ = ItemType::None;
@@ -46,6 +49,14 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
 
     // 初始化各组件
     initMap();
+    if (mineLayer_)
+    {
+        miningManager_ = MiningManager::create(mineLayer_, inventory_);
+        if (miningManager_)
+        {
+            this->addChild(miningManager_, 0);
+        }
+    }
     initPlayer();
     initCamera();
     initUI();
@@ -166,7 +177,7 @@ void MineScene::initPlayer()
 
     // 创建玩家
     player_ = Player::create();
-    if (!player_)
+    if (player_)
     {
         // 设置玩家初始位置（矿洞入口/楼梯处）
         // 假设楼梯在地图上方或特定位置
@@ -207,10 +218,14 @@ void MineScene::initPlayer()
 void MineScene::initCamera()
 {
     auto camera = this->getDefaultCamera();
-    if (camera)
+    if (camera && player_)
     {
         Vec2 playerPos = player_->getPosition();
         camera->setPosition(playerPos.x, playerPos.y);
+    }
+    else if (!player_)
+    {
+        CCLOG("ERROR: Cannot init camera without player");
     }
 }
 

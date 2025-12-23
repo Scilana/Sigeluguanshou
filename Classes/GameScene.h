@@ -148,16 +148,7 @@ private:
     // ==========================================
     // 农场与工具栏操作
     // ==========================================
-    /**
-     * @brief 处理农田动作（J: till/plant/harvest，K: water）
-     * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
-     */
-    void handleFarmAction(bool waterOnly);
 
-    /**
-     * @brief 显示一次性的操作提示
-     */
-    void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
 
     // 快捷栏
     std::vector<ItemType> toolbarItems_;

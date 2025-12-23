@@ -14,6 +14,7 @@
 // 前向声明
 class Slime;
 class Zombie;
+class MiningManager;
 
 /**
  * @brief 矿洞场景类（简化版）
@@ -58,6 +59,7 @@ private:
     // 背包系统（共享引用）
     InventoryManager* inventory_;
     InventoryUI* inventoryUI_;
+    MiningManager* miningManager_;
     
     // 物品栏（使用 InventoryManager 中定义的 ItemType）
     std::vector<ItemType> toolbarItems_;
@@ -75,6 +77,9 @@ private:
     // UI元素
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
+    cocos2d::Label* itemLabel_;       // current tool label
+    cocos2d::Label* actionLabel_;     // action hint label
+    cocos2d::Label* healthLabel_;     // health label
 
     // 当前矿洞层数
     int currentFloor_;
