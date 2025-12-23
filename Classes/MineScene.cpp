@@ -64,6 +64,42 @@ void MineScene::initMap()
     {
         this->addChild(mineLayer_, 0);
         CCLOG("Mine layer added to scene (Floor %d)", currentFloor_);
+
+        // 调整 Front 层的 Z-order，使其显示在玩家上方
+        auto tmxMap = mineLayer_->getTMXMap();
+        if (tmxMap)
+        {
+            auto frontLayer = tmxMap->getLayer("Front");
+            if (frontLayer)
+            {
+                CCLOG("Front layer found, current position: (%.2f, %.2f)",
+                      frontLayer->getPosition().x, frontLayer->getPosition().y);
+
+                // 保存 Front 层相对于 TMX 地图的位置
+                Vec2 layerPosInMap = frontLayer->getPosition();
+                Vec2 mapPos = tmxMap->getPosition();
+                Vec2 finalPos = mapPos + layerPosInMap;
+
+                // 移除 Front 层从 TMX 地图
+                frontLayer->retain();
+                tmxMap->removeChild(frontLayer);
+
+                // 设置绝对位置（考虑 TMX 地图的位置）
+                frontLayer->setPosition(finalPos);
+
+                // 重新添加到 mineLayer_，Z-order 设为 20（玩家是 10）
+                // 添加到 mineLayer_ 而不是场景，这样位置计算更准确
+                mineLayer_->addChild(frontLayer, 20);
+                frontLayer->release();
+
+                CCLOG("Front layer repositioned with Z-order 20 at (%.2f, %.2f)",
+                      finalPos.x, finalPos.y);
+            }
+            else
+            {
+                CCLOG("WARNING: Front layer not found in TMX map");
+            }
+        }
     }
     else
     {
@@ -90,15 +126,49 @@ void MineScene::initPlayer()
         return;
     }
 
-    // 设置玩家初始位置（矿洞入口，暂时设为地图中心）
+    // 设置玩家初始位置 - 寻找第一个可行走的位置
     Size mapSize = mineLayer_->getMapSizeInTiles();
     Size tileSize = mineLayer_->getTileSize();
 
     Vec2 startTileCoord(mapSize.width / 2, mapSize.height / 2);
-    Vec2 startPosition = mineLayer_->tileCoordToPosition(startTileCoord);
 
+    // 从地图中心开始螺旋搜索，寻找第一个可行走的位置
+    bool foundWalkable = false;
+    for (int radius = 0; radius < 20 && !foundWalkable; radius++)
+    {
+        for (int dx = -radius; dx <= radius && !foundWalkable; dx++)
+        {
+            for (int dy = -radius; dy <= radius && !foundWalkable; dy++)
+            {
+                if (abs(dx) != radius && abs(dy) != radius)
+                    continue; // 只检查当前圆周上的点
+
+                Vec2 testCoord(mapSize.width / 2 + dx, mapSize.height / 2 + dy);
+
+                // 检查是否在地图范围内且可行走
+                if (testCoord.x >= 0 && testCoord.x < mapSize.width &&
+                    testCoord.y >= 0 && testCoord.y < mapSize.height)
+                {
+                    if (!mineLayer_->hasCollisionAt(testCoord))
+                    {
+                        startTileCoord = testCoord;
+                        foundWalkable = true;
+                        CCLOG("Found walkable position at tile (%d, %d)", (int)testCoord.x, (int)testCoord.y);
+                    }
+                }
+            }
+        }
+    }
+
+    if (!foundWalkable)
+    {
+        CCLOG("WARNING: Could not find walkable position, using map center");
+    }
+
+    Vec2 startPosition = mineLayer_->tileCoordToPosition(startTileCoord);
     player_->setPosition(startPosition);
     player_->setMapLayer(mineLayer_);
+    player_->enableKeyboardControl();  // 启用键盘控制
 
     this->addChild(player_, 10);
     CCLOG("Player added to mine scene");
@@ -162,7 +232,7 @@ void MineScene::initUI()
 
     // 操作提示
     auto hint = Label::createWithSystemFont(
-        "WASD: Move | ESC: Back to Farm",
+        "WASD: Move | Q: Previous Floor | E: Next Floor | ESC: Back to Farm",
         "Arial", 18
     );
     hint->setPosition(Vec2(
@@ -193,6 +263,12 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_ESCAPE:
         backToFarm();
         break;
+    case EventKeyboard::KeyCode::KEY_Q:
+        goToPreviousFloor();
+        break;
+    case EventKeyboard::KeyCode::KEY_E:
+        goToNextFloor();
+        break;
     default:
         break;
     }
@@ -215,13 +291,10 @@ void MineScene::updateCamera()
         return;
 
     Vec2 playerPos = player_->getPosition();
-    Vec2 cameraPos = camera->getPosition();
 
-    // 平滑跟随
-    float smoothing = 0.1f;
-    Vec2 newCameraPos = cameraPos + (playerPos - cameraPos) * smoothing;
-
-    camera->setPosition(newCameraPos);
+    // 直接设置摄像机位置，不使用平滑跟随
+    // 这样可以避免场景切换时的抖动
+    camera->setPosition(playerPos);
 }
 
 void MineScene::updateUI()
@@ -247,5 +320,38 @@ void MineScene::backToFarm()
     // 创建农场场景并切换
     auto farmScene = GameScene::createScene();
     auto transition = TransitionFade::create(1.0f, farmScene);
+    Director::getInstance()->replaceScene(transition);
+}
+
+void MineScene::goToPreviousFloor()
+{
+    if (currentFloor_ <= 1)
+    {
+        CCLOG("Already at first floor!");
+        return;
+    }
+
+    CCLOG("Going to previous floor: %d -> %d", currentFloor_, currentFloor_ - 1);
+
+    // 创建上一层矿洞场景
+    auto prevFloorScene = MineScene::createScene(inventory_, currentFloor_ - 1);
+    auto transition = TransitionFade::create(0.5f, prevFloorScene);
+    Director::getInstance()->replaceScene(transition);
+}
+
+void MineScene::goToNextFloor()
+{
+    // 最多 120 层（根据您的地图文件）
+    if (currentFloor_ >= 18)
+    {
+        CCLOG("Already at last floor!");
+        return;
+    }
+
+    CCLOG("Going to next floor: %d -> %d", currentFloor_, currentFloor_ + 1);
+
+    // 创建下一层矿洞场景
+    auto nextFloorScene = MineScene::createScene(inventory_, currentFloor_ + 1);
+    auto transition = TransitionFade::create(0.5f, nextFloorScene);
     Director::getInstance()->replaceScene(transition);
 }

@@ -25,22 +25,16 @@ bool MineLayer::init(const std::string& tmxFile)
     CCLOG("MineLayer initialized with: %s", tmxFile.c_str());
 
     // 新的矿洞地图使用 "Buildings" 层作为碰撞层
-    // MapLayer 默认使用 "collision" 层，但新地图使用 "Buildings" 层
     auto tmxMap = getTMXMap();
     if (tmxMap)
     {
-        // 检查是否有 Buildings 层（新地图格式）
-        auto buildingsLayer = tmxMap->getLayer("Buildings");
-        if (buildingsLayer)
-        {
-            CCLOG("Found Buildings layer in mine map - will use for collision");
-        }
-
-        // 检查其他层
+        // 检查图层
         auto backLayer = tmxMap->getLayer("Back");
+        auto buildingsLayer = tmxMap->getLayer("Buildings");
         auto frontLayer = tmxMap->getLayer("Front");
 
         if (backLayer) CCLOG("Found Back layer");
+        if (buildingsLayer) CCLOG("Found Buildings layer (collision)");
         if (frontLayer) CCLOG("Found Front layer");
     }
 

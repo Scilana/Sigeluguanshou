@@ -102,6 +102,16 @@ private:
      * @brief 返回地面（农场）
      */
     void backToFarm();
+
+    /**
+     * @brief 前往上一层
+     */
+    void goToPreviousFloor();
+
+    /**
+     * @brief 前往下一层
+     */
+    void goToNextFloor();
 };
 
 #endif // __MINE_SCENE_H__
