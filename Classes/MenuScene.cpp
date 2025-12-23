@@ -1,4 +1,4 @@
-﻿#include "MenuScene.h"
+#include "MenuScene.h"
 #include "GameScene.h"
 
 USING_NS_CC;
@@ -13,12 +13,12 @@ bool MenuScene::init()
     if (!Scene::init())
         return false;
 
-    CCLOG("Initializing Menu Scene with transparent buttons...");
+    CCLOG("Initializing Menu Scene with start screen assets...");
 
     createBackground();
+    createDecorations();
     createLogo();
     createMenuButtons();
-    createDecorations();
     addAnimations();
 
     return true;
@@ -29,239 +29,248 @@ bool MenuScene::checkImageExists(const std::string& path)
     return FileUtils::getInstance()->isFileExist(path);
 }
 
-// ========== 创建背景 ==========
+cocos2d::MenuItemImage* MenuScene::createImageButton(
+    const std::string& normalImage,
+    const std::string& selectedImage,
+    const cocos2d::ccMenuCallback& callback
+)
+{
+    if (!checkImageExists(normalImage))
+        return nullptr;
+
+    std::string selectedPath = selectedImage;
+    if (!checkImageExists(selectedImage))
+        selectedPath = normalImage;
+
+    auto button = MenuItemImage::create(normalImage, selectedPath, callback);
+    return button;
+}
+
+// ========== Background ==========
 
 void MenuScene::createBackground()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 加载背景图片
-    checkImageExists("images/backgrounds/menu_bg.png");
-    auto bg = Sprite::create("images/backgrounds/menu_bg.png");
-    if (bg) {
-        bg->setPosition(Vec2(
+    auto bg = Sprite::create("ui/start/background1.png");
+    if (!bg) {
+        bg = Sprite::create("images/backgrounds/menu_bg.png");
+    }
+    if (!bg)
+        return;
+
+    float scaleX = visibleSize.width / bg->getContentSize().width;
+    float scaleY = visibleSize.height / bg->getContentSize().height;
+    float scale = MAX(scaleX, scaleY);
+
+    bg->setPosition(Vec2(
+        origin.x + visibleSize.width / 2,
+        origin.y + visibleSize.height / 2
+    ));
+    bg->setScale(scale);
+    this->addChild(bg, -20);
+
+    auto overlay = Sprite::create("ui/start/background2.png");
+    if (overlay) {
+        overlay->setPosition(Vec2(
             origin.x + visibleSize.width / 2,
             origin.y + visibleSize.height / 2
         ));
+        overlay->setScale(scale);
+        overlay->setOpacity(200);
+        this->addChild(overlay, -19);
+    }
 
-        // 缩放以适应屏幕
-        float scaleX = visibleSize.width / bg->getContentSize().width;
-        float scaleY = visibleSize.height / bg->getContentSize().height;
-        float scale = MAX(scaleX, scaleY);
-        bg->setScale(scale);
-
-        this->addChild(bg, -10);
-        CCLOG("Background image loaded successfully!");
-        return;
+    auto overlayHalf = Sprite::create("ui/start/background2-half.png");
+    if (overlayHalf) {
+        float overlayScale = visibleSize.width / overlayHalf->getContentSize().width;
+        overlayHalf->setAnchorPoint(Vec2(0.5f, 1.0f));
+        overlayHalf->setPosition(Vec2(
+            origin.x + visibleSize.width / 2,
+            origin.y + visibleSize.height
+        ));
+        overlayHalf->setScale(overlayScale);
+        overlayHalf->setOpacity(220);
+        this->addChild(overlayHalf, -18);
     }
 }
 
-// ========== 创建Logo ==========
+// ========== Logo ==========
 
 void MenuScene::createLogo()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 加载Logo图片
-    checkImageExists("images/ui/logo.png");
-    auto logo = Sprite::create("images/ui/logo.png");
-    if (logo) {
-        logo->setPosition(Vec2(
-            origin.x + visibleSize.width / 2,
-            origin.y + visibleSize.height * 0.75f
-    ));
-
-        float maxWidth = visibleSize.width * 1.0f;
-        if (logo->getContentSize().width > maxWidth) {
-            float scale = maxWidth / logo->getContentSize().width;
-            logo->setScale(scale);
-        }
-
-        logo->setTag(1001);
-        this->addChild(logo, 10);
-        CCLOG("Logo image loaded successfully!");
-        return;
+    auto logo = Sprite::create("ui/start/title.png");
+    if (!logo) {
+        logo = Sprite::create("images/ui/logo.png");
     }
-    
+    if (!logo)
+        return;
+
+    float targetWidth = visibleSize.width * 0.6f;
+    float scale = targetWidth / logo->getContentSize().width;
+
+    logo->setPosition(Vec2(
+        origin.x + visibleSize.width / 2,
+        origin.y + visibleSize.height * 0.72f
+    ));
+    logo->setScale(scale);
+    logo->setTag(1001);
+    this->addChild(logo, 10);
 }
 
-// ========== 创建半透明按钮 ==========
+// ========== Menu Buttons ==========
 
 void MenuScene::createMenuButtons()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 创建半透明样式的按钮
-    auto createTransparentButton = [](const std::string& text, const ccMenuCallback& callback) {
-        // 按钮背景 - 半透明黑色
-        // Alpha值: 180 = 约70%透明度, 可以调整 (0-255)
-        auto normalBg = LayerColor::create(Color4B(0, 0, 0, 180), 320, 70);
+    const std::string startNormal = "ui/start/start1.png";
+    const std::string startSelected = "ui/start/start2.png";
+    const std::string loadNormal = "ui/start/load1.png";
+    const std::string loadSelected = "ui/start/load2.png";
+    const std::string coopNormal = "ui/start/coop1.png";
+    const std::string coopSelected = "ui/start/coop2.png";
+    const std::string quitNormal = "ui/start/quit1.png";
+    const std::string quitSelected = "ui/start/quit2.png";
 
-        // 添加边框效果
-        auto border = DrawNode::create();
-        Vec2 rectangle[4] = {
-            Vec2(0, 0),
-            Vec2(320, 0),
-            Vec2(320, 70),
-            Vec2(0, 70)
-        };
-        Color4F borderColor(1.0f, 1.0f, 1.0f, 0.8f); // 白色边框
-        border->drawPolygon(rectangle, 4, Color4F(0, 0, 0, 0), 2, borderColor);
-        normalBg->addChild(border);
+    auto sample = Sprite::create(startNormal);
+    float buttonScale = 1.0f;
+    float buttonWidth = visibleSize.width * 0.18f;
+    if (sample) {
+        float targetButtonWidth = visibleSize.width * 0.18f;
+        buttonScale = targetButtonWidth / sample->getContentSize().width;
+        buttonWidth = sample->getContentSize().width * buttonScale;
+    }
 
-        // 按钮文字 - 白色，带阴影
-        auto label = Label::createWithSystemFont(text, "Arial", 32);
-        label->setPosition(Vec2(160, 35));
-        label->setColor(Color3B::WHITE);
-        label->enableShadow(Color4B(0, 0, 0, 200), Size(2, -2), 0);
-        normalBg->addChild(label);
+    float gap = visibleSize.width * 0.035f;
+    float totalWidth = buttonWidth * 4 + gap * 3;
+    float startX = origin.x + (visibleSize.width - totalWidth) / 2 + buttonWidth / 2;
+    float y = origin.y + visibleSize.height * 0.18f;
 
-        // 悬停状态 - 稍微亮一些
-        auto hoverBg = LayerColor::create(Color4B(255, 255, 255, 100), 320, 70);
-        auto hoverBorder = DrawNode::create();
-        hoverBorder->drawPolygon(rectangle, 4, Color4F(0, 0, 0, 0), 3, Color4F(1, 1, 1, 1));
-        hoverBg->addChild(hoverBorder);
-
-        auto hoverLabel = Label::createWithSystemFont(text, "Arial", 32);
-        hoverLabel->setPosition(Vec2(160, 35));
-        hoverLabel->setColor(Color3B::WHITE);
-        hoverLabel->enableShadow(Color4B(0, 0, 0, 200), Size(2, -2), 0);
-        hoverBg->addChild(hoverLabel);
-
-        // 按下状态 - 更暗
-        auto pressedBg = LayerColor::create(Color4B(0, 0, 0, 220), 320, 70);
-        auto pressedBorder = DrawNode::create();
-        pressedBorder->drawPolygon(rectangle, 4, Color4F(0, 0, 0, 0), 2, Color4F(0.8f, 0.8f, 0.8f, 0.8f));
-        pressedBg->addChild(pressedBorder);
-
-        auto pressedLabel = Label::createWithSystemFont(text, "Arial", 32);
-        pressedLabel->setPosition(Vec2(160, 35));
-        pressedLabel->setColor(Color3B(200, 200, 200));
-        pressedLabel->enableShadow(Color4B(0, 0, 0, 200), Size(2, -2), 0);
-        pressedBg->addChild(pressedLabel);
-
-        // 创建菜单项
-        auto button = MenuItemSprite::create(normalBg, hoverBg, pressedBg, callback);
-
-        return button;
-        };
-
-    // 创建按钮
-    auto startButton = createTransparentButton("Start Game",
+    auto startButton = createImageButton(startNormal, startSelected,
         CC_CALLBACK_1(MenuScene::startGameCallback, this));
-    startButton->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.45f
-    ));
-
-    auto continueButton = createTransparentButton("Continue",
+    auto loadButton = createImageButton(loadNormal, loadSelected,
         CC_CALLBACK_1(MenuScene::continueGameCallback, this));
-    continueButton->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.36f
-    ));
-
-    auto settingsButton = createTransparentButton("Settings",
-        CC_CALLBACK_1(MenuScene::settingsCallback, this));
-    settingsButton->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.27f
-    ));
-
-    auto exitButton = createTransparentButton("Exit",
+    auto coopButton = createImageButton(coopNormal, coopSelected,
+        CC_CALLBACK_1(MenuScene::coopCallback, this));
+    auto quitButton = createImageButton(quitNormal, quitSelected,
         CC_CALLBACK_1(MenuScene::exitGameCallback, this));
-    exitButton->setPosition(Vec2(
-        origin.x + visibleSize.width / 2,
-        origin.y + visibleSize.height * 0.18f
-    ));
 
-    // 创建菜单
-    auto menu = Menu::create(startButton, continueButton, settingsButton, exitButton, nullptr);
+    auto menu = Menu::create();
     menu->setPosition(Vec2::ZERO);
     this->addChild(menu, 20);
 
-    CCLOG("Transparent buttons created!");
+    if (startButton) {
+        startButton->setScale(buttonScale);
+        startButton->setPosition(Vec2(startX, y));
+        menu->addChild(startButton);
+    }
+
+    if (loadButton) {
+        loadButton->setScale(buttonScale);
+        loadButton->setPosition(Vec2(startX + (buttonWidth + gap) * 1, y));
+        menu->addChild(loadButton);
+    }
+
+    if (coopButton) {
+        coopButton->setScale(buttonScale);
+        coopButton->setPosition(Vec2(startX + (buttonWidth + gap) * 2, y));
+        menu->addChild(coopButton);
+    }
+
+    if (quitButton) {
+        quitButton->setScale(buttonScale);
+        quitButton->setPosition(Vec2(startX + (buttonWidth + gap) * 3, y));
+        menu->addChild(quitButton);
+    }
 }
 
-// ========== 创建装饰元素 ==========
+// ========== Decorations ==========
 
 void MenuScene::createDecorations()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
     Vec2 origin = Director::getInstance()->getVisibleOrigin();
 
-    // 版本信息 - 半透明背景
-    auto versionBg = LayerColor::create(Color4B(0, 0, 0, 150), 120, 30);
-    versionBg->setPosition(Vec2(
-        origin.x + visibleSize.width - 125,
-        origin.y + 10
-    ));
-    this->addChild(versionBg, 29);
+    float decorScale = visibleSize.width / 1920.0f;
 
-    auto version = Label::createWithSystemFont("v0.1.0 - Alpha", "Arial", 16);
-    version->setPosition(Vec2(
-        origin.x + visibleSize.width - 65,
-        origin.y + 25
-    ));
-    version->setColor(Color3B::WHITE);
-    version->enableShadow(Color4B(0, 0, 0, 200), Size(1, -1), 0);
-    this->addChild(version, 30);
+    auto clouds = Sprite::create("ui/start/Clouds.png");
+    if (clouds) {
+        clouds->setPosition(Vec2(
+            origin.x + visibleSize.width * 0.72f,
+            origin.y + visibleSize.height * 0.78f
+        ));
+        clouds->setScale(decorScale * 1.4f);
+        clouds->setTag(2001);
+        this->addChild(clouds, -5);
+    }
 
-    // 制作信息 - 半透明背景
-    auto creditsBg = LayerColor::create(Color4B(0, 0, 0, 150), 140, 30);
-    creditsBg->setPosition(Vec2(origin.x + 10, origin.y + 10));
-    this->addChild(creditsBg, 29);
-
-    auto credits = Label::createWithSystemFont("Made with Love", "Arial", 16);
-    credits->setPosition(Vec2(origin.x + 80, origin.y + 25));
-    credits->setColor(Color3B::WHITE);
-    credits->enableShadow(Color4B(0, 0, 0, 200), Size(1, -1), 0);
-    this->addChild(credits, 30);
+    auto cloud = Sprite::create("ui/start/Cloud.png");
+    if (cloud) {
+        cloud->setPosition(Vec2(
+            origin.x + visibleSize.width * 0.85f,
+            origin.y + visibleSize.height * 0.62f
+        ));
+        cloud->setScale(decorScale * 1.1f);
+        cloud->setTag(2002);
+        this->addChild(cloud, -6);
+    }
 }
 
-// ========== 添加动画 ==========
+// ========== Animations ==========
 
 void MenuScene::addAnimations()
 {
-    // Logo漂浮动画
     auto logo = this->getChildByTag(1001);
     if (logo) {
-        auto moveUp = MoveBy::create(2.0f, Vec2(0, 15));
+        auto moveUp = MoveBy::create(2.5f, Vec2(0, 12));
         auto moveDown = moveUp->reverse();
         auto seq = Sequence::create(moveUp, moveDown, nullptr);
         logo->runAction(RepeatForever::create(seq));
 
-        // 添加轻微的缩放效果
-        auto scaleUp = ScaleTo::create(2.0f, 1.02f);
-        auto scaleDown = ScaleTo::create(2.0f, 1.0f);
+        auto scaleUp = ScaleTo::create(2.5f, logo->getScale() * 1.02f);
+        auto scaleDown = ScaleTo::create(2.5f, logo->getScale());
         auto scaleSeq = Sequence::create(scaleUp, scaleDown, nullptr);
         logo->runAction(RepeatForever::create(scaleSeq));
     }
+
+    auto clouds = this->getChildByTag(2001);
+    if (clouds) {
+        auto drift = MoveBy::create(8.0f, Vec2(35, 0));
+        auto driftBack = drift->reverse();
+        auto seq = Sequence::create(drift, driftBack, nullptr);
+        clouds->runAction(RepeatForever::create(seq));
+    }
+
+    auto cloud = this->getChildByTag(2002);
+    if (cloud) {
+        auto drift = MoveBy::create(10.0f, Vec2(25, 0));
+        auto driftBack = drift->reverse();
+        auto seq = Sequence::create(drift, driftBack, nullptr);
+        cloud->runAction(RepeatForever::create(seq));
+    }
 }
 
-// ========== 回调函数 ==========
+// ========== Callbacks ==========
 
 void MenuScene::startGameCallback(Ref* sender)
 {
     CCLOG("Start Game clicked!");
 
-    auto visibleSize = Director::getInstance()->getVisibleSize();
-
-    // Uncomment when GameScene is ready
-    
     auto scene = GameScene::createScene();
     Director::getInstance()->replaceScene(
         TransitionFade::create(1.0f, scene)
     );
-    
 }
 
 void MenuScene::continueGameCallback(Ref* sender)
 {
-    CCLOG("Continue clicked!");
+    CCLOG("Load clicked!");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
@@ -287,22 +296,22 @@ void MenuScene::continueGameCallback(Ref* sender)
     label->runAction(removeAction->clone());
 }
 
-void MenuScene::settingsCallback(Ref* sender)
+void MenuScene::coopCallback(Ref* sender)
 {
-    CCLOG("Settings clicked!");
+    CCLOG("Co-op clicked!");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    auto messageBg = LayerColor::create(Color4B(0, 0, 0, 200), 450, 100);
+    auto messageBg = LayerColor::create(Color4B(0, 0, 0, 200), 520, 100);
     messageBg->setPosition(Vec2(
-        (visibleSize.width - 450) / 2,
+        (visibleSize.width - 520) / 2,
         (visibleSize.height - 100) / 2
     ));
     this->addChild(messageBg, 100);
 
-    auto label = Label::createWithSystemFont("Settings Coming Soon!", "Arial", 36);
+    auto label = Label::createWithSystemFont("Co-op Coming Soon!", "Arial", 36);
     label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-    label->setColor(Color3B(100, 200, 255));
+    label->setColor(Color3B(120, 220, 120));
     label->enableShadow(Color4B(0, 0, 0, 255), Size(2, -2), 0);
     this->addChild(label, 101);
 
