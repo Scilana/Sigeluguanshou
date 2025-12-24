@@ -10,7 +10,10 @@
 #include "FishingLayer.h"
 #include "InventoryManager.h" // 包含 ItemType 定义
 #include "InventoryUI.h"
+#include "MarketState.h"
 #include "MineScene.h"
+
+class MarketUI;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -55,6 +58,8 @@ private:
     // ==========================================
     InventoryManager* inventory_;
     InventoryUI* inventoryUI_;
+    MarketState marketState_;
+    MarketUI* marketUI_;
 
     // ==========================================
     // UI层与元素
@@ -89,6 +94,8 @@ private:
     void backToMenu();
     void toggleInventory();
     void onInventoryClosed();
+    void toggleMarket();
+    void onMarketClosed();
     void enterMine();
 
     /**
@@ -156,6 +163,7 @@ private:
     void initToolbar();
     void selectItemByIndex(int idx);
     int getCropIdForItem(ItemType type) const;
+    ItemType getItemTypeForCropId(int cropId) const;
 
     // ==========================================
     // 砍树系统 (New Architecture from GameScene1)
