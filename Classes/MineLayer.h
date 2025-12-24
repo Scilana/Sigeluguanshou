@@ -33,6 +33,9 @@ public:
     void clearMineralAt(const cocos2d::Vec2& tileCoord);
     bool isStairsAt(const cocos2d::Vec2& tileCoord) const;
 
+    // 重写 isWalkable，检查地面是否存在
+    virtual bool isWalkable(const cocos2d::Vec2& position) const override;
+
 private:
     cocos2d::TMXLayer* mineralLayer_{ nullptr };
     cocos2d::TMXLayer* stairsLayer_{ nullptr };

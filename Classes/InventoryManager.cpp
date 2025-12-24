@@ -2,6 +2,36 @@
 
 USING_NS_CC;
 
+static InventoryManager* s_instance = nullptr;
+
+InventoryManager* InventoryManager::getInstance()
+{
+    if (!s_instance)
+    {
+        s_instance = new (std::nothrow) InventoryManager();
+        if (s_instance && s_instance->init())
+        {
+            // 不调用 autorelease，保持引用计数为 1
+            CCLOG("InventoryManager instance created");
+        }
+        else
+        {
+            CC_SAFE_DELETE(s_instance);
+        }
+    }
+    return s_instance;
+}
+
+void InventoryManager::destroyInstance()
+{
+    if (s_instance)
+    {
+        s_instance->release();
+        s_instance = nullptr;
+        CCLOG("InventoryManager instance destroyed");
+    }
+}
+
 bool InventoryManager::init()
 {
     if (!Node::init())

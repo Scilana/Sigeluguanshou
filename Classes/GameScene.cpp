@@ -51,11 +51,12 @@ bool GameScene::init()
     initControls();
 
     // 初始化背包系统
-    inventory_ = InventoryManager::create();
+    inventory_ = InventoryManager::getInstance();
     if (inventory_)
     {
-        this->addChild(inventory_, 0);
-        CCLOG("InventoryManager initialized");
+        // 不再添加到场景，避免随场景销毁
+        // this->addChild(inventory_, 0);
+        CCLOG("InventoryManager retrieved from singleton");
     }
     marketState_.init();
     initWeather();
