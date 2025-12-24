@@ -10,7 +10,11 @@
 #include "FishingLayer.h"
 #include "InventoryManager.h" // 包含 ItemType 定义
 #include "InventoryUI.h"
+#include "MarketState.h"
 #include "MineScene.h"
+#include "SaveManager.h"
+
+class MarketUI;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -25,14 +29,26 @@ class GameScene : public cocos2d::Scene
 {
 public:
     /**
-     * @brief 创建场景
+     * @brief 创建场景（新游戏）
      */
     static cocos2d::Scene* createScene();
+
+    /**
+     * @brief 创建场景（从存档加载）
+     * @param loadFromSave 是否从存档加载
+     */
+    static cocos2d::Scene* createScene(bool loadFromSave);
 
     /**
      * @brief 初始化
      */
     virtual bool init() override;
+
+    /**
+     * @brief 初始化并加载存档
+     * @param loadFromSave 是否从存档加载
+     */
+    bool init(bool loadFromSave);
 
     /**
      * @brief 更新函数
@@ -55,6 +71,8 @@ private:
     // ==========================================
     InventoryManager* inventory_;
     InventoryUI* inventoryUI_;
+    MarketState marketState_;
+    MarketUI* marketUI_;
 
     // ==========================================
     // UI层与元素
@@ -89,6 +107,8 @@ private:
     void backToMenu();
     void toggleInventory();
     void onInventoryClosed();
+    void toggleMarket();
+    void onMarketClosed();
     void enterMine();
 
     /**
@@ -156,6 +176,7 @@ private:
     void initToolbar();
     void selectItemByIndex(int idx);
     int getCropIdForItem(ItemType type) const;
+    ItemType getItemTypeForCropId(int cropId) const;
 
     // ==========================================
     // 砍树系统 (New Architecture from GameScene1)
@@ -174,6 +195,7 @@ private:
         static const int CHOPS_NEEDED = 3; // 砍倒所需的次数
     };
     std::vector<TreeChopData> activeChops_; // 当前正在被砍的树
+    std::vector<cocos2d::Vec2> choppedTrees_; // 已砍倒的树木位置（用于存档）
 
     // 调试用树木结构 (旧)
     struct Tree
@@ -218,6 +240,30 @@ private:
      * @brief 更新砍树状态（如超时重置）
      */
     void updateChopping(float delta);
+
+    // ==========================================
+    // 存档系统
+    // ==========================================
+
+    /**
+     * @brief 保存游戏
+     */
+    void saveGame();
+
+    /**
+     * @brief 加载游戏
+     */
+    void loadGame();
+
+    /**
+     * @brief 收集游戏数据用于保存
+     */
+    SaveManager::SaveData collectSaveData();
+
+    /**
+     * @brief 应用加载的游戏数据
+     */
+    void applySaveData(const SaveManager::SaveData& data);
 };
 
 #endif // __GAME_SCENE_H__

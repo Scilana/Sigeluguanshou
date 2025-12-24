@@ -38,6 +38,8 @@ list(APPEND GAME_SOURCE
      Classes/FishingLayer.cpp
      Classes/InventoryManager.cpp
      Classes/InventoryUI.cpp
+     Classes/MarketState.cpp
+     Classes/MarketUI.cpp
      Classes/MineScene.cpp
      Classes/MineLayer.cpp
      Classes/MiningManager.cpp
@@ -47,6 +49,7 @@ list(APPEND GAME_SOURCE
      Classes/Weapon.cpp
      Classes/TreasureChest.cpp
      Classes/ElevatorUI.cpp
+     Classes/SaveManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -59,6 +62,8 @@ list(APPEND GAME_HEADER
      Classes/FishingLayer.h
      Classes/InventoryManager.h
      Classes/InventoryUI.h
+     Classes/MarketState.h
+     Classes/MarketUI.h
      Classes/MineScene.h
      Classes/MineLayer.h
      Classes/MiningManager.h
@@ -68,6 +73,7 @@ list(APPEND GAME_HEADER
      Classes/Weapon.h
      Classes/TreasureChest.h
      Classes/ElevatorUI.h
+     Classes/SaveManager.h
      )
 
 if(ANDROID)

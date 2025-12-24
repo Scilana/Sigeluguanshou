@@ -79,7 +79,7 @@ void FarmManager::update(float delta)
 
 FarmManager::ActionResult FarmManager::tillTile(const Vec2& tileCoord)
 {
-    ActionResult result{false, ""};
+    ActionResult result{false, "", -1};
     if (!isValidTile(tileCoord))
     {
         result.message = "Out of farm bounds";
@@ -103,7 +103,7 @@ FarmManager::ActionResult FarmManager::tillTile(const Vec2& tileCoord)
 
 FarmManager::ActionResult FarmManager::plantSeed(const Vec2& tileCoord, int cropId)
 {
-    ActionResult result{false, ""};
+    ActionResult result{false, "", -1};
     if (!isValidTile(tileCoord))
     {
         result.message = "Out of farm bounds";
@@ -138,7 +138,7 @@ FarmManager::ActionResult FarmManager::plantSeed(const Vec2& tileCoord, int crop
 
 FarmManager::ActionResult FarmManager::waterTile(const Vec2& tileCoord)
 {
-    ActionResult result{false, ""};
+    ActionResult result{false, "", -1};
     if (!isValidTile(tileCoord))
     {
         result.message = "Out of farm bounds";
@@ -161,7 +161,7 @@ FarmManager::ActionResult FarmManager::waterTile(const Vec2& tileCoord)
 
 FarmManager::ActionResult FarmManager::harvestTile(const Vec2& tileCoord)
 {
-    ActionResult result{false, ""};
+    ActionResult result{false, "", -1};
     if (!isValidTile(tileCoord))
     {
         result.message = "Out of farm bounds";
@@ -181,6 +181,7 @@ FarmManager::ActionResult FarmManager::harvestTile(const Vec2& tileCoord)
     }
 
     CropDef def = getCropDef(tile.cropId);
+    result.cropId = tile.cropId;
     tile.hasCrop = false;
     tile.cropId = -1;
     tile.stage = 0;
@@ -188,7 +189,7 @@ FarmManager::ActionResult FarmManager::harvestTile(const Vec2& tileCoord)
     tile.watered = false;
 
     result.success = true;
-    result.message = StringUtils::format("Harvested %s (+%d gold)", def.name.c_str(), def.salePrice);
+    result.message = StringUtils::format("Harvested %s", def.name.c_str());
     redrawOverlay();
     return result;
 }
@@ -253,6 +254,20 @@ void FarmManager::progressDay()
 void FarmManager::forceRedraw()
 {
     redrawOverlay();
+}
+
+void FarmManager::setAllTiles(const std::vector<FarmTile>& tiles)
+{
+    if (tiles.size() != tiles_.size())
+    {
+        CCLOG("Warning: Loaded tile count (%zu) doesn't match current map size (%zu)",
+            tiles.size(), tiles_.size());
+        // 可以选择调整大小或只复制匹配的部分
+        tiles_.resize(tiles.size());
+    }
+    tiles_ = tiles;
+    redrawOverlay();
+    CCLOG("Farm tiles loaded from save data");
 }
 
 void FarmManager::redrawOverlay()

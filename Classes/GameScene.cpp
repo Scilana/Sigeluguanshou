@@ -2,6 +2,7 @@
 #include "MenuScene.h"
 #include "FarmManager.h"
 #include "ElevatorUI.h"
+#include "MarketUI.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -37,6 +38,7 @@ bool GameScene::init()
     uiLayer_ = nullptr;
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
+    marketUI_ = nullptr;
 
     initMap();
     initFarm();
@@ -54,6 +56,7 @@ bool GameScene::init()
         // this->addChild(inventory_, 0);
         CCLOG("InventoryManager retrieved from singleton");
     }
+    marketState_.init();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -410,7 +413,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | M: Mine | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | P: Market | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -515,9 +518,16 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
         break;
+    case EventKeyboard::KeyCode::KEY_P:
+        toggleMarket();
+        break;
     case EventKeyboard::KeyCode::KEY_L:
         // 直接进入矿洞（使用 Mines/1.tmx）
         enterMine();
+        break;
+    case EventKeyboard::KeyCode::KEY_X:
+        // 保存游戏
+        saveGame();
         break;
     case EventKeyboard::KeyCode::KEY_M:
         if (isPlayerNearElevator())
@@ -735,6 +745,11 @@ void GameScene::updateUI()
 
     }
 
+    if (moneyLabel_ && inventory_)
+    {
+        moneyLabel_->setString(StringUtils::format("Gold: %d", inventory_->getMoney()));
+    }
+
     // 如果有地图层，也显示瓦片坐标
 
     if (mapLayer_)
@@ -762,7 +777,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     tileCoord.x = std::round(tileCoord.x);
     tileCoord.y = std::round(tileCoord.y);
 
-    FarmManager::ActionResult result{ false, "Unavailable" };
+    FarmManager::ActionResult result{ false, "Unavailable", -1 };
     ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
 
     if (waterOnly) {
@@ -770,7 +785,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             result = farmManager_->waterTile(tileCoord);
         }
         else {
-            result = { false, "Need watering can to water" };
+            result = { false, "Need watering can to water", -1 };
         }
     }
     else {
@@ -783,18 +798,34 @@ void GameScene::handleFarmAction(bool waterOnly)
             break;
         case ItemType::Scythe:
             result = farmManager_->harvestTile(tileCoord);
+            if (result.success && inventory_)
+            {
+                ItemType harvestItem = getItemTypeForCropId(result.cropId);
+                if (harvestItem != ItemType::None)
+                {
+                    if (inventory_->addItem(harvestItem, 1))
+                    {
+                        result.message = StringUtils::format("Harvested %s (+1)", InventoryManager::getItemName(harvestItem).c_str());
+                        if (inventoryUI_) inventoryUI_->refresh();
+                    }
+                    else
+                    {
+                        result.message = "Inventory full!";
+                    }
+                }
+            }
             break;
          case ItemType::Axe: {
             // ========== 砍树逻辑（第3刀替换版）==========
             Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No tree to chop here" };
+                result = { false, "No tree to chop here", -1 };
                 break;
             }
 
             std::vector<Vec2> component = collectCollisionComponent(target);
             if (component.empty() || component.size() > 10) {
-                result = { false, "No tree to chop here" };
+                result = { false, "No tree to chop here", -1 };
                 break;
             }
 
@@ -841,16 +872,16 @@ void GameScene::handleFarmAction(bool waterOnly)
                 if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
                     if (existingChop->treeSprite) {
                         playTreeFallAnimation(existingChop);
-                        result = { true, "Timber!" };
+                        result = { true, "Timber!", -1 };
                     }
                     else {
                         // 防御性编程：万一数值设置错了，没生成Sprite就倒了
-                        result = { true, "Tree destroyed (No anim)" };
+                        result = { true, "Tree destroyed (No anim)", -1 };
                         // 这里应该补一个清理瓦片的逻辑，以防万一
                     }
                 }
                 else {
-                    result = { true, "" };
+                    result = { true, "", -1 };
                 }
             }
             else {
@@ -868,7 +899,7 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                 // 第1刀的反馈
                 showActionMessage("Thump! (1)", Color3B::WHITE);
-                result = { true, "" };
+                result = { true, "", -1 };
             }
             break;
         }
@@ -876,7 +907,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             // Mine rocks: detect collision tile, verify rock GID, then clear it.
             Vec2 target = tileCoord;
             if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
@@ -893,13 +924,13 @@ void GameScene::handleFarmAction(bool waterOnly)
 
             int baseGid = mapLayer_->getBaseTileGID(target);
             if (rockGids.find(baseGid) == rockGids.end()) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
             std::vector<Vec2> component = collectCollisionComponent(target);
             if (component.empty()) {
-                result = { false, "No rock to mine here" };
+                result = { false, "No rock to mine here", -1 };
                 break;
             }
 
@@ -908,7 +939,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                 mapLayer_->clearBaseTileAt(t);
             }
 
-            result = { true, "Rock broken!" };
+            result = { true, "Rock broken!", -1 };
             break;
         }
         case ItemType::SeedTurnip:
@@ -917,12 +948,23 @@ void GameScene::handleFarmAction(bool waterOnly)
         case ItemType::SeedTomato:
         case ItemType::SeedPumpkin:
         case ItemType::SeedBlueberry: {
+            if (!inventory_ || !inventory_->hasItem(current, 1))
+            {
+                result = { false, "No seeds left", -1 };
+                break;
+            }
             int cropId = getCropIdForItem(current);
             result = farmManager_->plantSeed(tileCoord, cropId);
+            if (result.success && inventory_)
+            {
+                inventory_->removeItem(current, 1);
+                result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
+                if (inventoryUI_) inventoryUI_->refresh();
+            }
             break;
         }
         default:
-            result = { false, "Unknown item action" };
+            result = { false, "Unknown item action", -1 };
             break;
         }
     }
@@ -1328,7 +1370,20 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData) {
         int woodCount = 3 + (rand() % 3);
         spawnItem(ItemType::Wood, stumpPos, woodCount);
 
-        // --- F. 清理砍树数据 ---
+        // --- F. 记录被砍倒的树木位置（用于存档） ---
+        // 记录整棵树的所有瓦片
+        for (const auto& tile : savedTiles)
+        {
+            // 检查是否已记录
+            auto it = std::find(choppedTrees_.begin(), choppedTrees_.end(), tile);
+            if (it == choppedTrees_.end())
+            {
+                choppedTrees_.push_back(tile);
+                CCLOG("Recorded chopped tree tile: (%.0f, %.0f)", tile.x, tile.y);
+            }
+        }
+
+        // --- G. 清理砍树数据 ---
         activeChops_.erase(
             std::remove_if(activeChops_.begin(), activeChops_.end(),
                 [actualRootTile](const TreeChopData& c) {
@@ -1553,6 +1608,20 @@ int GameScene::getCropIdForItem(ItemType type) const
     }
 }
 
+ItemType GameScene::getItemTypeForCropId(int cropId) const
+{
+    switch (cropId)
+    {
+    case 0: return ItemType::Turnip;
+    case 1: return ItemType::Potato;
+    case 2: return ItemType::Corn;
+    case 3: return ItemType::Tomato;
+    case 4: return ItemType::Pumpkin;
+    case 5: return ItemType::Blueberry;
+    default: return ItemType::None;
+    }
+}
+
 void GameScene::onMouseDown(Event* event)
 {
     EventMouse* e = (EventMouse*)event;
@@ -1771,6 +1840,56 @@ void GameScene::onInventoryClosed()
     CCLOG("Inventory closed");
 }
 
+void GameScene::toggleMarket()
+{
+    if (!inventory_)
+    {
+        CCLOG("ERROR: Inventory not initialized!");
+        return;
+    }
+
+    if (marketUI_)
+    {
+        marketUI_->close();
+        return;
+    }
+
+    marketUI_ = MarketUI::create(inventory_, &marketState_, farmManager_);
+    if (!marketUI_)
+    {
+        CCLOG("ERROR: Failed to create MarketUI!");
+        return;
+    }
+
+    marketUI_->setCloseCallback([this]() {
+        onMarketClosed();
+    });
+
+    this->addChild(marketUI_, 2200);
+    marketUI_->setGlobalZOrder(2200);
+
+    auto camera = this->getDefaultCamera();
+    if (camera)
+    {
+        Vec3 cameraPos = camera->getPosition3D();
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Vec2 uiPos = Vec2(
+            cameraPos.x - visibleSize.width / 2,
+            cameraPos.y - visibleSize.height / 2
+        );
+        marketUI_->setPosition(uiPos);
+    }
+
+    marketUI_->show();
+    CCLOG("Market opened");
+}
+
+void GameScene::onMarketClosed()
+{
+    marketUI_ = nullptr;
+    CCLOG("Market closed");
+}
+
 void GameScene::enterMine()
 {
     CCLOG("Opening elevator UI...");
@@ -1792,6 +1911,18 @@ void GameScene::enterMine()
             // 楼层0是农场（地面），不需要切换场景
             showActionMessage("Already on the farm!", Color3B(200, 200, 200));
             return;
+        }
+
+        // 进入矿洞前自动保存游戏
+        CCLOG("Auto-saving before entering mine...");
+        SaveManager::SaveData data = collectSaveData();
+        if (SaveManager::getInstance()->saveGame(data))
+        {
+            CCLOG("✓ Auto-save successful!");
+        }
+        else
+        {
+            CCLOG("✗ Auto-save failed!");
         }
 
         // 创建矿洞场景，传入背包实例和选择的楼层
@@ -1836,11 +1967,284 @@ void GameScene::enterMine()
 bool GameScene::isPlayerNearElevator() const
 {
     if (!player_) return false;
-    
+
     // 检查距离
     float distance = player_->getPosition().distance(ELEVATOR_POS);
     // 允许100像素误差
-    return distance < 100.0f; 
+    return distance < 100.0f;
+}
+
+// ==========================================
+// 存档系统实现
+// ==========================================
+
+Scene* GameScene::createScene(bool loadFromSave)
+{
+    auto scene = GameScene::create();
+    if (scene && loadFromSave)
+    {
+        // 通过调用带参数的 init 来加载存档
+        // 但由于 create() 已经调用了 init()，我们需要手动加载
+        GameScene* gameScene = dynamic_cast<GameScene*>(scene);
+        if (gameScene)
+        {
+            gameScene->loadGame();
+        }
+    }
+    return scene;
+}
+
+bool GameScene::init(bool loadFromSave)
+{
+    if (!init())
+        return false;
+
+    if (loadFromSave)
+    {
+        loadGame();
+    }
+
+    return true;
+}
+
+void GameScene::saveGame()
+{
+    CCLOG("========================================");
+    CCLOG("Saving game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data = collectSaveData();
+
+    if (SaveManager::getInstance()->saveGame(data))
+    {
+        CCLOG("✓ Game saved successfully!");
+        // 显示保存成功提示
+        showActionMessage("Game Saved!", Color3B::GREEN);
+    }
+    else
+    {
+        CCLOG("✗ Failed to save game!");
+        showActionMessage("Save Failed!", Color3B::RED);
+    }
+}
+
+void GameScene::loadGame()
+{
+    CCLOG("========================================");
+    CCLOG("Loading game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data;
+
+    if (SaveManager::getInstance()->loadGame(data))
+    {
+        CCLOG("✓ Game loaded successfully from file!");
+        applySaveData(data);
+
+        // 延迟显示消息，确保 UI 已初始化
+        if (actionLabel_)
+        {
+            showActionMessage("Game Loaded!", Color3B::GREEN);
+        }
+    }
+    else
+    {
+        CCLOG("✗ Failed to load game!");
+        if (actionLabel_)
+        {
+            showActionMessage("Load Failed!", Color3B::RED);
+        }
+    }
+}
+
+SaveManager::SaveData GameScene::collectSaveData()
+{
+    SaveManager::SaveData data;
+
+    // 保存玩家位置
+    if (player_)
+    {
+        data.playerPosition = player_->getPosition();
+        CCLOG("Saving player position: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+
+    // 保存背包数据
+    if (inventory_)
+    {
+        data.inventory.money = inventory_->getMoney();
+        CCLOG("Saving money: %d", data.inventory.money);
+
+        const auto& slots = inventory_->getAllSlots();
+        for (size_t i = 0; i < slots.size(); i++)
+        {
+            const auto& slot = slots[i];
+            if (!slot.isEmpty())
+            {
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                data.inventory.slots.push_back(slotData);
+                CCLOG("  Slot %zu: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+            else
+            {
+                // 空槽位也要保存，保持索引一致
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(ItemType::None);
+                slotData.count = 0;
+                data.inventory.slots.push_back(slotData);
+            }
+        }
+    }
+
+    // 保存游戏天数
+    if (farmManager_)
+    {
+        data.dayCount = farmManager_->getDayCount();
+        CCLOG("Saving day count: %d", data.dayCount);
+    }
+
+    // 保存农作物数据
+    if (farmManager_)
+    {
+        const auto& farmTiles = farmManager_->getAllTiles();
+        Size mapSize = farmManager_->getMapSize();
+
+        for (int y = 0; y < mapSize.height; y++)
+        {
+            for (int x = 0; x < mapSize.width; x++)
+            {
+                int index = y * mapSize.width + x;
+                if (index >= farmTiles.size())
+                    continue;
+
+                const auto& tile = farmTiles[index];
+
+                // 只保存有状态的瓦片
+                if (tile.tilled || tile.hasCrop)
+                {
+                    SaveManager::SaveData::FarmTileData tileData;
+                    tileData.x = x;
+                    tileData.y = y;
+                    tileData.tilled = tile.tilled;
+                    tileData.watered = tile.watered;
+                    tileData.hasCrop = tile.hasCrop;
+                    tileData.cropId = tile.cropId;
+                    tileData.stage = tile.stage;
+                    tileData.progressDays = tile.progressDays;
+                    data.farmTiles.push_back(tileData);
+                }
+            }
+        }
+        CCLOG("Saving %zu farm tiles", data.farmTiles.size());
+    }
+
+    // 树木存档功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+
+    return data;
+}
+
+void GameScene::applySaveData(const SaveManager::SaveData& data)
+{
+    CCLOG("========================================");
+    CCLOG("Applying save data...");
+    CCLOG("========================================");
+
+    // 恢复玩家位置
+    if (player_)
+    {
+        CCLOG("Restoring player position...");
+        player_->setPosition(data.playerPosition);
+        CCLOG("✓ Player position restored: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+    else
+    {
+        CCLOG("✗ Warning: player_ is null!");
+    }
+
+    // 恢复背包数据
+    if (inventory_)
+    {
+        CCLOG("Restoring inventory...");
+        // 清空现有背包
+        inventory_->clear();
+
+        // 恢复金币 - 使用 addMoney 一次性添加
+        if (data.inventory.money > 0)
+        {
+            inventory_->addMoney(data.inventory.money);
+        }
+        CCLOG("✓ Money restored: %d", data.inventory.money);
+
+        // 恢复物品槽位
+        CCLOG("Restoring %zu inventory slots...", data.inventory.slots.size());
+        for (size_t i = 0; i < data.inventory.slots.size() && i < InventoryManager::MAX_SLOTS; i++)
+        {
+            const auto& slotData = data.inventory.slots[i];
+            if (slotData.type != static_cast<int>(ItemType::None) && slotData.count > 0)
+            {
+                ItemType type = static_cast<ItemType>(slotData.type);
+                inventory_->setSlot(i, type, slotData.count);
+                CCLOG("  Slot %zu restored: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+        }
+        CCLOG("✓ Inventory restored");
+    }
+    else
+    {
+        CCLOG("✗ Warning: inventory_ is null!");
+    }
+
+    // 恢复游戏天数
+    if (farmManager_)
+    {
+        CCLOG("Restoring day count...");
+        farmManager_->setDayCount(data.dayCount);
+        CCLOG("✓ Day count restored: %d", data.dayCount);
+    }
+    else
+    {
+        CCLOG("✗ Warning: farmManager_ is null!");
+    }
+
+    // 恢复农作物数据
+    if (farmManager_)
+    {
+        CCLOG("Restoring farm tiles...");
+        // 获取当前地图尺寸
+        Size mapSize = farmManager_->getMapSize();
+        std::vector<FarmManager::FarmTile> tiles(mapSize.width * mapSize.height);
+
+        // 应用保存的瓦片数据
+        for (const auto& tileData : data.farmTiles)
+        {
+            int index = tileData.y * mapSize.width + tileData.x;
+            if (index >= 0 && index < tiles.size())
+            {
+                tiles[index].tilled = tileData.tilled;
+                tiles[index].watered = tileData.watered;
+                tiles[index].hasCrop = tileData.hasCrop;
+                tiles[index].cropId = tileData.cropId;
+                tiles[index].stage = tileData.stage;
+                tiles[index].progressDays = tileData.progressDays;
+            }
+        }
+
+        farmManager_->setAllTiles(tiles);
+        CCLOG("✓ Farm tiles restored: %zu tiles", data.farmTiles.size());
+    }
+
+    // 树木恢复功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+    CCLOG("Tree restoration skipped (feature disabled for stability)");
+    choppedTrees_.clear();
+
+    CCLOG("========================================");
+    CCLOG("✓ Save data applied successfully!");
+    CCLOG("========================================");
 }
 
 
