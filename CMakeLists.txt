@@ -50,6 +50,7 @@ list(APPEND GAME_SOURCE
      Classes/TreasureChest.cpp
      Classes/ElevatorUI.cpp
      Classes/SaveManager.cpp
+     Classes/WeatherManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -74,6 +75,7 @@ list(APPEND GAME_HEADER
      Classes/TreasureChest.h
      Classes/ElevatorUI.h
      Classes/SaveManager.h
+     Classes/WeatherManager.h
      )
 
 if(ANDROID)

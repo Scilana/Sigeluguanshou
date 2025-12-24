@@ -3,6 +3,7 @@
 #include "FarmManager.h"
 #include "ElevatorUI.h"
 #include "MarketUI.h"
+#include "WeatherManager.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -35,6 +36,7 @@ bool GameScene::init()
     mapLayer_ = nullptr;
     farmManager_ = nullptr;
     player_ = nullptr;
+    weatherManager_ = nullptr;
     uiLayer_ = nullptr;
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
@@ -56,6 +58,7 @@ bool GameScene::init()
         CCLOG("InventoryManager initialized");
     }
     marketState_.init();
+    initWeather();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -485,6 +488,48 @@ void GameScene::initUI()
 
 }
 
+// ========== Weather Init ==========
+
+void GameScene::initWeather()
+
+{
+
+    if (!uiLayer_)
+
+    {
+
+        CCLOG("Weather skipped: uiLayer_ not initialized");
+
+        return;
+
+    }
+
+    weatherManager_ = WeatherManager::create();
+
+    if (weatherManager_)
+
+    {
+
+        uiLayer_->addChild(weatherManager_, -1);
+
+        lastWeatherDay_ = 0;
+
+        updateWeather();
+
+        CCLOG("WeatherManager initialized");
+
+    }
+
+    else
+
+    {
+
+        CCLOG("ERROR: Failed to create WeatherManager!");
+
+    }
+
+}
+
 // ========== 初始化控制 ==========
 
 void GameScene::initControls()
@@ -603,6 +648,8 @@ void GameScene::update(float delta)
     // 更新UI显示
 
     updateUI();
+
+    updateWeather();
 
     // 处理砍树计时
     updateChopping(delta);
@@ -762,6 +809,50 @@ void GameScene::updateUI()
             playerPos.x, playerPos.y, tileCoord.x, tileCoord.y);
 
         positionLabel_->setString(posStr);
+
+    }
+
+}
+
+void GameScene::updateWeather()
+
+{
+
+    int dayCount = 1;
+
+    if (farmManager_)
+
+    {
+
+        dayCount = farmManager_->getDayCount();
+
+    }
+
+    if (dayCount <= 0)
+
+    {
+
+        dayCount = 1;
+
+    }
+
+    if (dayCount == lastWeatherDay_)
+
+    {
+
+        return;
+
+    }
+
+    lastWeatherDay_ = dayCount;
+
+    marketState_.updatePrices(dayCount);
+
+    if (weatherManager_)
+
+    {
+
+        weatherManager_->updateWeather(marketState_.getWeather());
 
     }
 
