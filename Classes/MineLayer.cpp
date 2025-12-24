@@ -34,7 +34,10 @@ bool MineLayer::init(const std::string& tmxFile)
         mineralLayer_ = tmxMap->getLayer("mineral");
         if (!mineralLayer_)
             mineralLayer_ = tmxMap->getLayer("Mineral");
-        if (mineralLayer_) CCLOG("Found mineral layer");
+        if (!mineralLayer_)
+            mineralLayer_ = tmxMap->getLayer("mine1");
+        if (mineralLayer_) 
+            CCLOG("Found mineral layer: %s", mineralLayer_->getLayerName().c_str());
         stairsLayer_ = tmxMap->getLayer("stairs");
         if (!stairsLayer_)
             stairsLayer_ = tmxMap->getLayer("Stairs");
@@ -111,7 +114,11 @@ bool MineLayer::isWalkable(const Vec2& position) const
     // 1. 检查障碍物 (Buildings 层，通过父类 MapLayer 检查)
     if (!MapLayer::isWalkable(position)) return false;
 
-    // 2. 检查地面 (Back 层)
+    // 2. 严格检查：矿石也是障碍物
+    Vec2 tileCoord = positionToTileCoord(position);
+    if (isMineralAt(tileCoord)) return false;
+
+    // 3. 检查地面 (Back 层)
     // 只有 Back 层有图块的地方才是地面，没有图块的地方是虚空/墙壁
     auto tmxMap = getTMXMap();
     if (!tmxMap) return false;
@@ -123,8 +130,6 @@ bool MineLayer::isWalkable(const Vec2& position) const
         // 或者直接信任父类的判断
         return true; 
     }
-
-    Vec2 tileCoord = positionToTileCoord(position);
     
     // 边界检查
     Size mapSize = tmxMap->getMapSize();

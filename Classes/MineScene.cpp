@@ -64,6 +64,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initMonsters();
     initMonsters();
     initChests();
+    initWishingWell(); // 新功能：初始化许愿池
     initToolbar(); // 初始化工具栏
 
     // 启动更新
@@ -385,9 +386,9 @@ void MineScene::initMonsters()
     monsters_.clear();
 
     // 初始生成一些怪物
-    // 数量随楼层增加
-    int initialCount = 2 + currentFloor_;
-    if (initialCount > 10) initialCount = 10;
+    // 数量随楼层增加，但减少总量
+    int initialCount = 1 + currentFloor_ / 2;
+    if (initialCount > 5) initialCount = 5;
 
     for (int i = 0; i < initialCount; ++i)
     {
@@ -400,22 +401,23 @@ void MineScene::initChests()
     chests_.clear();
 
     // 初始生成宝箱
-    // 概率随楼层增加
-    int chestCount = 1;
-    if (currentFloor_ >= 3) chestCount = 2 + rand() % 2;
-    else if (currentFloor_ >= 2) chestCount = 1 + rand() % 2;
-    
-    // 如果运气好，多生成一个
-    if (rand() % 100 < 20) chestCount++;
+    // 概率降低：每层 30% 几率生成 1 个，最多 2 个
+    int chestCount = 0;
+    if (rand() % 100 < 30) 
+    {
+        chestCount = 1;
+        // 极低概率额外生成一个
+        if (rand() % 100 < 10) chestCount++;
+    }
 
     for (int i = 0; i < chestCount; ++i)
     {
         Vec2 pos = getRandomWalkablePosition();
-        
+
         auto chest = TreasureChest::create(currentFloor_);
         chest->setPosition(pos);
         this->addChild(chest, 5); // 宝箱层级
-        
+
         chests_.push_back(chest);
     }
 }
@@ -426,6 +428,7 @@ void MineScene::update(float delta)
     updateCamera();
     updateUI();
     updateMonsters(delta);
+    updateProjectiles(delta); // 添加这行
 
     // 攻击冷却
     if (currentAttackCooldown_ > 0)
@@ -435,10 +438,11 @@ void MineScene::update(float delta)
 
     // 随机生成怪物
     monsterSpawnTimer_ += delta;
-    if (monsterSpawnTimer_ > 10.0f) // 每10秒检查一次生成
+    if (monsterSpawnTimer_ > 15.0f) // 延长生成间隔到15秒
     {
         monsterSpawnTimer_ = 0;
-        if (monsters_.size() < 15 && rand() % 100 < getMonsterSpawnChance() * 100)
+        // 降低最大怪物数到 8
+        if (monsters_.size() < 8 && rand() % 100 < getMonsterSpawnChance() * 100)
         {
             spawnMonster();
         }
@@ -496,15 +500,16 @@ void MineScene::updateUI()
     // 更新工具显示
     if (inventory_ && itemLabel_)
     {
-        ItemType type = inventory_->getSlot(selectedItemIndex_).type;
+        int selectedIdx = inventory_->getSelectedSlotIndex();
+        ItemType type = inventory_->getSlot(selectedIdx).type;
         std::string name = InventoryManager::getItemName(type);
         if (type == ItemType::None) name = "Empty";
         
         // 显示选中状态 [1] Pickaxe
-        int num = (selectedItemIndex_ + 1) % 10;
+        int num = (selectedIdx + 1) % 10;
         if (num == 0) num = 10; // 显示习惯 1-0
         
-        itemLabel_->setString(StringUtils::format("[%d] %s", selectedItemIndex_ == 9 ? 0 : selectedItemIndex_ + 1, name.c_str()));
+        itemLabel_->setString(StringUtils::format("[%d] %s", selectedIdx == 9 ? 0 : selectedIdx + 1, name.c_str()));
     }
     
     // 更新血量显示 (假设 uiLayer 有 healthLabel_, 如果没有需要 initUI 添加)
@@ -573,7 +578,12 @@ void MineScene::updateMonsters(float delta)
                     // 简单击退
                     Vec2 pushDir = player_->getPosition() - monster->getPosition();
                     pushDir.normalize();
-                    player_->setPosition(player_->getPosition() + pushDir * 20.0f);
+                    Vec2 targetPos = player_->getPosition() + pushDir * 30.0f;
+                    
+                    if (mineLayer_ && mineLayer_->isWalkable(targetPos))
+                    {
+                        player_->setPosition(targetPos);
+                    }
                     
                     showActionMessage("Ouch!", Color3B::RED);
                 }
@@ -623,16 +633,21 @@ void MineScene::initToolbar()
         for (int i = 0; i < 10; ++i) toolbarItems_.push_back(ItemType::None);
     }
     
-    selectedItemIndex_ = 0;
-    
-    // 如果有UI，选中默认
-    this->selectItemByIndex(0);
+    // 如果有UI，选中默认(全局)
+    if (inventory_) {
+        int savedIdx = inventory_->getSelectedSlotIndex();
+        this->selectItemByIndex(savedIdx);
+    }
 }
 
 void MineScene::selectItemByIndex(int idx)
 {
     if (idx < 0 || idx >= 10) return;
-    selectedItemIndex_ = idx;
+    
+    // 存入全局
+    if (inventory_) {
+        inventory_->setSelectedSlotIndex(idx);
+    }
     
     // 重新获取当前工具类型（因为背包可能变动）
     if (inventory_) {
@@ -684,9 +699,13 @@ void MineScene::onInventoryClosed()
 void MineScene::handleMiningAction()
 {
     if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) return;
+    
+    // 复用攻击冷却，防止过快点击
+    if (currentAttackCooldown_ > 0) return;
 
     // 检查是否装备了镐子 (Pickaxe)
-    ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
+    int selectedIdx = inventory_->getSelectedSlotIndex();
+    ItemType currentTool = inventory_->getSlot(selectedIdx).type;
     if (currentTool != ItemType::Pickaxe)
     {
         showActionMessage("Need a Pickaxe!", Color3B::RED);
@@ -716,6 +735,8 @@ void MineScene::handleMiningAction()
         {
             mined = true;
             showActionMessage(result.message, Color3B::GREEN);
+            // 挖矿也有冷却，比如 0.5 秒
+            currentAttackCooldown_ = 0.5f;
         }
     }
     
@@ -730,6 +751,7 @@ void MineScene::handleMiningAction()
             {
                 mined = true;
                 showActionMessage(result.message, Color3B::GREEN);
+                currentAttackCooldown_ = 0.5f;
             }
         }
     }
@@ -742,13 +764,124 @@ void MineScene::handleMiningAction()
 }
 
 
+void MineScene::updateProjectiles(float delta)
+{
+    for (auto it = projectiles_.begin(); it != projectiles_.end();)
+    {
+        auto& p = *it;
+        p.duration -= delta;
+
+        // 1. 生命周期检查
+        if (p.duration <= 0)
+        {
+            p.sprite->removeFromParent();
+            it = projectiles_.erase(it);
+            continue;
+        }
+
+        // 2. 移动
+        Vec2 nextPos = p.sprite->getPosition() + p.velocity * delta;
+        
+        // 3. 地图碰撞 (撞墙消失)
+        // 仅在有 mineLayer 时检查，且避免越界
+        if (mineLayer_ && !mineLayer_->isWalkable(nextPos))
+        {
+            p.sprite->removeFromParent();
+            it = projectiles_.erase(it);
+            continue;
+        }
+
+        p.sprite->setPosition(nextPos);
+
+        // 4. 怪物碰撞
+        bool hitMonster = false;
+        for (auto monster : monsters_)
+        {
+            if (!monster->isDead() && monster->getBoundingBox().containsPoint(nextPos))
+            {
+                monster->takeDamage(p.damage); // 造成伤害
+                hitMonster = true;
+                
+                // 击退效果
+                Vec2 pushDir = p.velocity;
+                pushDir.normalize();
+                monster->setPosition(monster->getPosition() + pushDir * 20.0f);
+                
+                break; // 一箭只伤一怪
+            }
+        }
+
+        if (hitMonster)
+        {
+            p.sprite->removeFromParent();
+            it = projectiles_.erase(it);
+        }
+        else
+        {
+            ++it;
+        }
+    }
+}
+
 void MineScene::handleAttackAction()
 {
     if (currentAttackCooldown_ > 0) return;
     
+    // 如果背包不存在，直接返回
+    if (!inventory_) return;
+
+    // 获取当前武器
+    int selectedIdx = inventory_->getSelectedSlotIndex();
+    ItemType item = inventory_->getSlot(selectedIdx).type;
+    
+    // ----------------------------------------------------------------
+    // 新功能：弓箭射击
+    // ----------------------------------------------------------------
+    if (item == ItemType::Bow)
+    {
+        // 冷却时间
+        currentAttackCooldown_ = Weapon::getWeaponAttackSpeed(ItemType::Bow);
+
+        // 创建箭矢 (使用白色小矩形模拟)
+        auto arrowSprite = Sprite::create();
+        arrowSprite->setTextureRect(Rect(0, 0, 20, 3));
+        arrowSprite->setColor(Color3B::WHITE);
+        
+        // 初始位置：玩家位置 + 偏移 (胸口高度)
+        Vec2 playerPos = player_->getPosition();
+        arrowSprite->setPosition(playerPos + Vec2(0, 16));
+        
+        this->addChild(arrowSprite, 15); // Layer above player (Z=10)
+
+        // 计算方向
+        Vec2 direction = player_->getFacingDirection();
+        if (direction.isZero()) direction = Vec2(0, -1); // 默认向下
+        direction.normalize();
+
+        // 旋转箭矢 (Cocos rotation is CW, atan2 is CCW)
+        float angle = CC_RADIANS_TO_DEGREES(atan2(direction.y, direction.x));
+        arrowSprite->setRotation(-angle);
+
+        // 创建投射物
+        Projectile proj;
+        proj.sprite = arrowSprite;
+        proj.velocity = direction * 600.0f; // 速度 600
+        proj.damage = Weapon::getWeaponAttackPower(ItemType::Bow);
+        proj.duration = 1.0f; // 存活 1 秒
+
+        projectiles_.push_back(proj);
+        
+        CCLOG("Fired arrow! Damage: %.0f", proj.damage);
+        return; // 弓箭射击后直接返回，不进行近战判定
+    }
+
+    // ----------------------------------------------------------------
+    // 原有逻辑：近战攻击
+    // ----------------------------------------------------------------
+
     // 播放攻击动画
     // player_->playAttackAnimation();
-    currentAttackCooldown_ = attackCooldown_;
+    currentAttackCooldown_ = 0.5f; // 默认冷却，下面会覆盖
     
     Vec2 playerPos = player_->getPosition();
     float attackRange = 50.0f; // 默认范围
@@ -864,6 +997,7 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_ENTER:
+    case EventKeyboard::KeyCode::KEY_RETURN: // 新增 RETURN 键
     case EventKeyboard::KeyCode::KEY_KP_ENTER:
         if (isPlayerOnStairs())
         {
@@ -871,8 +1005,13 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         else
         {
-            showActionMessage("Not on stairs!", Color3B::GRAY);
+            // 如果不在楼梯，可能是其他交互
+            showActionMessage("Not on stairs!", Color3B::GRAY); // 保持原有提示
         }
+        break;
+
+    case EventKeyboard::KeyCode::KEY_K: // 许愿
+        handleWishAction();
         break;
 
     case EventKeyboard::KeyCode::KEY_M:
@@ -1032,4 +1171,123 @@ Vec2 MineScene::getRandomWalkablePosition() const
     }
     
     return Vec2(mapSize.width/2, mapSize.height/2);
+}
+
+void MineScene::initWishingWell()
+{
+    // 仅在第 5 层生成许愿池
+    if (currentFloor_ != 5) return;
+    
+    // 30% 概率生成
+    if (rand() % 100 > 30) return;
+
+    wishingWell_ = nullptr;
+    if (!mineLayer_) return;
+
+    // 在地图上找一个位置放置许愿池
+    Vec2 pos = getRandomWalkablePosition();
+    
+    // 创建许愿池视觉 (蓝色圆形)
+    auto wellNode = DrawNode::create();
+    wellNode->drawDot(Vec2::ZERO, 20, Color4F(0.2f, 0.4f, 1.0f, 0.8f)); // 水池
+    wellNode->drawCircle(Vec2::ZERO, 22, 0, 30, false, Color4F::GRAY); // 边框
+    
+    wishingWell_ = Node::create();
+    wishingWell_->setPosition(pos);
+    wishingWell_->addChild(wellNode);
+    this->addChild(wishingWell_, 5); // 与宝箱同层
+    
+    // 提示文字
+    auto label = Label::createWithSystemFont("Wishing Well\n(Press K)", "Arial", 12);
+    label->setPosition(Vec2(0, 30));
+    label->setAlignment(TextHAlignment::CENTER);
+    wishingWell_->addChild(label);
+    
+    CCLOG("Wishing Well initialized at (%.1f, %.1f)", pos.x, pos.y);
+}
+
+void MineScene::handleWishAction()
+{
+    if (!player_ || !wishingWell_ || !inventory_) return;
+    
+    // 检查距离
+    float dist = player_->getPosition().distance(wishingWell_->getPosition());
+    if (dist > 60.0f)
+    {
+        showActionMessage("Too far from Wishing Well!", Color3B::GRAY);
+        return;
+    }
+    
+    // 检查当前手持物品
+    int currentSlotIdx = inventory_->getSelectedSlotIndex();
+    ItemType currentItem = inventory_->getSlot(currentSlotIdx).type;
+    if (currentItem == ItemType::None)
+    {
+        showActionMessage("Hold an item to wish!", Color3B::YELLOW);
+        return;
+    }
+    
+    // 扣除物品
+    if (inventory_->removeItem(currentItem, 1))
+    {
+        // 播放效果（简单震动或颜色变化）
+        wishingWell_->runAction(Sequence::create(
+            ScaleTo::create(0.1f, 1.2f),
+            ScaleTo::create(0.1f, 1.0f),
+            nullptr
+        ));
+        
+        // 随机奖励
+        int randVal = rand() % 100;
+        if (randVal < 30) // 30% 啥也没有
+        {
+            showActionMessage("The well is silent...", Color3B::GRAY);
+        }
+        else if (randVal < 70) // 40% 金币 / 回血
+        {
+            if (rand() % 2 == 0)
+            {
+                int gold = 50 + rand() % 151; // 50-200
+                inventory_->addMoney(gold);
+                showActionMessage(StringUtils::format("Well grants %d Gold!", gold), Color3B::YELLOW);
+            }
+            else
+            {
+                int heal = 20 + rand() % 31; // 20-50
+                player_->heal(heal);
+                showActionMessage("You feel refreshed!", Color3B::GREEN);
+            }
+        }
+        else // 30% 好东西
+        {
+            // 随机给个矿石或更稀有的
+            ItemType rewards[] = {ItemType::GoldOre, ItemType::DiamondSword, ItemType::GoldSword};
+            ItemType reward = rewards[rand() % 3];
+            
+            // 如果是武器且已有，折算成钱
+            if ((reward == ItemType::DiamondSword || reward == ItemType::GoldSword) && inventory_->hasItem(reward, 1))
+            {
+                 int gold = 500;
+                 inventory_->addMoney(gold);
+                 showActionMessage("Great fortune! (500 Gold)", Color3B::ORANGE);
+            }
+            else
+            {
+                if (inventory_->addItem(reward, 1))
+                {
+                    showActionMessage(StringUtils::format("Received %s!", InventoryManager::getItemName(reward).c_str()), Color3B::MAGENTA);
+                }
+                else
+                {
+                    //背包满了
+                     int gold = Weapon::getWeaponPrice(reward); 
+                     inventory_->addMoney(gold);
+                     showActionMessage("Bag full, took Gold instead.", Color3B::ORANGE);
+                }
+            }
+        }
+        
+        // 刷新UI
+        updateUI(); 
+    }
 }

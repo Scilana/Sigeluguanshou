@@ -778,7 +778,15 @@ void GameScene::handleFarmAction(bool waterOnly)
     tileCoord.y = std::round(tileCoord.y);
 
     FarmManager::ActionResult result{ false, "Unavailable", -1 };
-    ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
+    // 检查是否装备了合适的工具
+    int selectedIdx = inventory_->getSelectedSlotIndex();
+    ItemType current = inventory_->getSlot(selectedIdx).type;
+    
+    // 如果没有工具，且不是只浇水操作，则提示
+    if (current == ItemType::None && !waterOnly) {
+        showActionMessage("No tool selected!", Color3B::RED);
+        return;
+    }
 
     if (waterOnly) {
         if (current == ItemType::WateringCan) {
@@ -1559,38 +1567,50 @@ void GameScene::initToolbar()
         ItemType::Axe,
         ItemType::Pickaxe,
         ItemType::FishingRod, // ID 5 (index 5)
-        ItemType::SeedTurnip,
-        ItemType::SeedPotato,
-        ItemType::SeedCorn,
-        ItemType::SeedTomato,
-        ItemType::SeedPumpkin,
-        ItemType::SeedBlueberry
     };
-
-    selectedItemIndex_ = 0;
-    selectItemByIndex(0);
-
+    // 初始化工具栏物品 (使用 ID 0-9)
+    toolbarItems_.clear();
+    
+    // 从全局管理器读取
+    if (inventory_)
+    {
+        for (int i = 0; i < 10; ++i)
+        {
+            auto slot = inventory_->getSlot(i);
+            toolbarItems_.push_back(slot.type);
+        }
+    }
+    else
+    {
+        for (int i = 0; i < 10; ++i) toolbarItems_.push_back(ItemType::None);
+    }
+    
+    // 初始化时从全局获取选中项
+    if (inventory_) {
+        int savedIdx = inventory_->getSelectedSlotIndex();
+        this->selectItemByIndex(savedIdx);
+    }
 }
 
 void GameScene::selectItemByIndex(int idx)
-
 {
-
-    if (toolbarItems_.empty())
-        return;
-
-    if (idx < 0 || idx >= static_cast<int>(toolbarItems_.size()))
-        return;
-
-    selectedItemIndex_ = idx;
-    std::string name = InventoryManager::getItemName(toolbarItems_[selectedItemIndex_]);
-
-    if (itemLabel_)
-    {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", name.c_str()));
+    if (idx < 0 || idx >= 10) return;
+    
+    // 更新全局状态
+    if (inventory_) {
+        inventory_->setSelectedSlotIndex(idx);
     }
-
+    
+    // 重新获取当前工具类型（因为背包可能变动）
+    if (inventory_) {
+        toolbarItems_[idx] = inventory_->getSlot(idx).type;
+    }
+    
+    // 获取物品名称并显示消息
+    std::string name = InventoryManager::getItemName(toolbarItems_[idx]);
     showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
+    
+    updateUI(); // 假设有一个更新UI的函数
 }
 
 
@@ -1630,9 +1650,15 @@ void GameScene::onMouseDown(Event* event)
         // Check current item
         if (toolbarItems_.empty()) return;
         
-        ItemType current = ItemType::Hoe;
-        if (selectedItemIndex_ >= 0 && selectedItemIndex_ < (int)toolbarItems_.size()) {
-            current = toolbarItems_[selectedItemIndex_];
+        // 使用全局选中索引
+        int selectedIdx = inventory_ ? inventory_->getSelectedSlotIndex() : 0;
+        ItemType current = ItemType::Hoe; // 默认
+        
+        if (selectedIdx >= 0 && selectedIdx < 10) {
+             // 确保 toolbarItems 已初始化
+             if (selectedIdx < (int)toolbarItems_.size()) {
+                 current = toolbarItems_[selectedIdx];
+             }
         }
 
         // Fishing Rod Logic

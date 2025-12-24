@@ -105,4 +105,19 @@ public:
     std::string getSpritePath() const override { return "weapons/diamond_sword.png"; }
 };
 
+/**
+ * @brief 弓
+ */
+class Bow : public Weapon
+{
+public:
+    std::string getName() const override { return "Bow"; }
+    int getAttackPower() const override { return 15; } // 箭矢伤害，可以在 MineScene 中结合 Accumulate
+    float getAttackRange() const override { return 300.0f; } // 射程远
+    float getAttackSpeed() const override { return 1.2f; }
+    int getPrice() const override { return 300; }
+    ItemType getItemType() const override { return ItemType::Bow; }
+    std::string getSpritePath() const override { return "weapons/bow.png"; }
+};
+
 #endif // __WEAPON_H__

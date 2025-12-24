@@ -4,6 +4,16 @@ USING_NS_CC;
 
 static InventoryManager* s_instance = nullptr;
 
+InventoryManager::InventoryManager()
+    : money_(0)
+    , selectedSlotIndex_(0)
+{
+}
+
+InventoryManager::~InventoryManager()
+{
+}
+
 InventoryManager* InventoryManager::getInstance()
 {
     if (!s_instance)
@@ -293,6 +303,7 @@ std::string InventoryManager::getItemName(ItemType itemType)
     case ItemType::IronSword: return "Iron Sword";
     case ItemType::GoldSword: return "Gold Sword";
     case ItemType::DiamondSword: return "Diamond Sword";
+    case ItemType::Bow: return "Bow";
     default: return "Unknown";
     }
 }
@@ -330,6 +341,7 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     case ItemType::IronSword: return "Sturdy sword, 25 attack";
     case ItemType::GoldSword: return "Elegant sword, 40 attack";
     case ItemType::DiamondSword: return "Legendary sword, 60 attack";
+    case ItemType::Bow: return "Ranged weapon, shoots arrows";
     default: return "";
     }
 }
@@ -339,7 +351,8 @@ bool InventoryManager::isStackable(ItemType itemType)
     // 工具不可堆叠
     if (itemType == ItemType::Hoe || itemType == ItemType::WateringCan ||
         itemType == ItemType::Scythe || itemType == ItemType::Axe ||
-        itemType == ItemType::Pickaxe || itemType == ItemType::FishingRod)
+        itemType == ItemType::Pickaxe || itemType == ItemType::FishingRod ||
+        itemType == ItemType::Bow)
     {
         return false;
     }
@@ -371,4 +384,12 @@ int InventoryManager::getMaxStack(ItemType itemType)
 
     // 其他物品最多99
     return 99;
+}
+
+void InventoryManager::setSelectedSlotIndex(int index)
+{
+    if (index >= 0 && index < MAX_SLOTS)
+    {
+        selectedSlotIndex_ = index;
+    }
 }

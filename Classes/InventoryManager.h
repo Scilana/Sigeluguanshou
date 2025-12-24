@@ -39,7 +39,8 @@ enum class ItemType
     WoodenSword,    // 木剑
     IronSword,      // 铁剑
     GoldSword,      // 金剑
-    DiamondSword    // 钻石剑
+    DiamondSword,   // 钻石剑
+    Bow             // 弓
 };
 
 /**
@@ -143,6 +144,16 @@ public:
     void swapSlots(int index1, int index2);
 
     /**
+     * @brief 获取当前选中的槽位索引（持久化）
+     */
+    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
+
+    /**
+     * @brief 设置当前选中的槽位索引
+     */
+    void setSelectedSlotIndex(int index);
+
+    /**
      * @brief 获取金币数量
      */
     int getMoney() const { return money_; }
@@ -198,6 +209,10 @@ public:
 private:
     std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
+    int selectedSlotIndex_; // 当前选中的槽位
+
+    InventoryManager();
+    ~InventoryManager();
 
     /**
      * @brief 初始化默认物品

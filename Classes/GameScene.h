@@ -172,7 +172,6 @@ private:
 
     // 快捷栏
     std::vector<ItemType> toolbarItems_;
-    int selectedItemIndex_;
     void initToolbar();
     void selectItemByIndex(int idx);
     int getCropIdForItem(ItemType type) const;

@@ -32,7 +32,7 @@ void Zombie::initStats()
     // 僵尸基础属性
     name_ = "Zombie";
     maxHp_ = 50;           // 高血量
-    attackPower_ = 10;     // 高攻击
+    attackPower_ = 25;     // 高攻击 (was 10)
     moveSpeed_ = 35.0f;    // 较慢移动
     attackRange_ = 40.0f;
     attackCooldown_ = 1.5f;

@@ -193,34 +193,96 @@ void Player::updateMovement(float delta)
     Vec2 direction = moveDirection_;
     if (direction.lengthSquared() > 0)
         direction.normalize(); 
+    else
+        return; // No input, no movement
 
-    Vec2 nextPos = currentPos + direction * moveSpeed_ * delta;
+    // 定义碰撞检测函数 (Lambda)
+    auto isPositionValid = [&](const Vec2& pos) -> bool {
+        if (!mapLayer_) return true; // 无地图层则无碰撞
 
-    if (mapLayer_)
+        // 定义相对于中心点的检测偏移量 (缩小的包围盒)
+        // 稍微缩小一点以避免过于严苛的卡顿
+        float halfW = 8.0f;  // 宽度的一半 (16px)
+        float halfH = 6.0f;  // 高度的一半 (12px)
+        
+        std::vector<Vec2> checkPoints;
+        checkPoints.push_back(Vec2(0, 0));
+        checkPoints.push_back(Vec2(-halfW, 0));
+        checkPoints.push_back(Vec2(halfW, 0));
+        checkPoints.push_back(Vec2(0, -halfH));
+        checkPoints.push_back(Vec2(0, halfH));
+        checkPoints.push_back(Vec2(-halfW, -halfH));
+        checkPoints.push_back(Vec2(halfW, -halfH));
+        checkPoints.push_back(Vec2(-halfW, halfH));
+        checkPoints.push_back(Vec2(halfW, halfH));
+        
+        Size mapSize = mapLayer_->getMapSize(); 
+        Size tileSize = mapLayer_->getTileSize();
+        // 计算地图像素总大小
+        float mapWidth = mapSize.width * tileSize.width;
+        float mapHeight = mapSize.height * tileSize.height;
+        
+        for (const auto& offset : checkPoints)
+        {
+            Vec2 testPos = pos + offset;
+            
+            // 1. 检查地图边界 (使用像素坐标)
+            if (testPos.x < 0 || testPos.x >= mapWidth ||
+                testPos.y < 0 || testPos.y >= mapHeight)
+            {
+                return false; // Collision
+            }
+            
+            // 2. 检查障碍物
+            if (!mapLayer_->isWalkable(testPos))
+            {
+                return false; // Collision
+            }
+        }
+        return true; // No collision
+    };
+
+    // 尝试直接移动到新位置
+    Vec2 offset = direction * moveSpeed_ * delta;
+    Vec2 newPos = currentPos + offset;
+
+    if (isPositionValid(newPos))
     {
-        if (mapLayer_->isWalkable(nextPos))
-        {
-            this->setPosition(nextPos);
-        }
-        else
-        {
-            Vec2 nextPosX = currentPos + Vec2(direction.x * moveSpeed_ * delta, 0);
-            if (mapLayer_->isWalkable(nextPosX))
-            {
-                this->setPosition(nextPosX);
-            }
-            else
-            {
-                Vec2 nextPosY = currentPos + Vec2(0, direction.y * moveSpeed_ * delta);
-                if (mapLayer_->isWalkable(nextPosY))
-                {
-                    this->setPosition(nextPosY);
-                }
-            }
-        }
+        this->setPosition(newPos);
     }
     else
     {
-        this->setPosition(nextPos);
+        // 尝试只移动 X 轴 (滑动)
+        Vec2 newPosX = currentPos + Vec2(offset.x, 0);
+        if (std::abs(offset.x) > 0.001f && isPositionValid(newPosX))
+        {
+            this->setPosition(newPosX);
+        }
+        // 尝试只移动 Y 轴 (滑动)
+        // 注意：这里使用 else if 可能会导致在尖角处完全卡住，
+        // 但通常最好一次只处理一个轴的滑动，或者分别处理。
+        // 如果 X 移动了，通常 Y 就不动了（或者下一帧再处理）。
+        // 这里为了简单，如果 X 能走就走 X，否则试 Y。
+        else 
+        {
+            Vec2 newPosY = currentPos + Vec2(0, offset.y);
+            if (std::abs(offset.y) > 0.001f && isPositionValid(newPosY))
+            {
+                this->setPosition(newPosY);
+            }
+        }
     }
+}
+
+void Player::heal(int amount)
+{
+    if (amount <= 0) return;
+    
+    hp_ += amount;
+    if (hp_ > maxHp_)
+    {
+        hp_ = maxHp_;
+    }
+    
+    CCLOG("Player healed for %d HP. Current HP: %d/%d", amount, hp_, maxHp_);
 }
