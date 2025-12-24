@@ -18,7 +18,7 @@ public:
     cocos2d::Size getMapSizeInTiles() const;
     cocos2d::Size getTileSize() const;
 
-    bool isWalkable(const cocos2d::Vec2& position) const;
+    virtual bool isWalkable(const cocos2d::Vec2& position) const;
     bool hasCollisionAt(const cocos2d::Vec2& tileCoord) const;
     void clearCollisionAt(const cocos2d::Vec2& tileCoord);
     void clearBaseTileAt(const cocos2d::Vec2& tileCoord);

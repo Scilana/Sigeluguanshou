@@ -351,6 +351,13 @@ void MineScene::initUI()
     itemLabel_->setPosition(Vec2(origin.x + visibleSize.width - 20, origin.y + visibleSize.height - 20));
     itemLabel_->setColor(Color3B::WHITE);
     uiLayer_->addChild(itemLabel_, 1);
+    
+    // 添加操作提示
+    auto tipLabel = Label::createWithSystemFont("(Keys 1-9 to switch)", "Arial", 12);
+    tipLabel->setAnchorPoint(Vec2(1, 0.5));
+    tipLabel->setPosition(Vec2(origin.x + visibleSize.width - 20, origin.y + visibleSize.height - 40));
+    tipLabel->setColor(Color3B::GRAY);
+    uiLayer_->addChild(tipLabel, 1);
 
     // 操作提示
     actionLabel_ = Label::createWithSystemFont("", "Arial", 24);
@@ -576,12 +583,34 @@ void MineScene::updateMonsters(float delta)
     }
 }
 
+
 void MineScene::initToolbar()
 {
     // 初始化工具栏物品 (使用 ID 0-9)
     toolbarItems_.clear();
+    
+    // 确保背包里有基础工具（测试用）
     if (inventory_)
     {
+        // 检查是否有剑和镐
+        bool hasSword = false;
+        bool hasPickaxe = false;
+        for (int i=0; i<10; ++i) {
+            ItemType t = inventory_->getSlot(i).type;
+            if (t == ItemType::WoodenSword || t == ItemType::IronSword || 
+                t == ItemType::GoldSword || t == ItemType::DiamondSword) hasSword = true;
+            if (t == ItemType::Pickaxe) hasPickaxe = true;
+        }
+        
+        if (!hasSword) {
+            inventory_->addItem(ItemType::WoodenSword, 1);
+            CCLOG("Starter Kit: Added Sword");
+        }
+        if (!hasPickaxe) {
+            inventory_->addItem(ItemType::Pickaxe, 1);
+            CCLOG("Starter Kit: Added Pickaxe");
+        }
+        
         for (int i = 0; i < 10; ++i)
         {
             auto slot = inventory_->getSlot(i);
