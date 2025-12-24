@@ -107,47 +107,56 @@ bool Player::init()
 // 加载动画的具体实现
 void Player::loadAnimations()
 {
-    // 初始化指针为空
+    // 1. 初始化指针
     walkUpAnimation_ = nullptr;
     walkDownAnimation_ = nullptr;
     walkLeftAnimation_ = nullptr;
     walkRightAnimation_ = nullptr;
 
-    //初始化斧头的代码
     useAxeUpAnimation_ = nullptr;
     useAxeDownAnimation_ = nullptr;
     useAxeLeftAnimation_ = nullptr;
     useAxeRightAnimation_ = nullptr;
 
-    // ... (初始化 nullptr 的代码)
     useHoeUpAnimation_ = nullptr;
     useHoeDownAnimation_ = nullptr;
     useHoeLeftAnimation_ = nullptr;
     useHoeRightAnimation_ = nullptr;
 
-    // Lambda 辅助函数：简化重复代码，便于连续输出图片
-    // 参数：动画类型（"walk"或"UseAxe"），方向后缀，帧数
-    // 修改 Lambda 辅助函数，让它支持自定义动作名称 (actionName)
+    // 2. 修正后的 Lambda 函数：区分走路和工具的命名格式
     auto createAnim = [](std::string actionName, std::string direction, int frameCount) -> Animation* {
         Vector<SpriteFrame*> frames;
         for (int i = 1; i <= frameCount; i++) {
-            // 拼凑文件名
-            // 砍树: characters/downUseAxe1.png
-            // 耕地: characters/downUseHoe1.png
-            std::string filename = StringUtils::format("characters/%s%s%d.png", direction.c_str(), actionName.c_str(), i);
+            std::string filename;
 
+            // 【关键修复】如果是走路动画，使用原版命名格式
+            if (actionName == "walk") {
+                // 格式：characters/player_walk_down_1.png
+                filename = StringUtils::format("characters/player_walk_%s_%d.png", direction.c_str(), i);
+            }
+            // 如果是工具动画 (UseAxe 或 UseHoe)，使用新版命名格式
+            else {
+                // 格式：characters/downUseHoe1.png
+                filename = StringUtils::format("characters/%s%s%d.png", direction.c_str(), actionName.c_str(), i);
+            }
+
+            // 检查文件是否存在
             if (!FileUtils::getInstance()->isFileExist(filename)) {
+                // 只有文件真的缺失时才报错，避免刷屏
                 CCLOG("Warning: Animation file missing: %s", filename.c_str());
                 continue;
             }
-            auto frame = SpriteFrame::create(filename, Rect(0, 0, 70, 120)); // 假设尺寸和原来一样是70x120
+
+            auto frame = SpriteFrame::create(filename, Rect(0, 0, 70, 120));
             if (frame) frames.pushBack(frame);
         }
-        // 锄头动作比较轻盈，可以稍微快一点 (0.1f)
-        return Animation::createWithSpriteFrames(frames, 0.1f);
+
+        // 走路速度 0.15f，挥动工具速度 0.1f (稍微快点)
+        float delay = (actionName == "walk") ? 0.15f : 0.1f;
+        return Animation::createWithSpriteFrames(frames, delay);
         };
 
-    // 创建走路动画并保留引用 (Retain)
+    // 3. 加载走路动画 (这里 actionName 传 "walk"，会触发上面的 if 分支)
     walkDownAnimation_ = createAnim("walk", "down", 4);
     if (walkDownAnimation_) walkDownAnimation_->retain();
 
@@ -160,7 +169,7 @@ void Player::loadAnimations()
     walkRightAnimation_ = createAnim("walk", "right", 3);
     if (walkRightAnimation_) walkRightAnimation_->retain();
 
-    // 创建挥斧动画并保留引用
+    // 4. 加载斧头动画 (actionName 传 "UseAxe"，触发 else 分支)
     useAxeDownAnimation_ = createAnim("UseAxe", "down", 3);
     if (useAxeDownAnimation_) useAxeDownAnimation_->retain();
 
@@ -173,9 +182,9 @@ void Player::loadAnimations()
     useAxeRightAnimation_ = createAnim("UseAxe", "right", 3);
     if (useAxeRightAnimation_) useAxeRightAnimation_->retain();
 
-    // 【新增】加载锄头动画 (注意文件名匹配：downUseHoe1.png -> actionName="UseHoe")
-    // 请确保图片放在 Resources/characters/ 目录下
-    useHoeDownAnimation_ = createAnim("UseHoe", "down", 2); 
+    // 5. 加载锄头动画 (actionName 传 "UseHoe"，触发 else 分支)
+    // 注意：根据你的截图，down 只有 2 帧，其他是 3 帧
+    useHoeDownAnimation_ = createAnim("UseHoe", "down", 2);
     if (useHoeDownAnimation_) useHoeDownAnimation_->retain();
 
     useHoeUpAnimation_ = createAnim("UseHoe", "up", 3);
