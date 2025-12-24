@@ -32,7 +32,7 @@ void Slime::initStats()
     // 史莱姆基础属性
     name_ = "Slime";
     maxHp_ = 30;           // 低血量
-    attackPower_ = 15;      // 提高攻击 (was 5)
+    attackPower_ = 5;      // 低攻击
     moveSpeed_ = 60.0f;    // 较快移动
     attackRange_ = 35.0f;
     attackCooldown_ = 2.0f;

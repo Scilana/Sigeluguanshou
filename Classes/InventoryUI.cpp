@@ -154,36 +154,7 @@ void InventoryUI::initSlots()
             listener->setSwallowTouches(true);
             listener->onTouchBegan = [this, slotIndex](Touch* touch, Event* event) {
                 auto target = static_cast<Sprite*>(event->getCurrentTarget());
-                
-                // 由于 UI 随摄像机移动，touch->getLocation() (屏幕坐标) 需要转换为世界坐标
-                // 或者更简单：我们直接用 convertToNodeSpace，但是要考虑到 父节点(uiLayer) 的位移
-                // 修复方案：获取当前摄像机带来的偏移
-                
-                Vec2 touchLocation = touch->getLocation();
-                
-                // 获取当前正在运行的场景的摄像机位置（近似）
-                // 因为 MineScene 手动移动了 uiLayer 来模拟 HUD，所以 uiLayer 的 WorldPosition 与 CameraPosition 有关
-                // 更好的方法是使用 Node::convertToNodeSpace 的逆向思维，但在 HUD 移动的情况下，
-                // 我们假设 InventoryUI 是加在随摄像机移动的 Layer 上。
-                
-                // 重新计算触摸点的世界坐标：
-                // 如果摄像机移动了，屏幕上的点 (x,y) 对应世界上的点 (x + camOffset.x, y + camOffset.y)
-                // 这里的 camOffset = CameraPos - ScreenCenter (因为Camera看的是中心)
-                
-                auto scene = Director::getInstance()->getRunningScene();
-                if (scene)
-                {
-                    auto camera = scene->getDefaultCamera();
-                    if (camera)
-                    {
-                        Vec2 camPos = camera->getPosition();
-                        Size visibleSize = Director::getInstance()->getVisibleSize();
-                        Vec2 offset = camPos - Vec2(visibleSize.width/2, visibleSize.height/2);
-                        touchLocation += offset;
-                    }
-                }
-                
-                Vec2 locationInNode = target->convertToNodeSpace(touchLocation);
+                Vec2 locationInNode = target->convertToNodeSpace(touch->getLocation());
                 Size size = target->getContentSize();
                 Rect rect = Rect(0, 0, size.width, size.height);
 
@@ -334,121 +305,33 @@ cocos2d::Sprite* InventoryUI::createItemIcon(ItemType itemType)
 
 void InventoryUI::onSlotClicked(int slotIndex)
 {
-    // ---------------------------------------------------------
-    // 新功能：自定义背包（物品交换）
-    // ---------------------------------------------------------
-    
-    // 如果没有高亮框，创建一个
-    if (!selectedFrame_)
-    {
-        selectedFrame_ = Sprite::create();
-        selectedFrame_->setTextureRect(Rect(0, 0, SLOT_SIZE + 6, SLOT_SIZE + 6));
-        selectedFrame_->setColor(Color3B::YELLOW);
-        selectedFrame_->setOpacity(0); // 仅作为边框容器，主体透明
-        
-        // 绘制边框
-        auto border = DrawNode::create();
-        border->drawRect(Vec2(0,0), Vec2(SLOT_SIZE+6, SLOT_SIZE+6), Color4F::YELLOW);
-        border->setLineWidth(4);
-        selectedFrame_->addChild(border);
-        
-        panel_->addChild(selectedFrame_, 10); // 放在最上层
-        selectedFrame_->setVisible(false);
-    }
-
     const auto& slot = inventory_->getSlot(slotIndex);
 
-    // 逻辑：
-    // 1. 如果当前没有选中物品
-    if (selectedSlotIndex_ == -1)
+    if (slot.isEmpty())
     {
-        // 选中当前点击的槽位
-        selectedSlotIndex_ = slotIndex;
-        updateSelection();
-        
-        // 显示信息
-        if (!slot.isEmpty())
-        {
-            std::string info = StringUtils::format(
-                "%s x%d - %s",
-                InventoryManager::getItemName(slot.type).c_str(),
-                slot.count,
-                InventoryManager::getItemDescription(slot.type).c_str()
-            );
-            
-            if (infoLabel_) infoLabel_->setString(info + " (Select another to swap)");
-        }
-        else
-        {
-            if (infoLabel_) infoLabel_->setString("(Empty slot selected)");
-        }
+        infoLabel_->setString("");
     }
-    // 2. 如果已经选中了一个物品
     else
     {
-        // 如果点击的是同一个，取消选中
-        if (selectedSlotIndex_ == slotIndex)
-        {
-            selectedSlotIndex_ = -1;
-            updateSelection();
-            if (infoLabel_) infoLabel_->setString("Selection cleared");
-        }
-        // 如果点击的是不同的槽位，交换
-        else
-        {
-            inventory_->swapSlots(selectedSlotIndex_, slotIndex);
-            
-            // 刷新UI显示交换后的结果
-            refresh();
-            
-            if (infoLabel_) infoLabel_->setString("Items swapped!");
-            
-            // 交换后取消选中
-            selectedSlotIndex_ = -1;
-            updateSelection();
-        }
-    }
-}
+        std::string info = StringUtils::format(
+            "%s x%d - %s",
+            InventoryManager::getItemName(slot.type).c_str(),
+            slot.count,
+            InventoryManager::getItemDescription(slot.type).c_str()
+        );
+        infoLabel_->setString(info);
 
-void InventoryUI::updateSelection()
-{
-    if (selectedSlotIndex_ != -1 && selectedSlotIndex_ < slotSprites_.size())
-    {
-        if (!selectedFrame_) return; // 防御性检查
-        
-        const auto& slotSprite = slotSprites_[selectedSlotIndex_];
-        // 获取槽位在 panel 中的位置
-        if (slotSprite.background) {
-            Vec2 pos = slotSprite.background->getPosition();
-            selectedFrame_->setPosition(pos + Vec2(SLOT_SIZE/2, SLOT_SIZE/2));
-            selectedFrame_->setVisible(true);
-            
-            // 简单的呼吸动画
-            selectedFrame_->stopAllActions();
-            selectedFrame_->runAction(RepeatForever::create(Sequence::create(
-                FadeTo::create(0.5f, 150),
-                FadeTo::create(0.5f, 255),
-                nullptr
-            )));
-        }
+        CCLOG("Clicked slot %d: %s x%d", slotIndex,
+            InventoryManager::getItemName(slot.type).c_str(), slot.count);
     }
-    else
-    {
-        if (selectedFrame_)
-        {
-            selectedFrame_->setVisible(false);
-            selectedFrame_->stopAllActions();
-        }
-    }
+
+    // 可以在这里添加更多交互，比如拖拽、使用物品等
 }
 
 void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
     if (keyCode == EventKeyboard::KeyCode::KEY_ESCAPE ||
-        keyCode == EventKeyboard::KeyCode::KEY_B || 
-        keyCode == EventKeyboard::KeyCode::KEY_TAB || 
-        keyCode == EventKeyboard::KeyCode::KEY_E || 
-        keyCode == EventKeyboard::KeyCode::KEY_I)
+        keyCode == EventKeyboard::KeyCode::KEY_B)
     {
         close();
     }
@@ -533,7 +416,6 @@ cocos2d::Color3B InventoryUI::getItemColor(ItemType itemType) const
 
     // 木材 - 深棕色
     case ItemType::Wood:
-    case ItemType::Bow:
         return Color3B(101, 67, 33);
 
     // 鱼 - 银色

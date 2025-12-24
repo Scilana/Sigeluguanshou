@@ -224,16 +224,3 @@ void Player::updateMovement(float delta)
         this->setPosition(nextPos);
     }
 }
-
-void Player::heal(int amount)
-{
-    if (amount <= 0) return;
-    
-    hp_ += amount;
-    if (hp_ > maxHp_)
-    {
-        hp_ = maxHp_;
-    }
-    
-    CCLOG("Player healed for %d HP. Current HP: %d/%d", amount, hp_, maxHp_);
-}

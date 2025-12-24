@@ -88,23 +88,8 @@ private:
     std::vector<Monster*> monsters_;
     float monsterSpawnTimer_;
 
-    // ========== 弓箭/投射物系统 ==========
-    struct Projectile {
-        cocos2d::Sprite* sprite;
-        cocos2d::Vec2 velocity;
-        float damage;
-        float duration; // 存活时间
-    };
-    std::vector<Projectile> projectiles_;
-    void updateProjectiles(float delta);
-
     // ========== 宝箱系统 ==========
     std::vector<TreasureChest*> chests_;
-
-    // ========== 许愿池系统 ==========
-    cocos2d::Node* wishingWell_; // 许愿池节点
-    void initWishingWell();      // 初始化许愿池
-    void handleWishAction();     // 处理许愿交互
 
     // ========== 武器/攻击系统 ==========
     ItemType currentWeapon_;

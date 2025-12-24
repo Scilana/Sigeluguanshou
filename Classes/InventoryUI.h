@@ -120,11 +120,6 @@ private:
      */
     void onSlotClicked(int slotIndex);
 
-    void updateSelection(); // 更新选中框位置和可见性
-
-    int selectedSlotIndex_ = -1;  // 当前选中的槽位索引，-1 表示未选中
-    cocos2d::Sprite* selectedFrame_ = nullptr; // 选中高亮框
-
     /**
      * @brief 处理键盘事件
      */
