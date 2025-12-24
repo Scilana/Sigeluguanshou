@@ -106,7 +106,7 @@ private:
     /**
      * @brief 掉落物品
      */
-    void dropItems(const cocos2d::Vec2& tileCoord, const MineralDef& mineralDef);
+    std::string dropItems(const cocos2d::Vec2& tileCoord, const MineralDef& mineralDef);
 };
 
 #endif // __MINING_MANAGER_H__

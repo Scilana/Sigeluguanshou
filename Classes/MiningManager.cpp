@@ -136,10 +136,15 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             // 一次就破坏
             mineLayer_->clearMineralAt(tileCoord);
             mineLayer_->clearCollisionAt(tileCoord);
-            dropItems(tileCoord, *mineralDef);
+            std::string dropMsg = dropItems(tileCoord, *mineralDef);
             activeMinings_.erase(key);
             addExp(mineralDef->expReward);
-            return { true, mineralDef->name + " broken!" };
+            
+            if (!dropMsg.empty()) {
+                return { true, dropMsg };
+            } else {
+                return { true, mineralDef->name + " broken!" };
+            }
         }
         else
         {
@@ -156,10 +161,15 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             // 破坏矿物
             mineLayer_->clearMineralAt(tileCoord);
             mineLayer_->clearCollisionAt(tileCoord);
-            dropItems(tileCoord, *mineralDef);
+            std::string dropMsg = dropItems(tileCoord, *mineralDef);
             activeMinings_.erase(it);
             addExp(mineralDef->expReward);
-            return { true, mineralDef->name + " broken!" };
+            
+            if (!dropMsg.empty()) {
+                return { true, dropMsg };
+            } else {
+                return { true, mineralDef->name + " broken!" };
+            }
         }
         else
         {
@@ -192,10 +202,10 @@ long long MiningManager::getTileKey(const Vec2& tileCoord) const
     return (static_cast<long long>(y) << 32) | (static_cast<unsigned long long>(x) & 0xffffffffULL);
 }
 
-void MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mineralDef)
+std::string MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mineralDef)
 {
     if (mineralDef.dropItem == ItemType::None)
-        return;
+        return "";
 
     // 计算掉落数量
     int dropCount = mineralDef.dropMinCount;
@@ -210,12 +220,15 @@ void MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mineralDe
         bool added = inventory_->addItem(mineralDef.dropItem, dropCount);
         if (added)
         {
-            CCLOG("Collected %d x %s", dropCount,
-                  InventoryManager::getItemName(mineralDef.dropItem).c_str());
+            std::string itemName = InventoryManager::getItemName(mineralDef.dropItem);
+            CCLOG("Collected %d x %s", dropCount, itemName.c_str());
+            return StringUtils::format("Found %d %s!", dropCount, itemName.c_str());
         }
         else
         {
             CCLOG("Inventory full! Could not collect items");
+            return "Inventory full!";
         }
     }
+    return "";
 }

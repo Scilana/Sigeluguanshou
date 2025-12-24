@@ -109,21 +109,29 @@ void MineScene::initMap()
             CCLOG("  - Tile size: %.0f x %.0f px", tileSize.width, tileSize.height);
             CCLOG("  - Total size: %.0f x %.0f px", mapSize.width * tileSize.width, mapSize.height * tileSize.height);
 
-            // 处理 Front 层（放在最底层，Back 下面）
+            // 打印所有图层名称
+            CCLOG("--- Layer List ---");
+            for (const auto& child : tmxMap->getChildren())
+            {
+                auto layer = dynamic_cast<TMXLayer*>(child);
+                if (layer)
+                {
+                     CCLOG("Layer Name: %s, Z: %d, Visible: %d", layer->getLayerName().c_str(), layer->getLocalZOrder(), layer->isVisible());
+                }
+            }
+            CCLOG("------------------");
+
+            // 处理 Front 层 (通常是遮挡层/顶部墙壁，放在最上层)
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
                 CCLOG("✓ Front layer found!");
-                CCLOG("  - Position: (%.2f, %.2f)", frontLayer->getPosition().x, frontLayer->getPosition().y);
-                CCLOG("  - Visible: %s", frontLayer->isVisible() ? "YES" : "NO");
-                CCLOG("  - Original opacity: %d", frontLayer->getOpacity());
-                CCLOG("  - Layer Size: (%.0f, %.0f)", frontLayer->getLayerSize().width, frontLayer->getLayerSize().height);
-
-                // Front 层保留在 tmxMap 中，设置为最底层
-                frontLayer->setLocalZOrder(-200);  // 最底层
-                frontLayer->setVisible(true);  // 确保可见
-                frontLayer->setOpacity(255);   // 确保完全不透明
-                CCLOG("✓ Front layer set to Z-order -200 (below Back), opacity: 255");
+                // Front 通常是在玩家之上的遮挡层 (Roof/TreeTop)
+                // 这里设置为 20 (Player is 10)
+                frontLayer->setLocalZOrder(20); 
+                frontLayer->setVisible(true);
+                frontLayer->setOpacity(255);
+                CCLOG("✓ Front layer set to Z-order 20 (Above Player)");
             }
             else
             {
@@ -1161,40 +1169,36 @@ void MineScene::selectItemByIndex(int idx)
 void MineScene::initChests()
 {
     if (!mineLayer_) return;
+    
+    // 清空原有列表
+    chests_.clear();
 
     // 降低宝箱生成概率和数量
-    // 之前可能是 5-10 个，现在降低到 1-3 个
     int minChests = 1;
     int maxChests = 2 + (currentFloor_ / 2); // 随层数微增，但总体少
     int count = minChests + rand() % (maxChests - minChests + 1);
 
-    // 额外概率检查：深层可能不生成？或者 30% 概率一层一个都没有
+    // 额外概率检查：30% 概率一层一个都没有
     if (rand() % 100 < 30) count = 0;
 
     for (int i = 0; i < count; ++i)
     {
-        // ... (existing implementation if any, or create new logic)
-        // 既然找不到原有实现，这里提供完整实现
         Vec2 pos = getRandomWalkablePosition();
         
-        // 简单的宝箱 (使用 DrawNode 或 Sprite)
-        auto chest = Sprite::create("items/chest_closed.png"); // 假设有资源
-        if (!chest) 
+        // 创建宝箱对象
+        TreasureChest* chest = TreasureChest::create(currentFloor_);
+        if (chest)
         {
-            // 如果没有资源，用此代替
-             auto dn = DrawNode::create();
-             dn->drawSolidRect(Vec2(-10,-10), Vec2(10,10), Color4F::ORANGE);
-             chest = Sprite::create();
-             chest->addChild(dn);
+            chest->setPosition(pos);
+            this->addChild(chest, 5); // Z-order 与 Slime/Player 接近
+            
+            // 添加到列表以便交互
+            chests_.push_back(chest);
+            
+            CCLOG("Spawned chest at (%.1f, %.1f)", pos.x, pos.y);
         }
-        
-        chest->setPosition(pos);
-        this->addChild(chest, 5); // Z-order
-        
-        // 存储宝箱数据以便交互
-        // 这里只是简单展示，实际需要 Chest 类支持打开
     }
-    CCLOG("Spawned %d chests", count);
+    CCLOG("Spawned %d chests", (int)chests_.size());
 }
 
 void MineScene::initWishingWell()
