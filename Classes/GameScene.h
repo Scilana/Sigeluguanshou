@@ -63,14 +63,22 @@ private:
     // ==========================================
     // 核心组件
     // ==========================================
-    // ???
-    MapLayer* mapLayer_;
-    // ????
-    FarmManager* farmManager_;
-    // ??
-    Player* player_;
-    // ??????
-    WeatherManager* weatherManager_;
+    // ???
+
+    MapLayer* mapLayer_;
+
+    // ????
+
+    FarmManager* farmManager_;
+
+    // ??
+
+    Player* player_;
+
+    // ??????
+
+    WeatherManager* weatherManager_;
+
 
     // ==========================================
     // 背包与系统

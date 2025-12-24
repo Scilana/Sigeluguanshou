@@ -2,13 +2,14 @@
 #define __PLAYER_H__
 
 #include "cocos2d.h"
+#include "InventoryManager.h"
 
 // 前向声明，告诉编译器 MapLayer 类的存在
 class MapLayer;
 
 /**
  * @brief 玩家类
- * 包含移动逻辑、碰撞检测、动画状态机和战斗属性
+ * 包含移动逻辑、碰撞检测、动画状态机、战斗属性和能量系统
  */
 class Player : public cocos2d::Sprite
 {
@@ -23,7 +24,7 @@ public:
     virtual void update(float delta) override;
 
     /**
-     * @brief 启用键盘控制
+     * @brief 启用/禁用键盘控制
      */
     void enableKeyboardControl();
     void disableKeyboardControl();
@@ -57,6 +58,9 @@ public:
     // 获取当前面朝方向（用于判定攻击方向）
     cocos2d::Vec2 getFacingDirection() const { return facingDirection_; }
 
+    // 触发挥舞动作（对外接口）
+    void playSwingAnimation();
+
     // ========== 能量系统 ==========
     float getMaxEnergy() const { return maxEnergy_; }
     float getCurrentEnergy() const { return currentEnergy_; }
@@ -64,6 +68,8 @@ public:
     void recoverEnergy(float amount);
     bool isExhausted() const { return isExhausted_; }
     void setExhausted(bool exhausted);
+
+    void setCurrentTool(ItemType tool) { currentToolType_ = tool; }  //锄头系统
 
 private:
     // ========== 动画相关定义 ==========
@@ -81,13 +87,28 @@ private:
     };
 
     PlayerState currentState_;              // 当前状态
+    PlayerState stateBeforeAttack_;         // 保存攻击前的状态，用于攻击结束后恢复
     cocos2d::Action* currentAnimAction_;    // 当前正在播放的动作（用于停止它）
 
-    // 缓存的动画数据（使用 retain 保持引用）
+    // 缓存的行走动画数据（使用 retain 保持引用）
     cocos2d::Animation* walkUpAnimation_;
     cocos2d::Animation* walkDownAnimation_;
     cocos2d::Animation* walkLeftAnimation_;
     cocos2d::Animation* walkRightAnimation_;
+
+    // 缓存的挥斧动画数据
+    cocos2d::Animation* useAxeUpAnimation_;
+    cocos2d::Animation* useAxeDownAnimation_;
+    cocos2d::Animation* useAxeLeftAnimation_;
+    cocos2d::Animation* useAxeRightAnimation_;
+
+    ItemType currentToolType_ = ItemType::None;
+
+    // 【新增】锄头动画缓存
+    cocos2d::Animation* useHoeUpAnimation_;
+    cocos2d::Animation* useHoeDownAnimation_;
+    cocos2d::Animation* useHoeLeftAnimation_;
+    cocos2d::Animation* useHoeRightAnimation_;
 
     /**
      * @brief 加载所有动画资源到内存
@@ -99,12 +120,21 @@ private:
      */
     void playAnimation(PlayerState state);
 
+    /**
+     * @brief 攻击动画播放结束后的回调函数
+     */
+    void onAttackAnimationFinished();
+
     // ========== 移动与属性 ==========
 
     float moveSpeed_;
     cocos2d::Vec2 moveDirection_;
     cocos2d::Vec2 facingDirection_;
     bool isMoving_;
+
+    // 动作状态标志
+    bool isAttacking_;      // 是否正在播放攻击动画（此时锁定移动）
+    bool isAttackPressed_;  // 是否按下了攻击键（J键）
 
     // 按键状态标志
     bool isUpPressed_;
@@ -128,7 +158,7 @@ private:
     float baseMoveSpeed_; // 记录基础速度以便恢复
 
     /**
-     * @brief 键盘按下
+     * @brief 键盘按下/释放
      */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
     void onKeyReleased(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);

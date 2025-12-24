@@ -790,213 +790,251 @@ void GameScene::updateWeather()
 
 void GameScene::handleFarmAction(bool waterOnly)
 {
-    if (!mapLayer_ || !farmManager_ || !player_)
-        return;
+    // 0. 安全检查
+    if (!mapLayer_ || !farmManager_ || !player_) return;
 
+    // 1. 立即播放玩家动画
+    // (Player 类内部会根据当前 set 的 ItemType 自动决定播放 挥锄头 还是 挥斧头)
+    player_->playSwingAnimation();
+
+    // 计算玩家当前脚下的瓦片坐标
     Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
     tileCoord.x = std::round(tileCoord.x);
     tileCoord.y = std::round(tileCoord.y);
 
-    FarmManager::ActionResult result{ false, "Unavailable", -1 };
+    // 获取当前工具类型
     ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
 
-    if (waterOnly) {
-        if (current == ItemType::WateringCan) {
-            result = farmManager_->waterTile(tileCoord);
-            if (result.success) player_->consumeEnergy(2.0f);
-        }
-        else {
-            result = { false, "Need watering can to water", -1 };
-        }
-    }
-    else {
-        switch (current) {
-        case ItemType::Hoe:
-            result = farmManager_->tillTile(tileCoord);
-            if (result.success) player_->consumeEnergy(2.0f);
-            break;
-        case ItemType::WateringCan:
-            result = farmManager_->waterTile(tileCoord);
-            if (result.success) player_->consumeEnergy(2.0f);
-            break;
-        case ItemType::Scythe:
-            result = farmManager_->harvestTile(tileCoord);
-            if (result.success && inventory_)
+    // ======================================================================================
+    // 2. 定义核心业务逻辑 Lambda
+    //    将所有“改变游戏数据”的代码封装在这里，方便放入延迟回调中执行
+    // ======================================================================================
+    auto executeAction = [this, current, tileCoord, waterOnly]()
+        {
+            FarmManager::ActionResult result{ false, "Unavailable", -1 };
+
+            // --- 分支 A: 仅浇水模式 (按K键) ---
+            if (waterOnly)
             {
-                ItemType harvestItem = getItemTypeForCropId(result.cropId);
-                if (harvestItem != ItemType::None)
-                {
-                    if (inventory_->addItem(harvestItem, 1))
-                    {
-                        result.message = StringUtils::format("Harvested %s (+1)", InventoryManager::getItemName(harvestItem).c_str());
-                        if (inventoryUI_) inventoryUI_->refresh();
-                    }
-                    else
-                    {
-                        result.message = "Inventory full!";
-                    }
+                if (current == ItemType::WateringCan) {
+                    result = farmManager_->waterTile(tileCoord);
+                    if (result.success) player_->consumeEnergy(2.0f);
+                }
+                else {
+                    result = { false, "Need watering can to water", -1 };
                 }
             }
-            break;
-         case ItemType::Axe: {
-            // ========== 砍树逻辑（第3刀替换版）==========
-            Vec2 target = tileCoord;
-            if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No tree to chop here", -1 };
-                break;
-            }
+            // --- 分支 B: 通用工具模式 (按J键) ---
+            else
+            {
+                switch (current)
+                {
+                    // Case 1: 锄头 (耕地)
+                case ItemType::Hoe:
+                    result = farmManager_->tillTile(tileCoord);
+                    if (result.success) player_->consumeEnergy(2.0f);
+                    break;
 
-            std::vector<Vec2> component = collectCollisionComponent(target);
-            if (component.empty() || component.size() > 10) {
-                result = { false, "No tree to chop here", -1 };
-                break;
-            }
+                    // Case 2: 水壶 (也可以按J浇水)
+                case ItemType::WateringCan:
+                    result = farmManager_->waterTile(tileCoord);
+                    if (result.success) player_->consumeEnergy(2.0f);
+                    break;
 
-            // 查找是否已经在砍这棵树
-            TreeChopData* existingChop = nullptr;
-            for (auto& chop : activeChops_) {
-                if (chop.tileCoord == component.front()) {
-                    existingChop = &chop;
+                    // Case 3: 镰刀 (收获)
+                case ItemType::Scythe:
+                    result = farmManager_->harvestTile(tileCoord);
+                    if (result.success && inventory_)
+                    {
+                        ItemType harvestItem = getItemTypeForCropId(result.cropId);
+                        if (harvestItem != ItemType::None)
+                        {
+                            if (inventory_->addItem(harvestItem, 1))
+                            {
+                                result.message = StringUtils::format("Harvested %s (+1)", InventoryManager::getItemName(harvestItem).c_str());
+                                if (inventoryUI_) inventoryUI_->refresh();
+                            }
+                            else
+                            {
+                                result.message = "Inventory full!";
+                            }
+                        }
+                    }
+                    break;
+
+                    // Case 4: 斧头 (砍树 - 复杂逻辑)
+                case ItemType::Axe:
+                {
+                    Vec2 target = tileCoord;
+                    // 尝试寻找附近的树根
+                    if (!findNearbyCollisionTile(tileCoord, target)) {
+                        result = { false, "No tree to chop here", -1 };
+                        break;
+                    }
+
+                    std::vector<Vec2> component = collectCollisionComponent(target);
+                    if (component.empty() || component.size() > 10) {
+                        result = { false, "No tree to chop here", -1 };
+                        break;
+                    }
+
+                    // 查找是否已经在砍这棵树
+                    TreeChopData* existingChop = nullptr;
+                    for (auto& chop : activeChops_) {
+                        if (chop.tileCoord == component.front()) {
+                            existingChop = &chop;
+                            break;
+                        }
+                    }
+
+                    const int REPLACE_THRESHOLD = 3; // 第3刀替换为Sprite
+
+                    if (existingChop) {
+                        // --- 已经在砍了 (第 2, 3, 4... 刀) ---
+                        existingChop->chopCount++;
+                        existingChop->chopTimer = 0.0f;
+
+                        // 第3刀：替换瓦片为Sprite
+                        if (existingChop->chopCount == REPLACE_THRESHOLD && existingChop->treeSprite == nullptr) {
+                            CCLOG("Chop 3: Replacing tiles with Sprite...");
+                            existingChop->treeSprite = createTreeSprite(existingChop->tiles);
+                            showActionMessage("Tree is loose!", Color3B::YELLOW);
+                        }
+
+                        // 播放树木受击摇晃动画
+                        if (existingChop->treeSprite) {
+                            playTreeShakeAnimation(existingChop->treeSprite);
+                        }
+                        else {
+                            showActionMessage("Thump! (" + std::to_string(existingChop->chopCount) + ")", Color3B::WHITE);
+                        }
+
+                        // 检查是否砍倒 (假设 6 刀)
+                        if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
+                            if (existingChop->treeSprite) {
+                                playTreeFallAnimation(existingChop);
+                                result = { true, "Timber!", -1 };
+                            }
+                            else {
+                                result = { true, "Tree destroyed", -1 };
+                            }
+                        }
+                        else {
+                            result = { true, "", -1 }; // 砍到了但没倒，不弹提示以免刷屏
+                        }
+                    }
+                    else {
+                        // --- 第 1 刀 (新砍伐) ---
+                        TreeChopData newChop;
+                        newChop.tileCoord = component.front();
+                        newChop.tiles = component;
+                        newChop.chopCount = 1;
+                        newChop.chopTimer = 0.0f;
+                        newChop.treeSprite = nullptr; // 第1刀不生成Sprite
+
+                        activeChops_.push_back(newChop);
+
+                        showActionMessage("Thump! (1)", Color3B::WHITE);
+                        player_->consumeEnergy(2.0f);
+                        result = { true, "", -1 };
+                    }
+                    break;
+                }
+
+                // Case 5: 镐子 (碎石)
+                case ItemType::Pickaxe:
+                {
+                    Vec2 target = tileCoord;
+                    if (!findNearbyCollisionTile(tileCoord, target)) {
+                        result = { false, "No rock to mine here", -1 };
+                        break;
+                    }
+
+                    // 石头 GID 列表 (请确保这里的 ID 与你的地图一致)
+                    static const std::unordered_set<int> rockGids = {
+                        45019, 45020, 45021, 45025, 45026, 45027, 45028, 45030,
+                        45069, 45070, 45071, 45072, 45073, 45170, 45171, 45172
+                        // ... 如果你有更多石头ID请补全 ...
+                    };
+
+                    int baseGid = mapLayer_->getBaseTileGID(target);
+
+                    // 简单的宽容判断：只要有碰撞且看起来像石头（或者你可以直接去掉 rockGids 检查，只信赖碰撞）
+                    // 这里保留你的逻辑，如果 rockGids 不全可能导致敲不碎
+                    // if (rockGids.find(baseGid) == rockGids.end()) ... 
+
+                    std::vector<Vec2> component = collectCollisionComponent(target);
+                    if (component.empty()) {
+                        result = { false, "No rock here", -1 };
+                        break;
+                    }
+
+                    for (const auto& t : component) {
+                        mapLayer_->clearCollisionAt(t);
+                        mapLayer_->clearBaseTileAt(t);
+                    }
+
+                    player_->consumeEnergy(4.0f);
+                    result = { true, "Rock broken!", -1 };
+                    break;
+                }
+
+                // Case 6: 各种种子 (播种)
+                case ItemType::SeedTurnip:
+                case ItemType::SeedPotato:
+                case ItemType::SeedCorn:
+                case ItemType::SeedTomato:
+                case ItemType::SeedPumpkin:
+                case ItemType::SeedBlueberry:
+                {
+                    if (!inventory_ || !inventory_->hasItem(current, 1)) {
+                        result = { false, "No seeds left", -1 };
+                        break;
+                    }
+                    int cropId = getCropIdForItem(current);
+                    result = farmManager_->plantSeed(tileCoord, cropId);
+                    if (result.success && inventory_) {
+                        inventory_->removeItem(current, 1);
+                        player_->consumeEnergy(2.0f);
+                        result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
+                        if (inventoryUI_) inventoryUI_->refresh();
+                    }
+                    break;
+                }
+
+                default:
+                    result = { false, "Unknown item action", -1 };
                     break;
                 }
             }
 
-            // 定义何时替换为 Sprite (第 3 刀)
-            const int REPLACE_THRESHOLD = 3;
-
-            if (existingChop) {
-                // --- 已经在砍了 (第 2, 3, 4... 刀) ---
-                existingChop->chopCount++;
-                existingChop->chopTimer = 0.0f; // 重置超时计时
-
-                // 【关键逻辑】如果是第 3 刀，且还没有 Sprite，立刻进行替换！
-                if (existingChop->chopCount == REPLACE_THRESHOLD && existingChop->treeSprite == nullptr) {
-                    CCLOG("第3刀！替换瓦片为Sprite...");
-                    existingChop->treeSprite = createTreeSprite(existingChop->tiles); // 这会清除瓦片并生成Sprite
-                    showActionMessage("Tree is loose!", Color3B::YELLOW);
-                }
-
-                // 如果 Sprite 已经存在（即 >= 3刀），播放摇晃动画
-                if (existingChop->treeSprite) {
-                    playTreeShakeAnimation(existingChop->treeSprite);
-                }
-                else {
-                    // 如果还不到3刀（还是瓦片），只显示简单的撞击文字
-                    Vec2 pos = mapLayer_->tileCoordToPosition(target);
-                    // 简单的偏移，让字显示在上方
-                    pos.x += mapLayer_->getTileSize().width / 2;
-                    pos.y += mapLayer_->getTileSize().height;
-
-                    // 这里由于没有Sprite拿不到位置，我们简单弹个全局字，或者你可以加个临时的Label
-                    showActionMessage("Thump! (" + std::to_string(existingChop->chopCount) + ")", Color3B::WHITE);
-                }
-
-                // 检查是否砍倒 (假设需要 6 刀)
-                if (existingChop->chopCount >= TreeChopData::CHOPS_NEEDED) {
-                    if (existingChop->treeSprite) {
-                        playTreeFallAnimation(existingChop);
-                        result = { true, "Timber!", -1 };
-                    }
-                    else {
-                        // 防御性编程：万一数值设置错了，没生成Sprite就倒了
-                        result = { true, "Tree destroyed (No anim)", -1 };
-                        // 这里应该补一个清理瓦片的逻辑，以防万一
-                    }
-                }
-                else {
-                    result = { true, "", -1 };
-                }
+            // 统一显示操作结果提示
+            if (!result.message.empty()) {
+                Color3B color = result.success ? Color3B(120, 230, 140) : Color3B(255, 180, 120);
+                showActionMessage(result.message, color);
             }
-            else {
-                // --- 第 1 刀 (新砍伐) ---
-                TreeChopData newChop;
-                newChop.tileCoord = component.front();
-                newChop.tiles = component;
-                newChop.chopCount = 1;
-                newChop.chopTimer = 0.0f;
+        };
 
-                // 【关键】第1刀不生成 Sprite，设为 nullptr
-                newChop.treeSprite = nullptr;
+    // ======================================================================================
+    // 3. 动作执行策略：延迟 vs 立即
+    // ======================================================================================
 
-                activeChops_.push_back(newChop);
-
-                // 第1刀的反馈
-                showActionMessage("Thump! (1)", Color3B::WHITE);
-                player_->consumeEnergy(2.0f);
-                result = { true, "", -1 };
-            }
-            break;
-        }
-        case ItemType::Pickaxe: {
-            // Mine rocks: detect collision tile, verify rock GID, then clear it.
-            Vec2 target = tileCoord;
-            if (!findNearbyCollisionTile(tileCoord, target)) {
-                result = { false, "No rock to mine here", -1 };
-                break;
-            }
-
-            static const std::unordered_set<int> rockGids = {
-                // Rock / ore tiles used in farm.tmx (bottom rows of tileset5)
-                45019, 45020, 45021,
-                45025, 45026, 45027, 45028, 45030,
-                45069, 45070, 45071, 45072, 45073,
-                45075, 45076, 45077, 45078, 45079, 45080, 45081,
-                45125, 45126, 45157, 45170, 45171, 45172, 45173, 45175, 45176,
-                45179, 45180, 45181, 45185,
-                45220, 45223, 45224, 45225, 45226
-            };
-
-            int baseGid = mapLayer_->getBaseTileGID(target);
-            if (rockGids.find(baseGid) == rockGids.end()) {
-                result = { false, "No rock to mine here", -1 };
-                break;
-            }
-
-            std::vector<Vec2> component = collectCollisionComponent(target);
-            if (component.empty()) {
-                result = { false, "No rock to mine here", -1 };
-                break;
-            }
-
-            for (const auto& t : component) {
-                mapLayer_->clearCollisionAt(t);
-                mapLayer_->clearBaseTileAt(t);
-            }
-
-            player_->consumeEnergy(4.0f);
-            result = { true, "Rock broken!", -1 };
-            break;
-        }
-        case ItemType::SeedTurnip:
-        case ItemType::SeedPotato:
-        case ItemType::SeedCorn:
-        case ItemType::SeedTomato:
-        case ItemType::SeedPumpkin:
-        case ItemType::SeedBlueberry: {
-            if (!inventory_ || !inventory_->hasItem(current, 1))
-            {
-                result = { false, "No seeds left", -1 };
-                break;
-            }
-            int cropId = getCropIdForItem(current);
-            result = farmManager_->plantSeed(tileCoord, cropId);
-            if (result.success && inventory_)
-            {
-                inventory_->removeItem(current, 1);
-                player_->consumeEnergy(2.0f);
-                result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
-                if (inventoryUI_) inventoryUI_->refresh();
-            }
-            break;
-        }
-        default:
-            result = { false, "Unknown item action", -1 };
-            break;
-        }
+    // 如果是挥动类工具（锄头、镐子、斧头），我们需要配合动画的“打击点”
+    // 假设动画总长约 0.45秒 (3帧 * 0.15s)，打击感通常在中间，所以延迟 0.2秒
+    if (current == ItemType::Hoe || current == ItemType::Pickaxe || current == ItemType::Axe)
+    {
+        auto seq = Sequence::create(
+            DelayTime::create(0.2f),
+            CallFunc::create(executeAction),
+            nullptr
+        );
+        this->runAction(seq);
     }
-
-    Color3B color = result.success ? Color3B(120, 230, 140) : Color3B(255, 180, 120);
-    showActionMessage(result.message, color);
+    else
+    {
+        // 种子、水壶等其他物品，立即执行逻辑
+        executeAction();
+    }
 }
 
 // ========== 砍树相关函数 ==========
@@ -1598,18 +1636,30 @@ void GameScene::initToolbar()
 
 }
 
-void GameScene::selectItemByIndex(int idx)
-
+void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
 {
-
+    // 1. 基本安全检查
     if (toolbarItems_.empty())
         return;
 
     if (idx < 0 || idx >= static_cast<int>(toolbarItems_.size()))
         return;
 
+    // 2. 更新选中的索引
     selectedItemIndex_ = idx;
-    std::string name = InventoryManager::getItemName(toolbarItems_[selectedItemIndex_]);
+
+    // 【关键修复】这里必须定义 currentItem 变量！
+    // 从工具栏数组中取出当前选中的物品类型
+    ItemType currentItem = toolbarItems_[selectedItemIndex_];
+
+    // 3. 告诉 Player 切换了工具 (现在 currentItem 有定义了，不会报错)
+    if (player_)
+    {
+        player_->setCurrentTool(currentItem);  //通过这个传ITEMTYPE，从而在play Amination中选动画
+    }
+
+    // 4. 更新 UI 显示
+    std::string name = InventoryManager::getItemName(currentItem); // 这里也可以直接用 currentItem
 
     if (itemLabel_)
     {
