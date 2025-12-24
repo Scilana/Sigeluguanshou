@@ -1,9 +1,10 @@
-#include "GameScene.h"
+﻿﻿#include "GameScene.h"
 #include "MenuScene.h"
 #include "SimpleAudioEngine.h"
 #include "ui/CocosGUI.h"
 #include "HouseScene.h"
 #include "FarmManager.h"
+#include "MarketUI.h"
 #include "ElevatorUI.h"
 #include <cmath>
 
@@ -63,10 +64,10 @@ bool GameScene::init(bool loadFromSave)
 
     // 按顺序初始化组件
     initMap();
-    
+
     // 初始化农场管理器
     farmManager_ = FarmManager::create(mapLayer_);
-    this->addChild(farmManager_); // 添加到场景更新
+    this->addChild(farmManager_); // 添加到场景层
 
     initPlayer();
     initCamera();
@@ -100,6 +101,8 @@ bool GameScene::init(bool loadFromSave)
     return true;
 }
 
+
+
 void GameScene::initMap()
 {
     mapLayer_ = MapLayer::create("map/Farm.tmx");
@@ -118,8 +121,11 @@ void GameScene::initPlayer()
     player_ = Player::create();
     player_->setPosition(Vec2(400, 300)); // 默认位置
     player_->setMapLayer(mapLayer_);
+    player_->enableKeyboardControl();
     this->addChild(player_, 10); // 玩家层级较高
 }
+
+
 
 void GameScene::initCamera()
 {
@@ -128,6 +134,8 @@ void GameScene::initCamera()
     updateCamera(); // 初始位置更新
 }
 
+
+
 void GameScene::initUI()
 {
     // 创建UI层，随摄像机移动（或使用ScreenSpaceCamera，但这里简单模拟）
@@ -135,6 +143,7 @@ void GameScene::initUI()
     this->addChild(uiLayer_, 100);
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
 
     // 时间显示
     timeLabel_ = Label::createWithSystemFont("Day 1  06:00 AM", "Arial", 24);
@@ -157,7 +166,11 @@ void GameScene::initUI()
 
     // 操作提示
     actionLabel_ = Label::createWithSystemFont("", "Arial", 32);
-    actionLabel_->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2 + 50));
+    actionLabel_->setAnchorPoint(Vec2(0.5f, 0.5f));
+    actionLabel_->setPosition(Vec2(
+        origin.x + visibleSize.width / 2,
+        origin.y + visibleSize.height / 2 + 50
+    ));
     actionLabel_->setOpacity(0);
     uiLayer_->addChild(actionLabel_);
 
@@ -167,6 +180,8 @@ void GameScene::initUI()
     positionLabel_->setAnchorPoint(Vec2(0, 1));
     uiLayer_->addChild(positionLabel_);
 }
+
+
 
 void GameScene::initControls()
 {
@@ -178,6 +193,8 @@ void GameScene::initControls()
     CCLOG("Controls initialized");
 
 }
+
+
 
 void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
@@ -350,56 +367,6 @@ void GameScene::updateUI()
 // 输入处理
 // =====================================
 
-void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
-{
-    // 数字键切换物品
-    int key = (int)keyCode;
-    // KEY_0 is 76, KEY_1 is 77... in general, check actual mapping
-    if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
-    {
-        int idx = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
-        if (idx == 0) idx = 9; // 0键对应第10格
-        else idx -= 1;         // 1键对应第0格
-        selectItemByIndex(idx);
-    }
-    
-    // 快捷键逻辑
-    switch (keyCode)
-    {
-        case EventKeyboard::KeyCode::KEY_ESCAPE:
-            if (inventoryUI_) toggleInventory();
-            else backToMenu(); // 或者打开暂停菜单
-            break;
-        case EventKeyboard::KeyCode::KEY_E:
-        case EventKeyboard::KeyCode::KEY_B:
-        case EventKeyboard::KeyCode::KEY_TAB:
-            toggleInventory(); // 打开/关闭背包
-            break;
-        case EventKeyboard::KeyCode::KEY_J: // 交互/使用工具
-        case EventKeyboard::KeyCode::KEY_SPACE:
-            handleFarmAction(false); // 耕地/种植/收获/挖矿/砍树
-            break;
-        case EventKeyboard::KeyCode::KEY_K: // 浇水
-            handleFarmAction(true);
-            break;
-        case EventKeyboard::KeyCode::KEY_M: // 进入矿洞
-            if (isPlayerNearElevator())
-            {
-                 enterMine(); // 传送
-            }
-            break;
-        // 调试用：保存/加载
-        case EventKeyboard::KeyCode::KEY_F5:
-            saveGame();
-            break;
-        case EventKeyboard::KeyCode::KEY_F9:
-            loadGame();
-            break;
-        default:
-            break;
-    }
-}
-
 void GameScene::selectItemByIndex(int idx)
 {
     if (idx >= 0 && idx < 10)
@@ -434,46 +401,11 @@ void GameScene::toggleInventory()
     }
 }
 
-void GameScene::onInventoryClosed()
-{
-    inventoryUI_ = nullptr;
-}
-
 void GameScene::backToMenu()
 {
     // 保存并返回
     saveGame();
     Director::getInstance()->replaceScene(MenuScene::createScene());
-}
-
-bool GameScene::isPlayerNearElevator() const
-{
-    if (!player_) return false;
-    // 简单距离判定
-    return player_->getPosition().distance(ELEVATOR_POS) < 100.0f;
-}
-
-void GameScene::enterMine()
-{
-    // 显示电梯UI选择楼层
-    auto elevatorUI = ElevatorUI::create();
-    if (elevatorUI)
-    {
-        elevatorUI->setFloorSelectCallback([this](int floor) {
-            auto mineScene = MineScene::createScene(inventory_, floor);
-            Director::getInstance()->replaceScene(TransitionFade::create(1.0f, mineScene)); 
-        });
-        
-        // 也可以直接进入上次的层数，这里暂时默认显示UI
-        this->addChild(elevatorUI, 999);
-        elevatorUI->show();
-    }
-    else
-    {
-        // Fallback
-        auto mineScene = MineScene::createScene(inventory_, 1); 
-        Director::getInstance()->replaceScene(TransitionFade::create(1.0f, mineScene));
-    }
 }
 
 // =====================================
@@ -482,7 +414,8 @@ void GameScene::enterMine()
 
 void GameScene::handleFarmAction(bool waterOnly)
 {
-    if (!player_ || !farmManager_ || !inventory_) return;
+    if (!player_ || !farmManager_ || !inventory_ || !mapLayer_)
+        return;
 
     ItemType currentItem = inventory_->getSlot(selectedItemIndex_).type;
     
@@ -497,42 +430,47 @@ void GameScene::handleFarmAction(bool waterOnly)
         if (currentItem == ItemType::WateringCan)
         {
             auto result = farmManager_->waterTile(tileCoord);
-            if (result.success)
-            {
-                 showActionMessage("Watered!", Color3B::BLUE);
-            }
+            if (!result.message.empty())
+                showActionMessage(result.message, result.success ? Color3B::BLUE : Color3B::RED);
         }
         return;
     }
 
-    // 设置关闭回调
-    inventoryUI_->setCloseCallback([this]() {
-        onInventoryClosed();
-    });
+    FarmManager::ActionResult result{ false, "", -1 };
 
-    // 添加到场景（高 Z-order 确保在顶层）
-    this->addChild(inventoryUI_, 2000);
-
-    // 设置全局 Z-order（确保在摄像机控制之外）
-    inventoryUI_->setGlobalZOrder(2000);
-
-    // 调整位置跟随摄像机
-    auto camera = this->getDefaultCamera();
-    if (camera)
+    if (currentItem == ItemType::Hoe)
     {
-        Vec3 cameraPos = camera->getPosition3D();
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 uiPos = Vec2(
-            cameraPos.x - visibleSize.width / 2,
-            cameraPos.y - visibleSize.height / 2
-        );
-        inventoryUI_->setPosition(uiPos);
+        result = farmManager_->tillTile(tileCoord);
+    }
+    else
+    {
+        int cropId = getCropIdForItem(currentItem);
+        if (cropId >= 0)
+        {
+            result = farmManager_->plantSeed(tileCoord, cropId);
+            if (result.success)
+            {
+                inventory_->removeItem(currentItem, 1);
+            }
+        }
+        else
+        {
+            result = farmManager_->harvestTile(tileCoord);
+            if (result.success)
+            {
+                ItemType cropItem = getItemTypeForCropId(result.cropId);
+                if (cropItem != ItemType::None)
+                {
+                    inventory_->addItem(cropItem, 1);
+                }
+            }
+        }
     }
 
-    // 播放显示动画
-    inventoryUI_->show();
-
-    CCLOG("Inventory opened");
+    if (!result.message.empty())
+    {
+        showActionMessage(result.message, result.success ? Color3B::GREEN : Color3B::RED);
+    }
 }
 
 void GameScene::onInventoryClosed()
@@ -574,6 +512,7 @@ void GameScene::toggleMarket()
     {
         Vec3 cameraPos = camera->getPosition3D();
         auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
         Vec2 uiPos = Vec2(
             cameraPos.x - visibleSize.width / 2,
             cameraPos.y - visibleSize.height / 2
@@ -673,6 +612,7 @@ void GameScene::enterMine()
         {
             Vec3 cameraPos = camera->getPosition3D();
             auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
             Vec2 uiPos = Vec2(
                 cameraPos.x - visibleSize.width / 2,
                 cameraPos.y - visibleSize.height / 2
@@ -707,34 +647,7 @@ bool GameScene::isPlayerNearHouseDoor() const
 // 存档系统实现
 // ==========================================
 
-Scene* GameScene::createScene(bool loadFromSave)
-{
-    auto scene = GameScene::create();
-    if (scene && loadFromSave)
-    {
-        // 通过调用带参数的 init 来加载存档
-        // 但由于 create() 已经调用了 init()，我们需要手动加载
-        GameScene* gameScene = dynamic_cast<GameScene*>(scene);
-        if (gameScene)
-        {
-            gameScene->loadGame();
-        }
-    }
-    return scene;
-}
-
-bool GameScene::init(bool loadFromSave)
-{
-    if (!init())
-        return false;
-
-    if (loadFromSave)
-    {
-        loadGame();
-    }
-}
-
-// ... 实现 Save/Load Stubs
+// ... 鐎圭偟骞 Save/Load Stubs
 void GameScene::saveGame()
 {
     if (SaveManager::getInstance()->saveGame(collectSaveData()))
@@ -818,17 +731,86 @@ void GameScene::initFarm()
     // Farm initialization logic if needed, currently handled in init()
 }
 
-void GameScene::toggleMarket()
+void GameScene::initToolbar()
 {
-    // Market UI stub
+    toolbarItems_.clear();
+    selectedItemIndex_ = 0;
+    if (inventory_)
+    {
+        inventory_->setSelectedSlotIndex(selectedItemIndex_);
+    }
 }
 
-void GameScene::onMarketClosed()
+void GameScene::initTrees()
 {
-    // Market close callback stub
+    trees_.clear();
+    activeChops_.clear();
+    choppedTrees_.clear();
+}
+
+int GameScene::findTreeIndex(const cocos2d::Vec2& tile) const
+{
+    for (size_t i = 0; i < trees_.size(); ++i)
+    {
+        if (trees_[i].tileCoord == tile)
+        {
+            return static_cast<int>(i);
+        }
+    }
+    return -1;
+}
+
+int GameScene::getCropIdForItem(ItemType type) const
+{
+    switch (type)
+    {
+    case ItemType::SeedTurnip:
+        return 0;
+    case ItemType::SeedPotato:
+        return 1;
+    case ItemType::SeedCorn:
+        return 2;
+    case ItemType::SeedTomato:
+        return 3;
+    case ItemType::SeedPumpkin:
+        return 4;
+    case ItemType::SeedBlueberry:
+        return 5;
+    default:
+        return -1;
+    }
+}
+
+void GameScene::showActionMessage(const std::string& text, const cocos2d::Color3B& color)
+{
+    if (!actionLabel_)
+        return;
+
+    actionLabel_->stopAllActions();
+    actionLabel_->setString(text);
+    actionLabel_->setColor(color);
+    actionLabel_->setOpacity(255);
+    auto seq = Sequence::create(DelayTime::create(1.0f), FadeOut::create(0.5f), nullptr);
+    actionLabel_->runAction(seq);
 }
 
 ItemType GameScene::getItemTypeForCropId(int cropId) const
 {
-    return ItemType::None;
+    switch (cropId)
+    {
+    case 0:
+        return ItemType::Turnip;
+    case 1:
+        return ItemType::Potato;
+    case 2:
+        return ItemType::Corn;
+    case 3:
+        return ItemType::Tomato;
+    case 4:
+        return ItemType::Pumpkin;
+    case 5:
+        return ItemType::Blueberry;
+    default:
+        return ItemType::None;
+    }
 }
