@@ -24,6 +24,7 @@ bool MineLayer::init(const std::string& tmxFile)
 
     mineralLayer_ = nullptr;
     stairsLayer_ = nullptr;
+    collisionLayer_ = nullptr;
 
     CCLOG("MineLayer initialized with: %s", tmxFile.c_str());
 
@@ -38,23 +39,37 @@ bool MineLayer::init(const std::string& tmxFile)
             mineralLayer_ = tmxMap->getLayer("mine1");
         if (mineralLayer_) 
             CCLOG("Found mineral layer: %s", mineralLayer_->getLayerName().c_str());
+            
         stairsLayer_ = tmxMap->getLayer("stairs");
         if (!stairsLayer_)
             stairsLayer_ = tmxMap->getLayer("Stairs");
         if (stairsLayer_) CCLOG("Found stairs layer");
 
+        collisionLayer_ = tmxMap->getLayer("Buildings");
+        if (collisionLayer_) CCLOG("Found Buildings layer (collision)");
 
         // 检查图层
         auto backLayer = tmxMap->getLayer("Back");
-        auto buildingsLayer = tmxMap->getLayer("Buildings");
         auto frontLayer = tmxMap->getLayer("Front");
 
         if (backLayer) CCLOG("Found Back layer");
-        if (buildingsLayer) CCLOG("Found Buildings layer (collision)");
         if (frontLayer) CCLOG("Found Front layer");
     }
 
     return true;
+}
+
+void MineLayer::clearCollisionAt(const Vec2& tileCoord)
+{
+    if (!collisionLayer_)
+        return;
+
+    Size mapSize = getTMXMap() ? getTMXMap()->getMapSize() : Size::ZERO;
+    if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
+        tileCoord.y < 0 || tileCoord.y >= mapSize.height)
+        return;
+
+    collisionLayer_->setTileGID(0, tileCoord);
 }
 
 bool MineLayer::isMineralAt(const Vec2& tileCoord) const

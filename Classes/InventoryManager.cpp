@@ -4,16 +4,6 @@ USING_NS_CC;
 
 static InventoryManager* s_instance = nullptr;
 
-InventoryManager::InventoryManager()
-    : money_(0)
-    , selectedSlotIndex_(0)
-{
-}
-
-InventoryManager::~InventoryManager()
-{
-}
-
 InventoryManager* InventoryManager::getInstance()
 {
     if (!s_instance)
@@ -55,6 +45,7 @@ bool InventoryManager::init()
 
     // 初始化默认金币和物品
     money_ = 500;
+    selectedSlotIndex_ = 0; // 默认选中第一个
     initDefaultItems();
 
     CCLOG("InventoryManager initialized with %d slots and %d gold", MAX_SLOTS, money_);
@@ -388,7 +379,7 @@ int InventoryManager::getMaxStack(ItemType itemType)
 
 void InventoryManager::setSelectedSlotIndex(int index)
 {
-    if (index >= 0 && index < MAX_SLOTS)
+    if (index >= 0 && index < 10)
     {
         selectedSlotIndex_ = index;
     }

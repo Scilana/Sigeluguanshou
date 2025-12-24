@@ -144,16 +144,6 @@ public:
     void swapSlots(int index1, int index2);
 
     /**
-     * @brief 获取当前选中的槽位索引（持久化）
-     */
-    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
-
-    /**
-     * @brief 设置当前选中的槽位索引
-     */
-    void setSelectedSlotIndex(int index);
-
-    /**
      * @brief 获取金币数量
      */
     int getMoney() const { return money_; }
@@ -170,6 +160,18 @@ public:
      * @return 是否成功移除
      */
     bool removeMoney(int amount);
+
+    // ========== 选中物品状态 (全局保持) ==========
+
+    /**
+     * @brief 获取当前选中的槽位索引 (0-9)
+     */
+    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
+
+    /**
+     * @brief 设置当前选中的槽位索引
+     */
+    void setSelectedSlotIndex(int index);
 
     /**
      * @brief 获取物品名称
@@ -209,10 +211,7 @@ public:
 private:
     std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
-    int selectedSlotIndex_; // 当前选中的槽位
-
-    InventoryManager();
-    ~InventoryManager();
+    int selectedSlotIndex_;                   // 当前选中的快捷栏槽位
 
     /**
      * @brief 初始化默认物品
