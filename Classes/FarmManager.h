@@ -18,6 +18,16 @@ class MapLayer;
 class FarmManager : public cocos2d::Node
 {
 public:
+    struct FarmTile
+    {
+        bool tilled = false;
+        bool watered = false;
+        bool hasCrop = false;
+        int cropId = -1;
+        int stage = 0;            // 当前生长阶段索引
+        int progressDays = 0;     // 当前阶段已积累的天数
+    };
+
     struct ActionResult
     {
         bool success;
@@ -35,19 +45,25 @@ public:
     ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
 
     int getDayCount() const { return dayCount_; }
+    void setDayCount(int dayCount) { dayCount_ = dayCount; }
     void forceRedraw();
 
-private:
-    struct FarmTile
-    {
-        bool tilled = false;
-        bool watered = false;
-        bool hasCrop = false;
-        int cropId = -1;
-        int stage = 0;            // 当前生长阶段索引
-        int progressDays = 0;     // 当前阶段已积累的天数
-    };
+    /**
+     * @brief 获取所有农田状态（用于存档）
+     */
+    std::vector<FarmTile> getAllTiles() const { return tiles_; }
 
+    /**
+     * @brief 设置所有农田状态（用于加载存档）
+     */
+    void setAllTiles(const std::vector<FarmTile>& tiles);
+
+    /**
+     * @brief 获取地图尺寸
+     */
+    cocos2d::Size getMapSize() const { return mapSizeTiles_; }
+
+private:
     struct CropDef
     {
         int id;

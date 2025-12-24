@@ -256,6 +256,20 @@ void FarmManager::forceRedraw()
     redrawOverlay();
 }
 
+void FarmManager::setAllTiles(const std::vector<FarmTile>& tiles)
+{
+    if (tiles.size() != tiles_.size())
+    {
+        CCLOG("Warning: Loaded tile count (%zu) doesn't match current map size (%zu)",
+            tiles.size(), tiles_.size());
+        // 可以选择调整大小或只复制匹配的部分
+        tiles_.resize(tiles.size());
+    }
+    tiles_ = tiles;
+    redrawOverlay();
+    CCLOG("Farm tiles loaded from save data");
+}
+
 void FarmManager::redrawOverlay()
 {
     overlay_->clear();

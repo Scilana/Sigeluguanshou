@@ -524,6 +524,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         // 直接进入矿洞（使用 Mines/1.tmx）
         enterMine();
         break;
+    case EventKeyboard::KeyCode::KEY_X:
+        // 保存游戏
+        saveGame();
+        break;
     case EventKeyboard::KeyCode::KEY_M:
         if (isPlayerNearElevator())
         {
@@ -1365,7 +1369,20 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData) {
         int woodCount = 3 + (rand() % 3);
         spawnItem(ItemType::Wood, stumpPos, woodCount);
 
-        // --- F. 清理砍树数据 ---
+        // --- F. 记录被砍倒的树木位置（用于存档） ---
+        // 记录整棵树的所有瓦片
+        for (const auto& tile : savedTiles)
+        {
+            // 检查是否已记录
+            auto it = std::find(choppedTrees_.begin(), choppedTrees_.end(), tile);
+            if (it == choppedTrees_.end())
+            {
+                choppedTrees_.push_back(tile);
+                CCLOG("Recorded chopped tree tile: (%.0f, %.0f)", tile.x, tile.y);
+            }
+        }
+
+        // --- G. 清理砍树数据 ---
         activeChops_.erase(
             std::remove_if(activeChops_.begin(), activeChops_.end(),
                 [actualRootTile](const TreeChopData& c) {
@@ -1895,6 +1912,18 @@ void GameScene::enterMine()
             return;
         }
 
+        // 进入矿洞前自动保存游戏
+        CCLOG("Auto-saving before entering mine...");
+        SaveManager::SaveData data = collectSaveData();
+        if (SaveManager::getInstance()->saveGame(data))
+        {
+            CCLOG("✓ Auto-save successful!");
+        }
+        else
+        {
+            CCLOG("✗ Auto-save failed!");
+        }
+
         // 创建矿洞场景，传入背包实例和选择的楼层
         auto mineScene = MineScene::createScene(inventory_, floor);
         if (mineScene)
@@ -1937,11 +1966,284 @@ void GameScene::enterMine()
 bool GameScene::isPlayerNearElevator() const
 {
     if (!player_) return false;
-    
+
     // 检查距离
     float distance = player_->getPosition().distance(ELEVATOR_POS);
     // 允许100像素误差
-    return distance < 100.0f; 
+    return distance < 100.0f;
+}
+
+// ==========================================
+// 存档系统实现
+// ==========================================
+
+Scene* GameScene::createScene(bool loadFromSave)
+{
+    auto scene = GameScene::create();
+    if (scene && loadFromSave)
+    {
+        // 通过调用带参数的 init 来加载存档
+        // 但由于 create() 已经调用了 init()，我们需要手动加载
+        GameScene* gameScene = dynamic_cast<GameScene*>(scene);
+        if (gameScene)
+        {
+            gameScene->loadGame();
+        }
+    }
+    return scene;
+}
+
+bool GameScene::init(bool loadFromSave)
+{
+    if (!init())
+        return false;
+
+    if (loadFromSave)
+    {
+        loadGame();
+    }
+
+    return true;
+}
+
+void GameScene::saveGame()
+{
+    CCLOG("========================================");
+    CCLOG("Saving game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data = collectSaveData();
+
+    if (SaveManager::getInstance()->saveGame(data))
+    {
+        CCLOG("✓ Game saved successfully!");
+        // 显示保存成功提示
+        showActionMessage("Game Saved!", Color3B::GREEN);
+    }
+    else
+    {
+        CCLOG("✗ Failed to save game!");
+        showActionMessage("Save Failed!", Color3B::RED);
+    }
+}
+
+void GameScene::loadGame()
+{
+    CCLOG("========================================");
+    CCLOG("Loading game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data;
+
+    if (SaveManager::getInstance()->loadGame(data))
+    {
+        CCLOG("✓ Game loaded successfully from file!");
+        applySaveData(data);
+
+        // 延迟显示消息，确保 UI 已初始化
+        if (actionLabel_)
+        {
+            showActionMessage("Game Loaded!", Color3B::GREEN);
+        }
+    }
+    else
+    {
+        CCLOG("✗ Failed to load game!");
+        if (actionLabel_)
+        {
+            showActionMessage("Load Failed!", Color3B::RED);
+        }
+    }
+}
+
+SaveManager::SaveData GameScene::collectSaveData()
+{
+    SaveManager::SaveData data;
+
+    // 保存玩家位置
+    if (player_)
+    {
+        data.playerPosition = player_->getPosition();
+        CCLOG("Saving player position: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+
+    // 保存背包数据
+    if (inventory_)
+    {
+        data.inventory.money = inventory_->getMoney();
+        CCLOG("Saving money: %d", data.inventory.money);
+
+        const auto& slots = inventory_->getAllSlots();
+        for (size_t i = 0; i < slots.size(); i++)
+        {
+            const auto& slot = slots[i];
+            if (!slot.isEmpty())
+            {
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                data.inventory.slots.push_back(slotData);
+                CCLOG("  Slot %zu: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+            else
+            {
+                // 空槽位也要保存，保持索引一致
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(ItemType::None);
+                slotData.count = 0;
+                data.inventory.slots.push_back(slotData);
+            }
+        }
+    }
+
+    // 保存游戏天数
+    if (farmManager_)
+    {
+        data.dayCount = farmManager_->getDayCount();
+        CCLOG("Saving day count: %d", data.dayCount);
+    }
+
+    // 保存农作物数据
+    if (farmManager_)
+    {
+        const auto& farmTiles = farmManager_->getAllTiles();
+        Size mapSize = farmManager_->getMapSize();
+
+        for (int y = 0; y < mapSize.height; y++)
+        {
+            for (int x = 0; x < mapSize.width; x++)
+            {
+                int index = y * mapSize.width + x;
+                if (index >= farmTiles.size())
+                    continue;
+
+                const auto& tile = farmTiles[index];
+
+                // 只保存有状态的瓦片
+                if (tile.tilled || tile.hasCrop)
+                {
+                    SaveManager::SaveData::FarmTileData tileData;
+                    tileData.x = x;
+                    tileData.y = y;
+                    tileData.tilled = tile.tilled;
+                    tileData.watered = tile.watered;
+                    tileData.hasCrop = tile.hasCrop;
+                    tileData.cropId = tile.cropId;
+                    tileData.stage = tile.stage;
+                    tileData.progressDays = tile.progressDays;
+                    data.farmTiles.push_back(tileData);
+                }
+            }
+        }
+        CCLOG("Saving %zu farm tiles", data.farmTiles.size());
+    }
+
+    // 树木存档功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+
+    return data;
+}
+
+void GameScene::applySaveData(const SaveManager::SaveData& data)
+{
+    CCLOG("========================================");
+    CCLOG("Applying save data...");
+    CCLOG("========================================");
+
+    // 恢复玩家位置
+    if (player_)
+    {
+        CCLOG("Restoring player position...");
+        player_->setPosition(data.playerPosition);
+        CCLOG("✓ Player position restored: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+    else
+    {
+        CCLOG("✗ Warning: player_ is null!");
+    }
+
+    // 恢复背包数据
+    if (inventory_)
+    {
+        CCLOG("Restoring inventory...");
+        // 清空现有背包
+        inventory_->clear();
+
+        // 恢复金币 - 使用 addMoney 一次性添加
+        if (data.inventory.money > 0)
+        {
+            inventory_->addMoney(data.inventory.money);
+        }
+        CCLOG("✓ Money restored: %d", data.inventory.money);
+
+        // 恢复物品槽位
+        CCLOG("Restoring %zu inventory slots...", data.inventory.slots.size());
+        for (size_t i = 0; i < data.inventory.slots.size() && i < InventoryManager::MAX_SLOTS; i++)
+        {
+            const auto& slotData = data.inventory.slots[i];
+            if (slotData.type != static_cast<int>(ItemType::None) && slotData.count > 0)
+            {
+                ItemType type = static_cast<ItemType>(slotData.type);
+                inventory_->setSlot(i, type, slotData.count);
+                CCLOG("  Slot %zu restored: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+        }
+        CCLOG("✓ Inventory restored");
+    }
+    else
+    {
+        CCLOG("✗ Warning: inventory_ is null!");
+    }
+
+    // 恢复游戏天数
+    if (farmManager_)
+    {
+        CCLOG("Restoring day count...");
+        farmManager_->setDayCount(data.dayCount);
+        CCLOG("✓ Day count restored: %d", data.dayCount);
+    }
+    else
+    {
+        CCLOG("✗ Warning: farmManager_ is null!");
+    }
+
+    // 恢复农作物数据
+    if (farmManager_)
+    {
+        CCLOG("Restoring farm tiles...");
+        // 获取当前地图尺寸
+        Size mapSize = farmManager_->getMapSize();
+        std::vector<FarmManager::FarmTile> tiles(mapSize.width * mapSize.height);
+
+        // 应用保存的瓦片数据
+        for (const auto& tileData : data.farmTiles)
+        {
+            int index = tileData.y * mapSize.width + tileData.x;
+            if (index >= 0 && index < tiles.size())
+            {
+                tiles[index].tilled = tileData.tilled;
+                tiles[index].watered = tileData.watered;
+                tiles[index].hasCrop = tileData.hasCrop;
+                tiles[index].cropId = tileData.cropId;
+                tiles[index].stage = tileData.stage;
+                tiles[index].progressDays = tileData.progressDays;
+            }
+        }
+
+        farmManager_->setAllTiles(tiles);
+        CCLOG("✓ Farm tiles restored: %zu tiles", data.farmTiles.size());
+    }
+
+    // 树木恢复功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+    CCLOG("Tree restoration skipped (feature disabled for stability)");
+    choppedTrees_.clear();
+
+    CCLOG("========================================");
+    CCLOG("✓ Save data applied successfully!");
+    CCLOG("========================================");
 }
 
 

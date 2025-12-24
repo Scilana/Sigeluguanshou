@@ -886,7 +886,9 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
 void MineScene::backToFarm()
 {
-    auto gameScene = GameScene::createScene();
+    CCLOG("Returning to farm, loading from save...");
+    // 从存档加载主世界，保持之前的游戏状态
+    auto gameScene = GameScene::createScene(true);  // true = 从存档加载
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
 }
 

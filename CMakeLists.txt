@@ -49,6 +49,7 @@ list(APPEND GAME_SOURCE
      Classes/Weapon.cpp
      Classes/TreasureChest.cpp
      Classes/ElevatorUI.cpp
+     Classes/SaveManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -72,6 +73,7 @@ list(APPEND GAME_HEADER
      Classes/Weapon.h
      Classes/TreasureChest.h
      Classes/ElevatorUI.h
+     Classes/SaveManager.h
      )
 
 if(ANDROID)
