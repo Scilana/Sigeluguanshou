@@ -49,6 +49,12 @@ public:
     int getHp() const { return hp_; }
 
     /**
+     * @brief 治疗
+     * @param amount 治疗量
+     */
+    void heal(int amount);
+
+    /**
      * @brief 获取玩家朝向
      */
     cocos2d::Vec2 getFacingDirection() const { return facingDirection_; }

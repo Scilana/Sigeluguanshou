@@ -15,7 +15,6 @@
 #include "SaveManager.h"
 
 class MarketUI;
-class WeatherManager;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -63,14 +62,9 @@ private:
     // ==========================================
     // 核心组件
     // ==========================================
-    // ???
-    MapLayer* mapLayer_;
-    // ????
-    FarmManager* farmManager_;
-    // ??
-    Player* player_;
-    // ??????
-    WeatherManager* weatherManager_;
+    MapLayer* mapLayer_;       // 地图层
+    FarmManager* farmManager_; // 农场管理
+    Player* player_;           // 玩家
 
     // ==========================================
     // 背包与系统
@@ -100,14 +94,12 @@ private:
     void initCamera();
     void initControls();
     void initTrees(); // 初始化调试用树木标记
-    void initWeather();
 
     // ==========================================
     // 更新循环函数
     // ==========================================
     void updateCamera(); // 更新摄像机位置（跟随玩家）
     void updateUI();     // 更新UI显示
-    void updateWeather();
 
     // ==========================================
     // 控制与交互
@@ -187,8 +179,6 @@ private:
     void selectItemByIndex(int idx);
     int getCropIdForItem(ItemType type) const;
     ItemType getItemTypeForCropId(int cropId) const;
-
-    int lastWeatherDay_ = 0;
 
     // ==========================================
     // 砍树系统 (New Architecture from GameScene1)
