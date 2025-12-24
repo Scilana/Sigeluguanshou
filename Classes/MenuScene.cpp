@@ -1,6 +1,7 @@
 #include "MenuScene.h"
 #include "GameScene.h"
 #include "SaveManager.h"
+#include "SimpleAudioEngine.h"
 
 USING_NS_CC;
 
@@ -15,6 +16,11 @@ bool MenuScene::init()
         return false;
 
     CCLOG("Initializing Menu Scene with start screen assets...");
+
+    auto audio = CocosDenshion::SimpleAudioEngine::getInstance();
+    if (!audio->isBackgroundMusicPlaying()) {
+        audio->playBackgroundMusic("MUSIC/01 - Stardew Valley Overture.mp3", true);
+    }
 
     createBackground();
     createDecorations();
