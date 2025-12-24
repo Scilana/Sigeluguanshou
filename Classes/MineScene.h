@@ -75,6 +75,10 @@ private:
     cocos2d::Layer* uiLayer_;
 
     // UI元素
+    cocos2d::Label* infoLabel_;                      // 物品信息显示
+
+    int selectedSlotIndex_;                          // 当前选中的槽位索引
+    void updateSelection();                          // 更新选中状态显示
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
     cocos2d::Label* itemLabel_;       // current tool label
@@ -95,6 +99,9 @@ private:
     ItemType currentWeapon_;
     float attackCooldown_;
     float currentAttackCooldown_;
+
+    // Wishing Well
+    cocos2d::Node* wishingWell_;
 
     /**
      * @brief 初始化地图
@@ -160,6 +167,16 @@ private:
      * @brief 处理宝箱交互
      */
     void handleChestInteraction();
+
+    /**
+     * @brief 初始化许愿池
+     */
+    void initWishingWell();
+
+    /**
+     * @brief 处理许愿池交互
+     */
+    void handleWishAction();
 
     /**
      * @brief 显示操作提示

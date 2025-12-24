@@ -117,24 +117,34 @@ void Player::setMapLayer(MapLayer* mapLayer)
 void Player::takeDamage(int damage)
 {
     if (isInvulnerable_) return;
-
+    
     hp_ -= damage;
     if (hp_ < 0) hp_ = 0;
-
-    CCLOG("Player took %d damage! HP: %d/%d", damage, hp_, maxHp_);
-
+    
+    // 受伤无敌时间
+    isInvulnerable_ = true;
+    invulnerableTimer_ = 1.0f;
+    
+    // 闪烁效果
+    auto blink = Blink::create(1.0f, 5);
+    auto finish = CallFunc::create([this]() {
+        isInvulnerable_ = false;
+        this->setOpacity(255);
+    });
+    this->runAction(Sequence::create(blink, finish, nullptr));
+    
     if (hp_ <= 0)
     {
-        CCLOG("Player Died!");
-        // TODO: Game Over Logic
+        // 死亡
+        CCLOG("Player died!");
     }
-    else
-    {
-        isInvulnerable_ = true;
-        invulnerableTimer_ = 1.0f;
-        auto blink = Blink::create(1.0f, 5);
-        this->runAction(blink);
-    }
+}
+
+void Player::heal(int amount)
+{
+    hp_ += amount;
+    if (hp_ > maxHp_) hp_ = maxHp_;
+    CCLOG("Player healed: +%d, Current HP: %d", amount, hp_);
 }
 
 void Player::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)

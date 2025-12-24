@@ -39,6 +39,8 @@ bool InventoryUI::init(InventoryManager* inventory)
     initSlots();
     initControls();
 
+    selectedSlotIndex_ = -1; // -1 表示未选中
+
     // 键盘监听（ESC 和 B 关闭）
     auto keyListener = EventListenerKeyboard::create();
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
@@ -198,6 +200,24 @@ void InventoryUI::refresh()
     for (auto& slot : slotSprites_)
     {
         updateSlot(slot.slotIndex);
+    }
+
+    updateSelection();
+}
+
+void InventoryUI::updateSelection()
+{
+    // 更新选中框显示
+    for (auto& slot : slotSprites_)
+    {
+        if (slot.slotIndex == selectedSlotIndex_)
+        {
+             slot.background->setColor(Color3B(100, 90, 80)); // 选中稍微亮一点
+        }
+        else
+        {
+             slot.background->setColor(Color3B(60, 55, 50)); // 默认颜色
+        }
     }
 }
 

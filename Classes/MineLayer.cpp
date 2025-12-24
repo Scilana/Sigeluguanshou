@@ -34,11 +34,15 @@ bool MineLayer::init(const std::string& tmxFile)
         mineralLayer_ = tmxMap->getLayer("mineral");
         if (!mineralLayer_)
             mineralLayer_ = tmxMap->getLayer("Mineral");
-        if (mineralLayer_) CCLOG("Found mineral layer");
+        if (!mineralLayer_)
+            mineralLayer_ = tmxMap->getLayer("mine1");
+        
+        if (mineralLayer_) CCLOG("Found mineral layer: %s", mineralLayer_->getLayerName().c_str());
+        
         stairsLayer_ = tmxMap->getLayer("stairs");
         if (!stairsLayer_)
             stairsLayer_ = tmxMap->getLayer("Stairs");
-        if (stairsLayer_) CCLOG("Found stairs layer");
+        if (stairsLayer_) CCLOG("Found stairs layer: %s", stairsLayer_->getLayerName().c_str());
 
 
         // 检查图层

@@ -64,6 +64,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initMonsters();
     initMonsters();
     initChests();
+    initWishingWell();
     initToolbar(); // 初始化工具栏
 
     // 启动更新
@@ -631,10 +632,18 @@ void MineScene::initToolbar()
         for (int i = 0; i < 10; ++i) toolbarItems_.push_back(ItemType::None);
     }
     
-    selectedItemIndex_ = 0;
+    // 恢复选中的物品
+    if (inventory_)
+    {
+        selectedItemIndex_ = inventory_->getSelectedSlotIndex();
+    }
+    else
+    {
+        selectedItemIndex_ = 0;
+    }
     
     // 如果有UI，选中默认
-    this->selectItemByIndex(0);
+    this->selectItemByIndex(selectedItemIndex_);
 }
 
 void MineScene::selectItemByIndex(int idx)
@@ -645,6 +654,8 @@ void MineScene::selectItemByIndex(int idx)
     // 重新获取当前工具类型（因为背包可能变动）
     if (inventory_) {
         toolbarItems_[idx] = inventory_->getSlot(idx).type;
+        // 同步选中状态到 InventoryManager
+        inventory_->setSelectedSlotIndex(idx);
     }
     
     updateUI();
@@ -691,12 +702,21 @@ void MineScene::onInventoryClosed()
 
 void MineScene::handleMiningAction()
 {
-    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) return;
+    CCLOG(">>> MineScene::handleMiningAction entered");
+    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) {
+        CCLOG(">>> ERROR: Missing dependencies in handleMiningAction (Player: %p, MiningMgr: %p, MineLayer: %p, Inventory: %p)", 
+               player_, miningManager_, mineLayer_, inventory_);
+        return;
+    }
 
     // 检查是否装备了镐子 (Pickaxe)
     ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
+    CCLOG(">>> Current selectedSlotIndex_: %d, selectedItemIndex_: %d", inventory_->getSelectedSlotIndex(), selectedItemIndex_);
+    CCLOG(">>> Current tool: %s (Type ID: %d)", InventoryManager::getItemName(currentTool).c_str(), (int)currentTool);
+
     if (currentTool != ItemType::Pickaxe)
     {
+        CCLOG(">>> Not holding a Pickaxe, Item: %s", InventoryManager::getItemName(currentTool).c_str());
         showActionMessage("Need a Pickaxe!", Color3B::RED);
         // 如果没镐子，尝试当作攻击处理
         handleAttackAction();
@@ -706,20 +726,33 @@ void MineScene::handleMiningAction()
     // 获取玩家位置和朝向
     Vec2 playerPos = player_->getPosition();
     Vec2 facingDir = player_->getFacingDirection();
+    CCLOG(">>> Player Pos: (%.1f, %.1f), Facing: (%.1f, %.1f)", playerPos.x, playerPos.y, facingDir.x, facingDir.y);
     
     // 归一化朝向并稍微延伸一点距离，以确定面前的格子
-    Vec2 targetPos = playerPos + facingDir * 32.0f;
+    // 如果没有方向（或者是0,0），尝试默认方向
+    if (facingDir.length() < 0.1f) {
+        CCLOG(">>> WARNING: facingDir is zero, using default (0, -1)");
+        facingDir = Vec2(0, -1);
+    }
+    
+    Vec2 targetPos = playerPos + facingDir * 24.0f; // 缩短一点探测距离
     
     // 将位置转换为瓦片坐标
     Vec2 tileCoord = mineLayer_->positionToTileCoord(targetPos);
+    CCLOG(">>> Target Pos: (%.1f, %.1f), Target Tile: (%.1f, %.1f)", targetPos.x, targetPos.y, tileCoord.x, tileCoord.y);
     
     // 尝试挖矿（精准挖掘）
     bool mined = false;
     
     // 优先检测面向的格子
-    if (mineLayer_->isMineralAt(tileCoord))
+    bool isMineral = mineLayer_->isMineralAt(tileCoord);
+    CCLOG(">>> mineLayer_->isMineralAt(targetTile) returns %s", isMineral ? "TRUE" : "FALSE");
+
+    if (isMineral)
     {
+        CCLOG(">>> Mineral found at target tile, calling miningManager_->mineTile");
         MiningManager::MiningResult result = miningManager_->mineTile(tileCoord);
+        CCLOG(">>> Mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
         if (result.success)
         {
             mined = true;
@@ -731,9 +764,12 @@ void MineScene::handleMiningAction()
     if (!mined)
     {
         Vec2 footTile = mineLayer_->positionToTileCoord(playerPos);
+        CCLOG(">>> Checking under foot at Tile: (%.1f, %.1f)", footTile.x, footTile.y);
         if (mineLayer_->isMineralAt(footTile))
         {
+            CCLOG(">>> Mineral found under foot, calling miningManager_->mineTile");
             MiningManager::MiningResult result = miningManager_->mineTile(footTile);
+            CCLOG(">>> Foot mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
             if (result.success)
             {
                 mined = true;
@@ -744,6 +780,7 @@ void MineScene::handleMiningAction()
     
     if (!mined)
     {
+        CCLOG(">>> No mining performed, calling handleAttackAction as fallback");
         // 即使有镐子但没挖到矿，也可以挥动一下（攻击）
         handleAttackAction();
     }
@@ -864,6 +901,7 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_J:
+        CCLOG(">>> Key 'J' pressed in MineScene::onKeyPressed");
         handleMiningAction();
         break;
 
@@ -1042,53 +1080,9 @@ Vec2 MineScene::getRandomWalkablePosition() const
     return Vec2(mapSize.width/2, mapSize.height/2);
 }
 
-void MineScene::selectItemByIndex(int idx)
-{
-    if (idx >= 0 && idx < 10)
-    {
-        selectedItemIndex_ = idx;
-        if (inventory_)
-        {
-            inventory_->setSelectedSlotIndex(idx);
-        }
-        updateUI(); // 立即刷新UI高亮
-    }
-}
 
-void MineScene::initChests()
-{
-    if (!mineLayer_) return;
-    
-    // 清空原有列表
-    chests_.clear();
 
-    // 降低宝箱生成概率和数量
-    int minChests = 1;
-    int maxChests = 2 + (currentFloor_ / 2); // 随层数微增，但总体少
-    int count = minChests + rand() % (maxChests - minChests + 1);
 
-    // 额外概率检查：30% 概率一层一个都没有
-    if (rand() % 100 < 30) count = 0;
-
-    for (int i = 0; i < count; ++i)
-    {
-        Vec2 pos = getRandomWalkablePosition();
-        
-        // 创建宝箱对象
-        TreasureChest* chest = TreasureChest::create(currentFloor_);
-        if (chest)
-        {
-            chest->setPosition(pos);
-            this->addChild(chest, 5); // Z-order 与 Slime/Player 接近
-            
-            // 添加到列表以便交互
-            chests_.push_back(chest);
-            
-            CCLOG("Spawned chest at (%.1f, %.1f)", pos.x, pos.y);
-        }
-    }
-    CCLOG("Spawned %d chests", (int)chests_.size());
-}
 
 void MineScene::initWishingWell()
 {

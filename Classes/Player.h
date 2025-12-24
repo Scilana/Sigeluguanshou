@@ -39,6 +39,11 @@ public:
     void takeDamage(int damage);
 
     /**
+     * @brief 恢复血量
+     */
+    void heal(int amount);
+
+    /**
      * @brief 是否处于无敌状态
      */
     bool isInvulnerable() const { return isInvulnerable_; }

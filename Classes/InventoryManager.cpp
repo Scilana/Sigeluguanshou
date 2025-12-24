@@ -45,6 +45,7 @@ bool InventoryManager::init()
 
     // 初始化默认金币和物品
     money_ = 500;
+    selectedSlotIndex_ = 0;
     initDefaultItems();
 
     CCLOG("InventoryManager initialized with %d slots and %d gold", MAX_SLOTS, money_);

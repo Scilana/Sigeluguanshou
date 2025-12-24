@@ -198,6 +198,11 @@ public:
 private:
     std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
+    int selectedSlotIndex_ = 0;               // 当前选中的槽位
+
+public:
+    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
+    void setSelectedSlotIndex(int index) { selectedSlotIndex_ = index; }
 
     /**
      * @brief 初始化默认物品
