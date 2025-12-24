@@ -1,5 +1,6 @@
 #include "GameScene.h"
 #include "MenuScene.h"
+#include "HouseScene.h"
 #include "FarmManager.h"
 #include "ElevatorUI.h"
 #include "MarketUI.h"
@@ -9,6 +10,12 @@
 #include <unordered_set>
 
 USING_NS_CC;
+
+namespace
+{
+    const Vec2 kHouseDoorTile(20.0f, 15.0f);
+    const float kHouseDoorRadius = 40.0f;
+}
 
 Scene* GameScene::createScene()
 
@@ -587,6 +594,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 player_->getPosition().x, player_->getPosition().y,
                 ELEVATOR_POS.x, ELEVATOR_POS.y);
         }
+        break;
+    case EventKeyboard::KeyCode::KEY_ENTER:
+    case EventKeyboard::KeyCode::KEY_KP_ENTER:
+        enterHouse();
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -1981,6 +1992,25 @@ void GameScene::onMarketClosed()
     CCLOG("Market closed");
 }
 
+void GameScene::enterHouse()
+{
+    if (!isPlayerNearHouseDoor())
+    {
+        showActionMessage("Door is too far!", Color3B::RED);
+        return;
+    }
+
+    auto houseScene = HouseScene::createScene();
+    if (!houseScene)
+    {
+        CCLOG("ERROR: Failed to create house scene!");
+        return;
+    }
+
+    auto transition = TransitionFade::create(0.4f, houseScene);
+    Director::getInstance()->pushScene(transition);
+}
+
 void GameScene::enterMine()
 {
     CCLOG("Opening elevator UI...");
@@ -2063,6 +2093,15 @@ bool GameScene::isPlayerNearElevator() const
     float distance = player_->getPosition().distance(ELEVATOR_POS);
     // 允许100像素误差
     return distance < 100.0f;
+}
+
+bool GameScene::isPlayerNearHouseDoor() const
+{
+    if (!player_ || !mapLayer_)
+        return false;
+
+    Vec2 doorPos = mapLayer_->tileCoordToPosition(kHouseDoorTile);
+    return player_->getPosition().distance(doorPos) <= kHouseDoorRadius;
 }
 
 // ==========================================
