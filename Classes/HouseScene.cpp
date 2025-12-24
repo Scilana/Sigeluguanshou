@@ -82,6 +82,8 @@ void HouseScene::initPlayer()
     if (!player_)
         return;
 
+    player_->setScale(0.9f);//放大人物
+
     player_->setPosition(Vec2(
         origin.x + visibleSize.width * 0.5f,
         origin.y + visibleSize.height * 0.2f
