@@ -31,6 +31,7 @@ list(APPEND GAME_SOURCE
      Classes/AppDelegate.cpp
      Classes/HelloWorldScene.cpp
      Classes/MenuScene.cpp
+     Classes/HouseScene.cpp
      Classes/GameScene.cpp
      Classes/Player.cpp
      Classes/MapLayer.cpp
@@ -56,6 +57,7 @@ list(APPEND GAME_HEADER
      Classes/AppDelegate.h
      Classes/HelloWorldScene.h
      Classes/MenuScene.h
+     Classes/HouseScene.h
      Classes/GameScene.h
      Classes/Player.h
      Classes/MapLayer.h

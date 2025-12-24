@@ -39,8 +39,7 @@ enum class ItemType
     WoodenSword,    // 木剑
     IronSword,      // 铁剑
     GoldSword,      // 金剑
-    DiamondSword,   // 钻石剑
-    Bow             // 弓
+    DiamondSword    // 钻石剑
 };
 
 /**
@@ -161,18 +160,6 @@ public:
      */
     bool removeMoney(int amount);
 
-    // ========== 选中物品状态 (全局保持) ==========
-
-    /**
-     * @brief 获取当前选中的槽位索引 (0-9)
-     */
-    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
-
-    /**
-     * @brief 设置当前选中的槽位索引
-     */
-    void setSelectedSlotIndex(int index);
-
     /**
      * @brief 获取物品名称
      * @param itemType 物品类型
@@ -211,7 +198,6 @@ public:
 private:
     std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
-    int selectedSlotIndex_;                   // 当前选中的快捷栏槽位
 
     /**
      * @brief 初始化默认物品

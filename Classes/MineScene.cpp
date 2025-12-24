@@ -64,16 +64,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initMonsters();
     initMonsters();
     initChests();
-    initWishingWell(); // 新功能：初始化许愿池
-
-    
-    // 初始化工具栏 (使用全局状态)
-    if (inventory_)
-    {
-        int idx = inventory_->getSelectedSlotIndex();
-        selectItemByIndex(idx);
-    } 
-    // initToolbar(); // 移除函数调用，直接在此处处理或保留函数但修改实现
+    initToolbar(); // 初始化工具栏
 
     // 启动更新
     this->scheduleUpdate();
@@ -402,9 +393,9 @@ void MineScene::initMonsters()
     monsters_.clear();
 
     // 初始生成一些怪物
-    // 数量随楼层增加，但减少总量
-    int initialCount = 1 + currentFloor_ / 2;
-    if (initialCount > 5) initialCount = 5;
+    // 数量随楼层增加
+    int initialCount = 2 + currentFloor_;
+    if (initialCount > 10) initialCount = 10;
 
     for (int i = 0; i < initialCount; ++i)
     {
@@ -412,7 +403,30 @@ void MineScene::initMonsters()
     }
 }
 
-// 旧的定义已移除，使用文件末尾的新定义
+void MineScene::initChests()
+{
+    chests_.clear();
+
+    // 初始生成宝箱
+    // 概率随楼层增加
+    int chestCount = 1;
+    if (currentFloor_ >= 3) chestCount = 2 + rand() % 2;
+    else if (currentFloor_ >= 2) chestCount = 1 + rand() % 2;
+    
+    // 如果运气好，多生成一个
+    if (rand() % 100 < 20) chestCount++;
+
+    for (int i = 0; i < chestCount; ++i)
+    {
+        Vec2 pos = getRandomWalkablePosition();
+        
+        auto chest = TreasureChest::create(currentFloor_);
+        chest->setPosition(pos);
+        this->addChild(chest, 5); // 宝箱层级
+        
+        chests_.push_back(chest);
+    }
+}
 
 void MineScene::update(float delta)
 {
@@ -420,7 +434,6 @@ void MineScene::update(float delta)
     updateCamera();
     updateUI();
     updateMonsters(delta);
-    updateProjectiles(delta); // 添加这行
 
     // 攻击冷却
     if (currentAttackCooldown_ > 0)
@@ -430,11 +443,10 @@ void MineScene::update(float delta)
 
     // 随机生成怪物
     monsterSpawnTimer_ += delta;
-    if (monsterSpawnTimer_ > 15.0f) // 延长生成间隔到15秒
+    if (monsterSpawnTimer_ > 10.0f) // 每10秒检查一次生成
     {
         monsterSpawnTimer_ = 0;
-        // 降低最大怪物数到 8
-        if (monsters_.size() < 8 && rand() % 100 < getMonsterSpawnChance() * 100)
+        if (monsters_.size() < 15 && rand() % 100 < getMonsterSpawnChance() * 100)
         {
             spawnMonster();
         }
@@ -569,12 +581,7 @@ void MineScene::updateMonsters(float delta)
                     // 简单击退
                     Vec2 pushDir = player_->getPosition() - monster->getPosition();
                     pushDir.normalize();
-                    Vec2 targetPos = player_->getPosition() + pushDir * 30.0f;
-                    
-                    if (mineLayer_ && mineLayer_->isWalkable(targetPos))
-                    {
-                        player_->setPosition(targetPos);
-                    }
+                    player_->setPosition(player_->getPosition() + pushDir * 20.0f);
                     
                     showActionMessage("Ouch!", Color3B::RED);
                 }
@@ -614,7 +621,7 @@ void MineScene::initToolbar()
         
         for (int i = 0; i < 10; ++i)
         {
-            InventoryManager::ItemSlot slot = inventory_->getSlot(i);
+            auto slot = inventory_->getSlot(i);
             toolbarItems_.push_back(slot.type);
         }
     }
@@ -630,7 +637,6 @@ void MineScene::initToolbar()
     this->selectItemByIndex(0);
 }
 
-/*
 void MineScene::selectItemByIndex(int idx)
 {
     if (idx < 0 || idx >= 10) return;
@@ -643,7 +649,6 @@ void MineScene::selectItemByIndex(int idx)
     
     updateUI();
 }
-*/
 
 void MineScene::toggleInventory()
 {
@@ -745,123 +750,13 @@ void MineScene::handleMiningAction()
 }
 
 
-void MineScene::updateProjectiles(float delta)
-{
-    for (auto it = projectiles_.begin(); it != projectiles_.end();)
-    {
-        auto& p = *it;
-        p.duration -= delta;
-
-        // 1. 生命周期检查
-        if (p.duration <= 0)
-        {
-            p.sprite->removeFromParent();
-            it = projectiles_.erase(it);
-            continue;
-        }
-
-        // 2. 移动
-        Vec2 nextPos = p.sprite->getPosition() + p.velocity * delta;
-        
-        // 3. 地图碰撞 (撞墙消失)
-        // 仅在有 mineLayer 时检查，且避免越界
-        if (mineLayer_ && !mineLayer_->isWalkable(nextPos))
-        {
-            p.sprite->removeFromParent();
-            it = projectiles_.erase(it);
-            continue;
-        }
-
-        p.sprite->setPosition(nextPos);
-
-        // 4. 怪物碰撞
-        bool hitMonster = false;
-        for (auto monster : monsters_)
-        {
-            if (!monster->isDead() && monster->getBoundingBox().containsPoint(nextPos))
-            {
-                monster->takeDamage(p.damage); // 造成伤害
-                hitMonster = true;
-                
-                // 击退效果
-                Vec2 pushDir = p.velocity;
-                pushDir.normalize();
-                monster->setPosition(monster->getPosition() + pushDir * 20.0f);
-                
-                break; // 一箭只伤一怪
-            }
-        }
-
-        if (hitMonster)
-        {
-            p.sprite->removeFromParent();
-            it = projectiles_.erase(it);
-        }
-        else
-        {
-            ++it;
-        }
-    }
-}
-
 void MineScene::handleAttackAction()
 {
     if (currentAttackCooldown_ > 0) return;
     
-    // 如果背包不存在，直接返回
-    if (!inventory_) return;
-
-    // 获取当前武器
-    ItemType item = inventory_->getSlot(selectedItemIndex_).type;
-    
-    // ----------------------------------------------------------------
-    // 新功能：弓箭射击
-    // ----------------------------------------------------------------
-    if (item == ItemType::Bow)
-    {
-        // 冷却时间
-        currentAttackCooldown_ = Weapon::getWeaponAttackSpeed(ItemType::Bow);
-
-        // 创建箭矢 (使用白色小矩形模拟)
-        auto arrowSprite = Sprite::create();
-        arrowSprite->setTextureRect(Rect(0, 0, 20, 3));
-        arrowSprite->setColor(Color3B::WHITE);
-        
-        // 初始位置：玩家位置 + 偏移 (胸口高度)
-        Vec2 playerPos = player_->getPosition();
-        arrowSprite->setPosition(playerPos + Vec2(0, 16));
-        
-        this->addChild(arrowSprite, 15); // Layer above player (Z=10)
-
-        // 计算方向
-        Vec2 direction = player_->getFacingDirection();
-        if (direction.isZero()) direction = Vec2(0, -1); // 默认向下
-        direction.normalize();
-
-        // 旋转箭矢 (Cocos rotation is CW, atan2 is CCW)
-        float angle = CC_RADIANS_TO_DEGREES(atan2(direction.y, direction.x));
-        arrowSprite->setRotation(-angle);
-
-        // 创建投射物
-        Projectile proj;
-        proj.sprite = arrowSprite;
-        proj.velocity = direction * 600.0f; // 速度 600
-        proj.damage = Weapon::getWeaponAttackPower(ItemType::Bow);
-        proj.duration = 1.0f; // 存活 1 秒
-
-        projectiles_.push_back(proj);
-        
-        CCLOG("Fired arrow! Damage: %.0f", proj.damage);
-        return; // 弓箭射击后直接返回，不进行近战判定
-    }
-
-    // ----------------------------------------------------------------
-    // 原有逻辑：近战攻击
-    // ----------------------------------------------------------------
-
     // 播放攻击动画
     // player_->playAttackAnimation();
-    currentAttackCooldown_ = 0.5f; // 默认冷却，下面会覆盖
+    currentAttackCooldown_ = attackCooldown_;
     
     Vec2 playerPos = player_->getPosition();
     float attackRange = 50.0f; // 默认范围
@@ -977,7 +872,6 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_ENTER:
-    case EventKeyboard::KeyCode::KEY_RETURN: // 新增 RETURN 键
     case EventKeyboard::KeyCode::KEY_KP_ENTER:
         if (isPlayerOnStairs())
         {
@@ -985,13 +879,8 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         else
         {
-            // 如果不在楼梯，可能是其他交互
-            showActionMessage("Not on stairs!", Color3B::GRAY); // 保持原有提示
+            showActionMessage("Not on stairs!", Color3B::GRAY);
         }
-        break;
-
-    case EventKeyboard::KeyCode::KEY_K: // 许愿
-        handleWishAction();
         break;
 
     case EventKeyboard::KeyCode::KEY_M:

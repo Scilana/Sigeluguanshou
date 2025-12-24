@@ -31,7 +31,6 @@ public:
     bool isMineralAt(const cocos2d::Vec2& tileCoord) const;
     int getMineralGID(const cocos2d::Vec2& tileCoord) const;
     void clearMineralAt(const cocos2d::Vec2& tileCoord);
-    void clearCollisionAt(const cocos2d::Vec2& tileCoord);
     bool isStairsAt(const cocos2d::Vec2& tileCoord) const;
 
     // 重写 isWalkable，检查地面是否存在
@@ -40,7 +39,6 @@ public:
 private:
     cocos2d::TMXLayer* mineralLayer_{ nullptr };
     cocos2d::TMXLayer* stairsLayer_{ nullptr };
-    cocos2d::TMXLayer* collisionLayer_{ nullptr };
 };
 
 #endif // __MINE_LAYER_H__
