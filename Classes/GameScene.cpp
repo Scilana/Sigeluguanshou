@@ -723,13 +723,12 @@ void GameScene::updateUI()
     positionLabel_->setString(posStr);
 
     if (farmManager_)
-
     {
-
-        std::string dayText = StringUtils::format("Day %d (auto +1 every 5s)", farmManager_->getDayCount());
-
-        timeLabel_->setString(dayText);
-
+        std::string timeStr = StringUtils::format("Day %d, %02d:%02d", 
+            farmManager_->getDayCount(), 
+            farmManager_->getHour(), 
+            farmManager_->getMinute());
+        timeLabel_->setString(timeStr);
     }
 
     if (moneyLabel_ && inventory_)
@@ -1899,7 +1898,11 @@ void GameScene::enterHouse()
     }
 
     auto houseScene = HouseScene::createScene();
-    if (!houseScene)
+    if (houseScene)
+    {
+        houseScene->setFarmManager(farmManager_);
+    }
+    else
     {
         CCLOG("ERROR: Failed to create house scene!");
         return;

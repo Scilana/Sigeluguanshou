@@ -1,5 +1,12 @@
 #include "MineScene.h"
+#include "MineLayer.h"
+#include "Player.h"
+#include "InventoryManager.h"
+#include "InventoryUI.h"
 #include "MiningManager.h"
+#include "Monster.h"
+#include "TreasureChest.h"
+#include "Weapon.h"
 #include "GameScene.h"
 #include "Slime.h"
 #include "Zombie.h"
@@ -61,7 +68,6 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initCamera();
     initUI();
     initControls();
-    initMonsters();
     initMonsters();
     initChests();
     initWishingWell();

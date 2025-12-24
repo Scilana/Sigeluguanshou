@@ -36,8 +36,12 @@ public:
     };
 
     static FarmManager* create(MapLayer* mapLayer);
-    bool init(MapLayer* mapLayer);
+    virtual bool init(MapLayer* mapLayer);
     virtual void update(float delta) override;
+
+    int getHour() const;
+    int getMinute() const;
+    float getDayProgress() const { return dayTimer_ / secondsPerDay_; }
 
     ActionResult tillTile(const cocos2d::Vec2& tileCoord);
     ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);

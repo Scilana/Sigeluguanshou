@@ -373,3 +373,13 @@ int InventoryManager::getMaxStack(ItemType itemType)
     // 其他物品最多99
     return 99;
 }
+
+int InventoryManager::getSelectedSlotIndex() const
+{
+    return selectedSlotIndex_;
+}
+
+void InventoryManager::setSelectedSlotIndex(int index)
+{
+    selectedSlotIndex_ = index;
+}

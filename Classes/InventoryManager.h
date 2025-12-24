@@ -201,8 +201,8 @@ private:
     int selectedSlotIndex_ = 0;               // 当前选中的槽位
 
 public:
-    int getSelectedSlotIndex() const { return selectedSlotIndex_; }
-    void setSelectedSlotIndex(int index) { selectedSlotIndex_ = index; }
+    int getSelectedSlotIndex() const;
+    void setSelectedSlotIndex(int index);
 
     /**
      * @brief 初始化默认物品

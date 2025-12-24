@@ -3,18 +3,21 @@
 
 #include "cocos2d.h"
 #include <string>
-#include "MineLayer.h"
-#include "Player.h"
-#include "InventoryManager.h"
-#include "Monster.h"
-#include "TreasureChest.h"
-#include "Weapon.h"
-#include "InventoryUI.h"
+#include <vector>
 
-// 前向声明
+#include "InventoryManager.h"
+
+// Forward declarations
+class MineLayer;
+class Player;
+class InventoryUI;
+class MiningManager;
+class Monster;
+class TreasureChest;
+class Weapon;
+
 class Slime;
 class Zombie;
-class MiningManager;
 
 /**
  * @brief 矿洞场景类（简化版）

@@ -20,6 +20,8 @@ public:
      * @brief 启用键盘控制
      */
     void enableKeyboardControl();
+    void disableKeyboardControl();
+    void resetKeyStates();
 
     /**
      * @brief 设置地图层（用于碰撞检测）

@@ -109,6 +109,22 @@ void Player::enableKeyboardControl()
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }
 
+void Player::disableKeyboardControl()
+{
+    _eventDispatcher->removeEventListenersForTarget(this);
+    resetKeyStates();
+}
+
+void Player::resetKeyStates()
+{
+    isUpPressed_ = false;
+    isDownPressed_ = false;
+    isLeftPressed_ = false;
+    isRightPressed_ = false;
+    isMoving_ = false;
+    moveDirection_ = Vec2::ZERO;
+}
+
 void Player::setMapLayer(MapLayer* mapLayer)
 {
     mapLayer_ = mapLayer;
