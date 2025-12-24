@@ -1,10 +1,18 @@
 #include "MineScene.h"
+#include "MineLayer.h"
+#include "Player.h"
+#include "InventoryManager.h"
+#include "InventoryUI.h"
 #include "MiningManager.h"
+#include "Monster.h"
+#include "TreasureChest.h"
+#include "Weapon.h"
 #include "GameScene.h"
 #include "Slime.h"
 #include "Zombie.h"
 #include <cmath>
 #include <algorithm>
+#include "EnergyBar.h"
 
 USING_NS_CC;
 
@@ -62,8 +70,8 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initUI();
     initControls();
     initMonsters();
-    initMonsters();
     initChests();
+    initWishingWell();
     initToolbar(); // 初始化工具栏
 
     // 启动更新
@@ -100,21 +108,29 @@ void MineScene::initMap()
             CCLOG("  - Tile size: %.0f x %.0f px", tileSize.width, tileSize.height);
             CCLOG("  - Total size: %.0f x %.0f px", mapSize.width * tileSize.width, mapSize.height * tileSize.height);
 
-            // 处理 Front 层（放在最底层，Back 下面）
+            // 打印所有图层名称
+            CCLOG("--- Layer List ---");
+            for (const auto& child : tmxMap->getChildren())
+            {
+                auto layer = dynamic_cast<TMXLayer*>(child);
+                if (layer)
+                {
+                     CCLOG("Layer Name: %s, Z: %d, Visible: %d", layer->getLayerName().c_str(), layer->getLocalZOrder(), layer->isVisible());
+                }
+            }
+            CCLOG("------------------");
+
+            // 处理 Front 层 (通常是遮挡层/顶部墙壁，放在最上层)
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
                 CCLOG("✓ Front layer found!");
-                CCLOG("  - Position: (%.2f, %.2f)", frontLayer->getPosition().x, frontLayer->getPosition().y);
-                CCLOG("  - Visible: %s", frontLayer->isVisible() ? "YES" : "NO");
-                CCLOG("  - Original opacity: %d", frontLayer->getOpacity());
-                CCLOG("  - Layer Size: (%.0f, %.0f)", frontLayer->getLayerSize().width, frontLayer->getLayerSize().height);
-
-                // Front 层保留在 tmxMap 中，设置为最底层
-                frontLayer->setLocalZOrder(-200);  // 最底层
-                frontLayer->setVisible(true);  // 确保可见
-                frontLayer->setOpacity(255);   // 确保完全不透明
-                CCLOG("✓ Front layer set to Z-order -200 (below Back), opacity: 255");
+                // Front 通常是在玩家之上的遮挡层 (Roof/TreeTop)
+                // 这里设置为 20 (Player is 10)
+                frontLayer->setLocalZOrder(20); 
+                frontLayer->setVisible(true);
+                frontLayer->setOpacity(255);
+                CCLOG("✓ Front layer set to Z-order 20 (Above Player)");
             }
             else
             {
@@ -351,6 +367,13 @@ void MineScene::initUI()
     itemLabel_->setPosition(Vec2(origin.x + visibleSize.width - 20, origin.y + visibleSize.height - 20));
     itemLabel_->setColor(Color3B::WHITE);
     uiLayer_->addChild(itemLabel_, 1);
+    
+    // 添加操作提示
+    auto tipLabel = Label::createWithSystemFont("(Keys 1-9 to switch)", "Arial", 12);
+    tipLabel->setAnchorPoint(Vec2(1, 0.5));
+    tipLabel->setPosition(Vec2(origin.x + visibleSize.width - 20, origin.y + visibleSize.height - 40));
+    tipLabel->setColor(Color3B::GRAY);
+    uiLayer_->addChild(tipLabel, 1);
 
     // 操作提示
     actionLabel_ = Label::createWithSystemFont("", "Arial", 24);
@@ -364,6 +387,16 @@ void MineScene::initUI()
     helpLabel->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + 20));
     helpLabel->setColor(Color3B(200, 200, 200));
     uiLayer_->addChild(helpLabel, 1);
+
+    // 能量条
+    if (player_)
+    {
+        auto energyBar = EnergyBar::create(player_);
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+        this->addChild(energyBar, 100);
+    }
 }
 
 void MineScene::initControls()
@@ -576,12 +609,34 @@ void MineScene::updateMonsters(float delta)
     }
 }
 
+
 void MineScene::initToolbar()
 {
     // 初始化工具栏物品 (使用 ID 0-9)
     toolbarItems_.clear();
+    
+    // 确保背包里有基础工具（测试用）
     if (inventory_)
     {
+        // 检查是否有剑和镐
+        bool hasSword = false;
+        bool hasPickaxe = false;
+        for (int i=0; i<10; ++i) {
+            ItemType t = inventory_->getSlot(i).type;
+            if (t == ItemType::WoodenSword || t == ItemType::IronSword || 
+                t == ItemType::GoldSword || t == ItemType::DiamondSword) hasSword = true;
+            if (t == ItemType::Pickaxe) hasPickaxe = true;
+        }
+        
+        if (!hasSword) {
+            inventory_->addItem(ItemType::WoodenSword, 1);
+            CCLOG("Starter Kit: Added Sword");
+        }
+        if (!hasPickaxe) {
+            inventory_->addItem(ItemType::Pickaxe, 1);
+            CCLOG("Starter Kit: Added Pickaxe");
+        }
+        
         for (int i = 0; i < 10; ++i)
         {
             auto slot = inventory_->getSlot(i);
@@ -594,10 +649,18 @@ void MineScene::initToolbar()
         for (int i = 0; i < 10; ++i) toolbarItems_.push_back(ItemType::None);
     }
     
-    selectedItemIndex_ = 0;
+    // 恢复选中的物品
+    if (inventory_)
+    {
+        selectedItemIndex_ = inventory_->getSelectedSlotIndex();
+    }
+    else
+    {
+        selectedItemIndex_ = 0;
+    }
     
     // 如果有UI，选中默认
-    this->selectItemByIndex(0);
+    this->selectItemByIndex(selectedItemIndex_);
 }
 
 void MineScene::selectItemByIndex(int idx)
@@ -608,6 +671,8 @@ void MineScene::selectItemByIndex(int idx)
     // 重新获取当前工具类型（因为背包可能变动）
     if (inventory_) {
         toolbarItems_[idx] = inventory_->getSlot(idx).type;
+        // 同步选中状态到 InventoryManager
+        inventory_->setSelectedSlotIndex(idx);
     }
     
     updateUI();
@@ -654,12 +719,21 @@ void MineScene::onInventoryClosed()
 
 void MineScene::handleMiningAction()
 {
-    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) return;
+    CCLOG(">>> MineScene::handleMiningAction entered");
+    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) {
+        CCLOG(">>> ERROR: Missing dependencies in handleMiningAction (Player: %p, MiningMgr: %p, MineLayer: %p, Inventory: %p)", 
+               player_, miningManager_, mineLayer_, inventory_);
+        return;
+    }
 
     // 检查是否装备了镐子 (Pickaxe)
     ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
+    CCLOG(">>> Current selectedSlotIndex_: %d, selectedItemIndex_: %d", inventory_->getSelectedSlotIndex(), selectedItemIndex_);
+    CCLOG(">>> Current tool: %s (Type ID: %d)", InventoryManager::getItemName(currentTool).c_str(), (int)currentTool);
+
     if (currentTool != ItemType::Pickaxe)
     {
+        CCLOG(">>> Not holding a Pickaxe, Item: %s", InventoryManager::getItemName(currentTool).c_str());
         showActionMessage("Need a Pickaxe!", Color3B::RED);
         // 如果没镐子，尝试当作攻击处理
         handleAttackAction();
@@ -669,23 +743,37 @@ void MineScene::handleMiningAction()
     // 获取玩家位置和朝向
     Vec2 playerPos = player_->getPosition();
     Vec2 facingDir = player_->getFacingDirection();
+    CCLOG(">>> Player Pos: (%.1f, %.1f), Facing: (%.1f, %.1f)", playerPos.x, playerPos.y, facingDir.x, facingDir.y);
     
     // 归一化朝向并稍微延伸一点距离，以确定面前的格子
-    Vec2 targetPos = playerPos + facingDir * 32.0f;
+    // 如果没有方向（或者是0,0），尝试默认方向
+    if (facingDir.length() < 0.1f) {
+        CCLOG(">>> WARNING: facingDir is zero, using default (0, -1)");
+        facingDir = Vec2(0, -1);
+    }
+    
+    Vec2 targetPos = playerPos + facingDir * 24.0f; // 缩短一点探测距离
     
     // 将位置转换为瓦片坐标
     Vec2 tileCoord = mineLayer_->positionToTileCoord(targetPos);
+    CCLOG(">>> Target Pos: (%.1f, %.1f), Target Tile: (%.1f, %.1f)", targetPos.x, targetPos.y, tileCoord.x, tileCoord.y);
     
     // 尝试挖矿（精准挖掘）
     bool mined = false;
     
     // 优先检测面向的格子
-    if (mineLayer_->isMineralAt(tileCoord))
+    bool isMineral = mineLayer_->isMineralAt(tileCoord);
+    CCLOG(">>> mineLayer_->isMineralAt(targetTile) returns %s", isMineral ? "TRUE" : "FALSE");
+
+    if (isMineral)
     {
+        CCLOG(">>> Mineral found at target tile, calling miningManager_->mineTile");
         MiningManager::MiningResult result = miningManager_->mineTile(tileCoord);
+        CCLOG(">>> Mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
         if (result.success)
         {
             mined = true;
+            player_->consumeEnergy(4.0f); // 挖矿消耗能量
             showActionMessage(result.message, Color3B::GREEN);
         }
     }
@@ -694,9 +782,12 @@ void MineScene::handleMiningAction()
     if (!mined)
     {
         Vec2 footTile = mineLayer_->positionToTileCoord(playerPos);
+        CCLOG(">>> Checking under foot at Tile: (%.1f, %.1f)", footTile.x, footTile.y);
         if (mineLayer_->isMineralAt(footTile))
         {
+            CCLOG(">>> Mineral found under foot, calling miningManager_->mineTile");
             MiningManager::MiningResult result = miningManager_->mineTile(footTile);
+            CCLOG(">>> Foot mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
             if (result.success)
             {
                 mined = true;
@@ -707,6 +798,7 @@ void MineScene::handleMiningAction()
     
     if (!mined)
     {
+        CCLOG(">>> No mining performed, calling handleAttackAction as fallback");
         // 即使有镐子但没挖到矿，也可以挥动一下（攻击）
         handleAttackAction();
     }
@@ -827,6 +919,7 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_J:
+        CCLOG(">>> Key 'J' pressed in MineScene::onKeyPressed");
         handleMiningAction();
         break;
 
@@ -886,7 +979,9 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
 void MineScene::backToFarm()
 {
-    auto gameScene = GameScene::createScene();
+    CCLOG("Returning to farm, loading from save...");
+    // 从存档加载主世界，保持之前的游戏状态
+    auto gameScene = GameScene::createScene(true);  // true = 从存档加载
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
 }
 
@@ -1001,4 +1096,126 @@ Vec2 MineScene::getRandomWalkablePosition() const
     }
     
     return Vec2(mapSize.width/2, mapSize.height/2);
+}
+
+
+
+
+
+void MineScene::initWishingWell()
+{
+    wishingWell_ = nullptr;
+    if (!mineLayer_) return;
+
+    // 限制只在 5 的倍数层出现
+    if (currentFloor_ % 5 != 0) return;
+
+    // 增加概率 (例如 50%)
+    if (rand() % 100 < 50) return;
+
+    // 在地图上找一个位置放置许愿池
+    Vec2 pos = getRandomWalkablePosition();
+    
+    // 创建许愿池视觉 (蓝色圆形)
+    auto wellNode = DrawNode::create();
+    wellNode->drawDot(Vec2::ZERO, 20, Color4F(0.2f, 0.4f, 1.0f, 0.8f)); // 水池
+    wellNode->drawCircle(Vec2::ZERO, 22, 0, 30, false, Color4F::GRAY); // 边框
+    
+    wishingWell_ = Node::create();
+    wishingWell_->setPosition(pos);
+    wishingWell_->addChild(wellNode);
+    this->addChild(wishingWell_, 5); // 与宝箱同层
+    
+    // 提示文字
+    auto label = Label::createWithSystemFont("Wishing Well\n(Press K)", "Arial", 12);
+    label->setPosition(Vec2(0, 30));
+    label->setAlignment(TextHAlignment::CENTER);
+    wishingWell_->addChild(label);
+    
+    CCLOG("Wishing Well initialized at (%.1f, %.1f)", pos.x, pos.y);
+}
+
+void MineScene::handleWishAction()
+{
+    if (!player_ || !wishingWell_ || !inventory_) return;
+    
+    // 检查距离
+    float dist = player_->getPosition().distance(wishingWell_->getPosition());
+    if (dist > 60.0f)
+    {
+        showActionMessage("Too far from Wishing Well!", Color3B::GRAY);
+        return;
+    }
+    
+    // 检查当前手持物品
+    ItemType currentItem = inventory_->getSlot(selectedItemIndex_).type;
+    if (currentItem == ItemType::None)
+    {
+        showActionMessage("Hold an item to wish!", Color3B::YELLOW);
+        return;
+    }
+    
+    // 扣除物品
+    if (inventory_->removeItem(currentItem, 1))
+    {
+        // 播放效果（简单震动或颜色变化）
+        wishingWell_->runAction(Sequence::create(
+            ScaleTo::create(0.1f, 1.2f),
+            ScaleTo::create(0.1f, 1.0f),
+            nullptr
+        ));
+        
+        // 随机奖励
+        int randVal = rand() % 100;
+        if (randVal < 30) // 30% 啥也没有
+        {
+            showActionMessage("The well is silent...", Color3B::GRAY);
+        }
+        else if (randVal < 70) // 40% 金币 / 回血
+        {
+            if (rand() % 2 == 0)
+            {
+                int gold = 50 + rand() % 151; // 50-200
+                inventory_->addMoney(gold);
+                showActionMessage(StringUtils::format("Well grants %d Gold!", gold), Color3B::YELLOW);
+            }
+            else
+            {
+                int heal = 20 + rand() % 31; // 20-50
+                player_->heal(heal);
+                showActionMessage("You feel refreshed!", Color3B::GREEN);
+            }
+        }
+        else // 30% 好东西
+        {
+            // 随机给个矿石或更稀有的
+            ItemType rewards[] = {ItemType::GoldOre, ItemType::DiamondSword, ItemType::GoldSword};
+            ItemType reward = rewards[rand() % 3];
+            
+            // 如果是武器且已有，折算成钱
+            if ((reward == ItemType::DiamondSword || reward == ItemType::GoldSword) && inventory_->hasItem(reward, 1))
+            {
+                 int gold = 500;
+                 inventory_->addMoney(gold);
+                 showActionMessage("Great fortune! (500 Gold)", Color3B::ORANGE);
+            }
+            else
+            {
+                if (inventory_->addItem(reward, 1))
+                {
+                    showActionMessage(StringUtils::format("Received %s!", InventoryManager::getItemName(reward).c_str()), Color3B::MAGENTA);
+                }
+                else
+                {
+                    //背包满了
+                     int gold = Weapon::getWeaponPrice(reward); 
+                     inventory_->addMoney(gold);
+                     showActionMessage("Bag full, took Gold instead.", Color3B::ORANGE);
+                }
+            }
+        }
+        
+        // 刷新UI
+        updateUI(); 
+    }
 }

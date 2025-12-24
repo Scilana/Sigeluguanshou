@@ -31,6 +31,7 @@ list(APPEND GAME_SOURCE
      Classes/AppDelegate.cpp
      Classes/HelloWorldScene.cpp
      Classes/MenuScene.cpp
+     Classes/HouseScene.cpp
      Classes/GameScene.cpp
      Classes/Player.cpp
      Classes/MapLayer.cpp
@@ -49,11 +50,15 @@ list(APPEND GAME_SOURCE
      Classes/Weapon.cpp
      Classes/TreasureChest.cpp
      Classes/ElevatorUI.cpp
+     Classes/SaveManager.cpp
+     Classes/WeatherManager.cpp
+     Classes/EnergyBar.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
      Classes/HelloWorldScene.h
      Classes/MenuScene.h
+     Classes/HouseScene.h
      Classes/GameScene.h
      Classes/Player.h
      Classes/MapLayer.h
@@ -72,6 +77,9 @@ list(APPEND GAME_HEADER
      Classes/Weapon.h
      Classes/TreasureChest.h
      Classes/ElevatorUI.h
+     Classes/SaveManager.h
+     Classes/WeatherManager.h
+     Classes/EnergyBar.h
      )
 
 if(ANDROID)

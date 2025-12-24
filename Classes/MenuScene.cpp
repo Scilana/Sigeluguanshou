@@ -1,5 +1,7 @@
 #include "MenuScene.h"
 #include "GameScene.h"
+#include "SaveManager.h"
+#include "SimpleAudioEngine.h"
 
 USING_NS_CC;
 
@@ -14,6 +16,11 @@ bool MenuScene::init()
         return false;
 
     CCLOG("Initializing Menu Scene with start screen assets...");
+
+    auto audio = CocosDenshion::SimpleAudioEngine::getInstance();
+    if (!audio->isBackgroundMusicPlaying()) {
+        audio->playBackgroundMusic("MUSIC/01 - Stardew Valley Overture.mp3", true);
+    }
 
     createBackground();
     createDecorations();
@@ -262,6 +269,15 @@ void MenuScene::startGameCallback(Ref* sender)
 {
     CCLOG("Start Game clicked!");
 
+    // 检查是否已有存档
+    if (SaveManager::getInstance()->hasSaveFile())
+    {
+        CCLOG("Warning: Existing save file will be overwritten on first save");
+        // 可以选择删除旧存档或提示用户
+        // SaveManager::getInstance()->deleteSaveFile();
+    }
+
+    // 创建新游戏（不加载存档）
     auto scene = GameScene::createScene();
     Director::getInstance()->replaceScene(
         TransitionFade::create(1.0f, scene)
@@ -270,30 +286,44 @@ void MenuScene::startGameCallback(Ref* sender)
 
 void MenuScene::continueGameCallback(Ref* sender)
 {
-    CCLOG("Load clicked!");
+    CCLOG("Continue Game clicked!");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
-    auto messageBg = LayerColor::create(Color4B(0, 0, 0, 200), 450, 100);
-    messageBg->setPosition(Vec2(
-        (visibleSize.width - 450) / 2,
-        (visibleSize.height - 100) / 2
-    ));
-    this->addChild(messageBg, 100);
+    // 检查是否有存档文件
+    if (!SaveManager::getInstance()->hasSaveFile())
+    {
+        // 没有存档，显示提示信息
+        auto messageBg = LayerColor::create(Color4B(0, 0, 0, 200), 450, 100);
+        messageBg->setPosition(Vec2(
+            (visibleSize.width - 450) / 2,
+            (visibleSize.height - 100) / 2
+        ));
+        this->addChild(messageBg, 100);
 
-    auto label = Label::createWithSystemFont("No saved game found!", "Arial", 36);
-    label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
-    label->setColor(Color3B(255, 255, 100));
-    label->enableShadow(Color4B(0, 0, 0, 255), Size(2, -2), 0);
-    this->addChild(label, 101);
+        auto label = Label::createWithSystemFont("No saved game found!", "Arial", 36);
+        label->setPosition(visibleSize.width / 2, visibleSize.height / 2);
+        label->setColor(Color3B(255, 255, 100));
+        label->enableShadow(Color4B(0, 0, 0, 255), Size(2, -2), 0);
+        this->addChild(label, 101);
 
-    auto removeAction = Sequence::create(
-        DelayTime::create(1.0f),
-        RemoveSelf::create(),
-        nullptr
+        auto removeAction = Sequence::create(
+            DelayTime::create(1.5f),
+            RemoveSelf::create(),
+            nullptr
+        );
+        messageBg->runAction(removeAction);
+        label->runAction(removeAction->clone());
+
+        return;
+    }
+
+    // 有存档，加载游戏
+    CCLOG("Loading saved game...");
+    auto scene = GameScene::createScene(true);  // true 表示从存档加载
+    Director::getInstance()->replaceScene(
+        TransitionFade::create(1.0f, scene)
     );
-    messageBg->runAction(removeAction);
-    label->runAction(removeAction->clone());
 }
 
 void MenuScene::coopCallback(Ref* sender)

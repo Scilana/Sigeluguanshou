@@ -75,6 +75,13 @@ bool Player::init()
     isLeftPressed_ = false;
     isRightPressed_ = false;
 
+    // 初始化能量
+    maxEnergy_ = 270.0f;
+    currentEnergy_ = maxEnergy_;
+    isExhausted_ = false;
+    baseMoveSpeed_ = 150.0f;
+    moveSpeed_ = baseMoveSpeed_;
+
     maxHp_ = 100;
     hp_ = maxHp_;
     isInvulnerable_ = false;
@@ -254,10 +261,57 @@ void Player::updateMovement(float delta)
             }
         }
     }
-    else
+
+    if (isMoving_)
     {
         // 如果没有地图层，直接移动不检测碰撞
         this->setPosition(nextPos);
+    }
+}
+
+void Player::consumeEnergy(float amount)
+{
+    if (amount <= 0) return;
+    
+    currentEnergy_ -= amount;
+    if (currentEnergy_ <= 0)
+    {
+        currentEnergy_ = 0;
+        if (!isExhausted_)
+        {
+            setExhausted(true);
+            CCLOG("Player is EXHAUSTED! Energy: 0");
+        }
+    }
+}
+
+void Player::recoverEnergy(float amount)
+{
+    if (amount <= 0) return;
+    
+    currentEnergy_ += amount;
+    if (currentEnergy_ > maxEnergy_)
+    {
+        currentEnergy_ = maxEnergy_;
+    }
+    
+    if (isExhausted_ && currentEnergy_ > 0)
+    {
+        // 简单处理：只要有能量就不再力竭
+        setExhausted(false);
+    }
+}
+
+void Player::setExhausted(bool exhausted)
+{
+    isExhausted_ = exhausted;
+    if (isExhausted_)
+    {
+        moveSpeed_ = baseMoveSpeed_ * 0.5f; // 力竭减半
+    }
+    else
+    {
+        moveSpeed_ = baseMoveSpeed_;
     }
 }
 
@@ -269,6 +323,22 @@ void Player::enableKeyboardControl()
     _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
 }
 
+void Player::disableKeyboardControl()
+{
+    _eventDispatcher->removeEventListenersForTarget(this);
+    resetKeyStates();
+}
+
+void Player::resetKeyStates()
+{
+    isUpPressed_ = false;
+    isDownPressed_ = false;
+    isLeftPressed_ = false;
+    isRightPressed_ = false;
+    isMoving_ = false;
+    moveDirection_ = Vec2::ZERO;
+}
+
 void Player::setMapLayer(MapLayer* mapLayer)
 {
     mapLayer_ = mapLayer;
@@ -277,12 +347,22 @@ void Player::setMapLayer(MapLayer* mapLayer)
 void Player::takeDamage(int damage)
 {
     if (isInvulnerable_) return;
-
+    
     hp_ -= damage;
     if (hp_ < 0) hp_ = 0;
-
-    CCLOG("Player took %d damage! HP: %d/%d", damage, hp_, maxHp_);
-
+    
+    // 受伤无敌时间
+    isInvulnerable_ = true;
+    invulnerableTimer_ = 1.0f;
+    
+    // 闪烁效果
+    auto blink = Blink::create(1.0f, 5);
+    auto finish = CallFunc::create([this]() {
+        isInvulnerable_ = false;
+        this->setOpacity(255);
+    });
+    this->runAction(Sequence::create(blink, finish, nullptr));
+    
     if (hp_ <= 0)
     {
         CCLOG("Player Died!");
@@ -297,6 +377,13 @@ void Player::takeDamage(int damage)
         auto blink = Blink::create(1.0f, 5);
         this->runAction(blink);
     }
+}
+
+void Player::heal(int amount)
+{
+    hp_ += amount;
+    if (hp_ > maxHp_) hp_ = maxHp_;
+    CCLOG("Player healed: +%d, Current HP: %d", amount, hp_);
 }
 
 void Player::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)

@@ -3,18 +3,21 @@
 
 #include "cocos2d.h"
 #include <string>
-#include "MineLayer.h"
-#include "Player.h"
-#include "InventoryManager.h"
-#include "Monster.h"
-#include "TreasureChest.h"
-#include "Weapon.h"
-#include "InventoryUI.h"
+#include <vector>
 
-// 前向声明
+#include "InventoryManager.h"
+
+// Forward declarations
+class MineLayer;
+class Player;
+class InventoryUI;
+class MiningManager;
+class Monster;
+class TreasureChest;
+class Weapon;
+
 class Slime;
 class Zombie;
-class MiningManager;
 
 /**
  * @brief 矿洞场景类（简化版）
@@ -75,6 +78,10 @@ private:
     cocos2d::Layer* uiLayer_;
 
     // UI元素
+    cocos2d::Label* infoLabel_;                      // 物品信息显示
+
+    int selectedSlotIndex_;                          // 当前选中的槽位索引
+    void updateSelection();                          // 更新选中状态显示
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
     cocos2d::Label* itemLabel_;       // current tool label
@@ -95,6 +102,9 @@ private:
     ItemType currentWeapon_;
     float attackCooldown_;
     float currentAttackCooldown_;
+
+    // Wishing Well
+    cocos2d::Node* wishingWell_;
 
     /**
      * @brief 初始化地图
@@ -160,6 +170,16 @@ private:
      * @brief 处理宝箱交互
      */
     void handleChestInteraction();
+
+    /**
+     * @brief 初始化许愿池
+     */
+    void initWishingWell();
+
+    /**
+     * @brief 处理许愿池交互
+     */
+    void handleWishAction();
 
     /**
      * @brief 显示操作提示

@@ -1,13 +1,23 @@
-#include "GameScene.h"
+﻿#include "GameScene.h"
 #include "MenuScene.h"
+#include "HouseScene.h"
 #include "FarmManager.h"
+#include "MarketUI.h"
 #include "ElevatorUI.h"
 #include "MarketUI.h"
+#include "WeatherManager.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
+#include "EnergyBar.h"
 
 USING_NS_CC;
+
+namespace
+{
+    const Vec2 kHouseDoorTile(20.0f, 15.0f);
+    const float kHouseDoorRadius = 40.0f;
+}
 
 Scene* GameScene::createScene()
 
@@ -35,6 +45,7 @@ bool GameScene::init()
     mapLayer_ = nullptr;
     farmManager_ = nullptr;
     player_ = nullptr;
+    weatherManager_ = nullptr;
     uiLayer_ = nullptr;
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
@@ -49,13 +60,15 @@ bool GameScene::init()
     initControls();
 
     // 初始化背包系统
-    inventory_ = InventoryManager::create();
+    inventory_ = InventoryManager::getInstance();
     if (inventory_)
     {
-        this->addChild(inventory_, 0);
-        CCLOG("InventoryManager initialized");
+        // 不再添加到场景，避免随场景销毁
+        // this->addChild(inventory_, 0);
+        CCLOG("InventoryManager retrieved from singleton");
     }
     marketState_.init();
+    initWeather();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -154,145 +167,72 @@ void GameScene::initPlayer()
     player_ = Player::create();
 
     if (player_)
-
     {
-
-        // 设置玩家初始位置（地图中心）
-
         if (mapLayer_)
-
         {
-
-            Size mapSize = mapLayer_->getMapSize();
-
-            Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
-
-            // 检查中心位置是否可行走
-
-            bool centerWalkable = mapLayer_->isWalkable(centerPos);
-
-            CCLOG("Map center position: (%.1f, %.1f)", centerPos.x, centerPos.y);
-
-            CCLOG("Map center walkable: %s", centerWalkable ? "YES" : "NO");
-
-            if (!centerWalkable)
-
+            Vec2 preferredPos(400.0f, 300.0f);
+            if (mapLayer_->isWalkable(preferredPos))
             {
+                player_->setPosition(preferredPos);
+            }
+            else
+            {
+                Size mapSize = mapLayer_->getMapSize();
+                Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
 
-                // 如果中心不可行走，寻找一个可行走的位置
-
-                CCLOG("WARNING: Map center is blocked! Finding safe position...");
-
-                Vec2 safePos = centerPos;
-
-                bool foundSafe = false;
-
-                // 在中心周围搜索可行走位置
-
-                for (int radius = 1; radius < 10 && !foundSafe; radius++)
-
+                bool centerWalkable = mapLayer_->isWalkable(centerPos);
+                if (!centerWalkable)
                 {
+                    Vec2 safePos = centerPos;
+                    bool foundSafe = false;
 
-                    for (int dx = -radius; dx <= radius && !foundSafe; dx++)
-
+                    for (int radius = 1; radius < 10 && !foundSafe; radius++)
                     {
-
-                        for (int dy = -radius; dy <= radius && !foundSafe; dy++)
-
+                        for (int dx = -radius; dx <= radius && !foundSafe; dx++)
                         {
-
-                            Vec2 testPos = centerPos + Vec2(dx * 32, dy * 32);
-
-                            if (mapLayer_->isWalkable(testPos))
-
+                            for (int dy = -radius; dy <= radius && !foundSafe; dy++)
                             {
-
-                                safePos = testPos;
-
-                                foundSafe = true;
-
-                                CCLOG("Found safe position: (%.1f, %.1f)", safePos.x, safePos.y);
-
+                                Vec2 testPos = centerPos + Vec2(dx * 32, dy * 32);
+                                if (mapLayer_->isWalkable(testPos))
+                                {
+                                    safePos = testPos;
+                                    foundSafe = true;
+                                }
                             }
-
                         }
-
                     }
 
+                    if (!foundSafe)
+                    {
+                        safePos = Vec2(100, 100);
+                    }
+
+                    player_->setPosition(safePos);
                 }
-
-                if (!foundSafe)
-
+                else
                 {
-
-                    // 如果还是找不到，使用一个固定的安全位置
-
-                    safePos = Vec2(100, 100);
-
-                    CCLOG("Using fallback position: (%.1f, %.1f)", safePos.x, safePos.y);
-
+                    player_->setPosition(centerPos);
                 }
-
-                player_->setPosition(safePos);
-
             }
-
-            else
-
-            {
-
-                player_->setPosition(centerPos);
-
-            }
-
-            CCLOG("Player position: (%.1f, %.1f)", player_->getPosition().x, player_->getPosition().y);
-
         }
-
         else
-
         {
-
-            // 如果地图加载失败，放在屏幕中心
-
             auto visibleSize = Director::getInstance()->getVisibleSize();
-
             player_->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
-
-            CCLOG("No map, player at screen center");
-
         }
-
-        // 启用键盘控制
 
         player_->enableKeyboardControl();
 
-        // 设置地图层引用（用于碰撞检测）
-
         if (mapLayer_)
-
         {
-
             player_->setMapLayer(mapLayer_);
-
-            CCLOG("MapLayer reference passed to Player");
-
         }
 
-        // 添加到场景（在地图层之上）
-
         this->addChild(player_, 10);
-
-        CCLOG("Player added to scene");
-
     }
-
     else
-
     {
-
         CCLOG("ERROR: Failed to create player!");
-
     }
 
 }
@@ -334,8 +274,7 @@ void GameScene::initUI()
     CCLOG("Initializing UI...");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
-
-    Vec2 origin = Director::getInstance()->getVisibleOrigin();
+    auto origin = Director::getInstance()->getVisibleOrigin();
 
     // 创建UI层（独立于摄像机移动）
 
@@ -483,6 +422,57 @@ void GameScene::initUI()
 
     CCLOG("UI initialized - using simple fixed layer method");
 
+    // 能量条
+    if (player_)
+    {
+        auto energyBar = EnergyBar::create(player_);
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+        this->addChild(energyBar, 100);
+    }
+}
+
+// ========== Weather Init ==========
+
+void GameScene::initWeather()
+
+{
+
+    if (!uiLayer_)
+
+    {
+
+        CCLOG("Weather skipped: uiLayer_ not initialized");
+
+        return;
+
+    }
+
+    weatherManager_ = WeatherManager::create();
+
+    if (weatherManager_)
+
+    {
+
+        uiLayer_->addChild(weatherManager_, -1);
+
+        lastWeatherDay_ = 0;
+
+        updateWeather();
+
+        CCLOG("WeatherManager initialized");
+
+    }
+
+    else
+
+    {
+
+        CCLOG("ERROR: Failed to create WeatherManager!");
+
+    }
+
 }
 
 // ========== 初始化控制 ==========
@@ -505,6 +495,8 @@ void GameScene::initControls()
 
 }
 
+
+
 void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
 {
@@ -524,6 +516,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         // 直接进入矿洞（使用 Mines/1.tmx）
         enterMine();
         break;
+    case EventKeyboard::KeyCode::KEY_X:
+        // 保存游戏
+        saveGame();
+        break;
     case EventKeyboard::KeyCode::KEY_M:
         if (isPlayerNearElevator())
         {
@@ -537,6 +533,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 player_->getPosition().x, player_->getPosition().y,
                 ELEVATOR_POS.x, ELEVATOR_POS.y);
         }
+        break;
+    case EventKeyboard::KeyCode::KEY_ENTER:
+    case EventKeyboard::KeyCode::KEY_KP_ENTER:
+        enterHouse();
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -599,6 +599,8 @@ void GameScene::update(float delta)
     // 更新UI显示
 
     updateUI();
+
+    updateWeather();
 
     // 处理砍树计时
     updateChopping(delta);
@@ -731,13 +733,12 @@ void GameScene::updateUI()
     positionLabel_->setString(posStr);
 
     if (farmManager_)
-
     {
-
-        std::string dayText = StringUtils::format("Day %d (auto +1 every 5s)", farmManager_->getDayCount());
-
-        timeLabel_->setString(dayText);
-
+        std::string timeStr = StringUtils::format("Day %d, %02d:%02d", 
+            farmManager_->getDayCount(), 
+            farmManager_->getHour(), 
+            farmManager_->getMinute());
+        timeLabel_->setString(timeStr);
     }
 
     if (moneyLabel_ && inventory_)
@@ -763,6 +764,30 @@ void GameScene::updateUI()
 
 }
 
+void GameScene::updateWeather()
+{
+    int dayCount = 1;
+    if (farmManager_)
+    {
+        dayCount = farmManager_->getDayCount();
+    }
+    if (dayCount <= 0)
+    {
+        dayCount = 1;
+    }
+    if (dayCount == lastWeatherDay_)
+    {
+        return;
+    }
+
+    lastWeatherDay_ = dayCount;
+    marketState_.updatePrices(dayCount);
+    if (weatherManager_)
+    {
+        weatherManager_->updateWeather(marketState_.getWeather());
+    }
+}
+
 void GameScene::handleFarmAction(bool waterOnly)
 {
     if (!mapLayer_ || !farmManager_ || !player_)
@@ -778,6 +803,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     if (waterOnly) {
         if (current == ItemType::WateringCan) {
             result = farmManager_->waterTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
         }
         else {
             result = { false, "Need watering can to water", -1 };
@@ -787,9 +813,11 @@ void GameScene::handleFarmAction(bool waterOnly)
         switch (current) {
         case ItemType::Hoe:
             result = farmManager_->tillTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
             break;
         case ItemType::WateringCan:
             result = farmManager_->waterTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
             break;
         case ItemType::Scythe:
             result = farmManager_->harvestTile(tileCoord);
@@ -894,6 +922,7 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                 // 第1刀的反馈
                 showActionMessage("Thump! (1)", Color3B::WHITE);
+                player_->consumeEnergy(2.0f);
                 result = { true, "", -1 };
             }
             break;
@@ -934,6 +963,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                 mapLayer_->clearBaseTileAt(t);
             }
 
+            player_->consumeEnergy(4.0f);
             result = { true, "Rock broken!", -1 };
             break;
         }
@@ -953,6 +983,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             if (result.success && inventory_)
             {
                 inventory_->removeItem(current, 1);
+                player_->consumeEnergy(2.0f);
                 result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
                 if (inventoryUI_) inventoryUI_->refresh();
             }
@@ -1365,7 +1396,20 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData) {
         int woodCount = 3 + (rand() % 3);
         spawnItem(ItemType::Wood, stumpPos, woodCount);
 
-        // --- F. 清理砍树数据 ---
+        // --- F. 记录被砍倒的树木位置（用于存档） ---
+        // 记录整棵树的所有瓦片
+        for (const auto& tile : savedTiles)
+        {
+            // 检查是否已记录
+            auto it = std::find(choppedTrees_.begin(), choppedTrees_.end(), tile);
+            if (it == choppedTrees_.end())
+            {
+                choppedTrees_.push_back(tile);
+                CCLOG("Recorded chopped tree tile: (%.0f, %.0f)", tile.x, tile.y);
+            }
+        }
+
+        // --- G. 清理砍树数据 ---
         activeChops_.erase(
             std::remove_if(activeChops_.begin(), activeChops_.end(),
                 [actualRootTile](const TreeChopData& c) {
@@ -1754,6 +1798,7 @@ void GameScene::backToMenu()
 {
 
     CCLOG("Returning to menu...");
+    saveGame();
 
     auto scene = MenuScene::createScene();
 
@@ -1786,34 +1831,21 @@ void GameScene::toggleInventory()
         return;
     }
 
-    // 设置关闭回调
     inventoryUI_->setCloseCallback([this]() {
         onInventoryClosed();
     });
 
-    // 添加到场景（高 Z-order 确保在顶层）
-    this->addChild(inventoryUI_, 2000);
-
-    // 设置全局 Z-order（确保在摄像机控制之外）
-    inventoryUI_->setGlobalZOrder(2000);
-
-    // 调整位置跟随摄像机
-    auto camera = this->getDefaultCamera();
-    if (camera)
+    if (uiLayer_)
     {
-        Vec3 cameraPos = camera->getPosition3D();
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        Vec2 uiPos = Vec2(
-            cameraPos.x - visibleSize.width / 2,
-            cameraPos.y - visibleSize.height / 2
-        );
-        inventoryUI_->setPosition(uiPos);
+        uiLayer_->addChild(inventoryUI_, 2000);
+        inventoryUI_->setPosition(Vec2::ZERO);
+    }
+    else
+    {
+        this->addChild(inventoryUI_, 2000);
     }
 
-    // 播放显示动画
     inventoryUI_->show();
-
-    CCLOG("Inventory opened");
 }
 
 void GameScene::onInventoryClosed()
@@ -1855,6 +1887,7 @@ void GameScene::toggleMarket()
     {
         Vec3 cameraPos = camera->getPosition3D();
         auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
         Vec2 uiPos = Vec2(
             cameraPos.x - visibleSize.width / 2,
             cameraPos.y - visibleSize.height / 2
@@ -1870,6 +1903,29 @@ void GameScene::onMarketClosed()
 {
     marketUI_ = nullptr;
     CCLOG("Market closed");
+}
+
+void GameScene::enterHouse()
+{
+    if (!isPlayerNearHouseDoor())
+    {
+        showActionMessage("Door is too far!", Color3B::RED);
+        return;
+    }
+
+    auto houseScene = HouseScene::createScene();
+    if (houseScene)
+    {
+        houseScene->setFarmManager(farmManager_);
+    }
+    else
+    {
+        CCLOG("ERROR: Failed to create house scene!");
+        return;
+    }
+
+    auto transition = TransitionFade::create(0.4f, houseScene);
+    Director::getInstance()->pushScene(transition);
 }
 
 void GameScene::enterMine()
@@ -1893,6 +1949,18 @@ void GameScene::enterMine()
             // 楼层0是农场（地面），不需要切换场景
             showActionMessage("Already on the farm!", Color3B(200, 200, 200));
             return;
+        }
+
+        // 进入矿洞前自动保存游戏
+        CCLOG("Auto-saving before entering mine...");
+        SaveManager::SaveData data = collectSaveData();
+        if (SaveManager::getInstance()->saveGame(data))
+        {
+            CCLOG("✓ Auto-save successful!");
+        }
+        else
+        {
+            CCLOG("✗ Auto-save failed!");
         }
 
         // 创建矿洞场景，传入背包实例和选择的楼层
@@ -1923,6 +1991,7 @@ void GameScene::enterMine()
         {
             Vec3 cameraPos = camera->getPosition3D();
             auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
             Vec2 uiPos = Vec2(
                 cameraPos.x - visibleSize.width / 2,
                 cameraPos.y - visibleSize.height / 2
@@ -1937,12 +2006,291 @@ void GameScene::enterMine()
 bool GameScene::isPlayerNearElevator() const
 {
     if (!player_) return false;
-    
+
     // 检查距离
     float distance = player_->getPosition().distance(ELEVATOR_POS);
     // 允许100像素误差
-    return distance < 100.0f; 
+    return distance < 100.0f;
 }
 
+bool GameScene::isPlayerNearHouseDoor() const
+{
+    if (!player_ || !mapLayer_)
+        return false;
 
+    Vec2 doorPos = mapLayer_->tileCoordToPosition(kHouseDoorTile);
+    return player_->getPosition().distance(doorPos) <= kHouseDoorRadius;
+}
 
+// ==========================================
+// 存档系统实现
+// ==========================================
+
+Scene* GameScene::createScene(bool loadFromSave)
+{
+    auto scene = GameScene::create();
+    if (scene && loadFromSave)
+    {
+        // 通过调用带参数的 init 来加载存档
+        // 但由于 create() 已经调用了 init()，我们需要手动加载
+        GameScene* gameScene = dynamic_cast<GameScene*>(scene);
+        if (gameScene)
+        {
+            gameScene->loadGame();
+        }
+    }
+    return scene;
+}
+
+bool GameScene::init(bool loadFromSave)
+{
+    if (!init())
+        return false;
+
+    if (loadFromSave)
+    {
+        loadGame();
+    }
+
+    return true;
+}
+
+void GameScene::saveGame()
+{
+    CCLOG("========================================");
+    CCLOG("Saving game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data = collectSaveData();
+
+    if (SaveManager::getInstance()->saveGame(data))
+    {
+        CCLOG("✓ Game saved successfully!");
+        // 显示保存成功提示
+        showActionMessage("Game Saved!", Color3B::GREEN);
+    }
+    else
+    {
+        CCLOG("✗ Failed to save game!");
+        showActionMessage("Save Failed!", Color3B::RED);
+    }
+}
+
+void GameScene::loadGame()
+{
+    CCLOG("========================================");
+    CCLOG("Loading game...");
+    CCLOG("========================================");
+
+    SaveManager::SaveData data;
+
+    if (SaveManager::getInstance()->loadGame(data))
+    {
+        CCLOG("✓ Game loaded successfully from file!");
+        applySaveData(data);
+
+        // 延迟显示消息，确保 UI 已初始化
+        if (actionLabel_)
+        {
+            showActionMessage("Game Loaded!", Color3B::GREEN);
+        }
+    }
+    else
+    {
+        CCLOG("✗ Failed to load game!");
+        if (actionLabel_)
+        {
+            showActionMessage("Load Failed!", Color3B::RED);
+        }
+    }
+}
+
+SaveManager::SaveData GameScene::collectSaveData()
+{
+    SaveManager::SaveData data;
+
+    // 保存玩家位置
+    if (player_)
+    {
+        data.playerPosition = player_->getPosition();
+        CCLOG("Saving player position: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+
+    // 保存背包数据
+    if (inventory_)
+    {
+        data.inventory.money = inventory_->getMoney();
+        CCLOG("Saving money: %d", data.inventory.money);
+
+        const auto& slots = inventory_->getAllSlots();
+        for (size_t i = 0; i < slots.size(); i++)
+        {
+            const auto& slot = slots[i];
+            if (!slot.isEmpty())
+            {
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                data.inventory.slots.push_back(slotData);
+                CCLOG("  Slot %zu: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+            else
+            {
+                // 空槽位也要保存，保持索引一致
+                SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+                slotData.type = static_cast<int>(ItemType::None);
+                slotData.count = 0;
+                data.inventory.slots.push_back(slotData);
+            }
+        }
+    }
+
+    // 保存游戏天数
+    if (farmManager_)
+    {
+        data.dayCount = farmManager_->getDayCount();
+        CCLOG("Saving day count: %d", data.dayCount);
+    }
+
+    // 保存农作物数据
+    if (farmManager_)
+    {
+        const auto& farmTiles = farmManager_->getAllTiles();
+        Size mapSize = farmManager_->getMapSize();
+
+        for (int y = 0; y < mapSize.height; y++)
+        {
+            for (int x = 0; x < mapSize.width; x++)
+            {
+                int index = y * mapSize.width + x;
+                if (index >= farmTiles.size())
+                    continue;
+
+                const auto& tile = farmTiles[index];
+
+                // 只保存有状态的瓦片
+                if (tile.tilled || tile.hasCrop)
+                {
+                    SaveManager::SaveData::FarmTileData tileData;
+                    tileData.x = x;
+                    tileData.y = y;
+                    tileData.tilled = tile.tilled;
+                    tileData.watered = tile.watered;
+                    tileData.hasCrop = tile.hasCrop;
+                    tileData.cropId = tile.cropId;
+                    tileData.stage = tile.stage;
+                    tileData.progressDays = tile.progressDays;
+                    data.farmTiles.push_back(tileData);
+                }
+            }
+        }
+        CCLOG("Saving %zu farm tiles", data.farmTiles.size());
+    }
+
+    // 树木存档功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+
+    return data;
+}
+
+void GameScene::applySaveData(const SaveManager::SaveData& data)
+{
+    CCLOG("========================================");
+    CCLOG("Applying save data...");
+    CCLOG("========================================");
+
+    // 恢复玩家位置
+    if (player_)
+    {
+        CCLOG("Restoring player position...");
+        player_->setPosition(data.playerPosition);
+        CCLOG("✓ Player position restored: (%.2f, %.2f)",
+            data.playerPosition.x, data.playerPosition.y);
+    }
+    else
+    {
+        CCLOG("✗ Warning: player_ is null!");
+    }
+
+    // 恢复背包数据
+    if (inventory_)
+    {
+        CCLOG("Restoring inventory...");
+        // 清空现有背包
+        inventory_->clear();
+
+        // 恢复金币 - 使用 addMoney 一次性添加
+        if (data.inventory.money > 0)
+        {
+            inventory_->addMoney(data.inventory.money);
+        }
+        CCLOG("✓ Money restored: %d", data.inventory.money);
+
+        // 恢复物品槽位
+        CCLOG("Restoring %zu inventory slots...", data.inventory.slots.size());
+        for (size_t i = 0; i < data.inventory.slots.size() && i < InventoryManager::MAX_SLOTS; i++)
+        {
+            const auto& slotData = data.inventory.slots[i];
+            if (slotData.type != static_cast<int>(ItemType::None) && slotData.count > 0)
+            {
+                ItemType type = static_cast<ItemType>(slotData.type);
+                inventory_->setSlot(i, type, slotData.count);
+                CCLOG("  Slot %zu restored: Type=%d, Count=%d", i, slotData.type, slotData.count);
+            }
+        }
+        CCLOG("✓ Inventory restored");
+    }
+    else
+    {
+        CCLOG("✗ Warning: inventory_ is null!");
+    }
+
+    // 恢复游戏天数
+    if (farmManager_)
+    {
+        CCLOG("Restoring day count...");
+        farmManager_->setDayCount(data.dayCount);
+        CCLOG("✓ Day count restored: %d", data.dayCount);
+    }
+    else
+    {
+        CCLOG("✗ Warning: farmManager_ is null!");
+    }
+
+    // 恢复农作物数据
+    if (farmManager_)
+    {
+        CCLOG("Restoring farm tiles...");
+        // 获取当前地图尺寸
+        Size mapSize = farmManager_->getMapSize();
+        std::vector<FarmManager::FarmTile> tiles(mapSize.width * mapSize.height);
+
+        // 应用保存的瓦片数据
+        for (const auto& tileData : data.farmTiles)
+        {
+            int index = tileData.y * mapSize.width + tileData.x;
+            if (index >= 0 && index < tiles.size())
+            {
+                tiles[index].tilled = tileData.tilled;
+                tiles[index].watered = tileData.watered;
+                tiles[index].hasCrop = tileData.hasCrop;
+                tiles[index].cropId = tileData.cropId;
+                tiles[index].stage = tileData.stage;
+                tiles[index].progressDays = tileData.progressDays;
+            }
+        }
+
+        farmManager_->setAllTiles(tiles);
+        CCLOG("✓ Farm tiles restored: %zu tiles", data.farmTiles.size());
+    }
+
+    // 树木恢复功能已禁用（避免崩溃问题）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+    CCLOG("Tree restoration skipped (feature disabled for stability)");
+    choppedTrees_.clear();
+
+    CCLOG("========================================");
+    CCLOG("✓ Save data applied successfully!");
+    CCLOG("========================================");
+}

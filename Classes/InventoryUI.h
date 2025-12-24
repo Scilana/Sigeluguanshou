@@ -60,6 +60,9 @@ private:
     cocos2d::Label* moneyLabel_;                     // 金币显示
     cocos2d::Label* infoLabel_;                      // 物品信息显示
 
+    int selectedSlotIndex_;                          // 当前选中的槽位索引
+    void updateSelection();                          // 更新选中状态显示
+
     static const int ROWS = 5;                       // 行数
     static const int COLS = 6;                       // 列数
     static const float SLOT_SIZE;                    // 格子大小

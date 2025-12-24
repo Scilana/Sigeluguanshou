@@ -2,6 +2,36 @@
 
 USING_NS_CC;
 
+static InventoryManager* s_instance = nullptr;
+
+InventoryManager* InventoryManager::getInstance()
+{
+    if (!s_instance)
+    {
+        s_instance = new (std::nothrow) InventoryManager();
+        if (s_instance && s_instance->init())
+        {
+            // 不调用 autorelease，保持引用计数为 1
+            CCLOG("InventoryManager instance created");
+        }
+        else
+        {
+            CC_SAFE_DELETE(s_instance);
+        }
+    }
+    return s_instance;
+}
+
+void InventoryManager::destroyInstance()
+{
+    if (s_instance)
+    {
+        s_instance->release();
+        s_instance = nullptr;
+        CCLOG("InventoryManager instance destroyed");
+    }
+}
+
 bool InventoryManager::init()
 {
     if (!Node::init())
@@ -15,6 +45,7 @@ bool InventoryManager::init()
 
     // 初始化默认金币和物品
     money_ = 500;
+    selectedSlotIndex_ = 0;
     initDefaultItems();
 
     CCLOG("InventoryManager initialized with %d slots and %d gold", MAX_SLOTS, money_);
@@ -341,4 +372,14 @@ int InventoryManager::getMaxStack(ItemType itemType)
 
     // 其他物品最多99
     return 99;
+}
+
+int InventoryManager::getSelectedSlotIndex() const
+{
+    return selectedSlotIndex_;
+}
+
+void InventoryManager::setSelectedSlotIndex(int index)
+{
+    selectedSlotIndex_ = index;
 }

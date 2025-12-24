@@ -26,6 +26,8 @@ public:
      * @brief 启用键盘控制
      */
     void enableKeyboardControl();
+    void disableKeyboardControl();
+    void resetKeyStates();
 
     /**
      * @brief 设置地图层（用于碰撞检测）
@@ -40,11 +42,28 @@ public:
     // ========== 战斗系统 ==========
 
     void takeDamage(int damage);
+
+    /**
+     * @brief 恢复血量
+     */
+    void heal(int amount);
+
+    /**
+     * @brief 是否处于无敌状态
+     */
     bool isInvulnerable() const { return isInvulnerable_; }
     int getHp() const { return hp_; }
 
     // 获取当前面朝方向（用于判定攻击方向）
     cocos2d::Vec2 getFacingDirection() const { return facingDirection_; }
+
+    // ========== 能量系统 ==========
+    float getMaxEnergy() const { return maxEnergy_; }
+    float getCurrentEnergy() const { return currentEnergy_; }
+    void consumeEnergy(float amount);
+    void recoverEnergy(float amount);
+    bool isExhausted() const { return isExhausted_; }
+    void setExhausted(bool exhausted);
 
 private:
     // ========== 动画相关定义 ==========
@@ -102,7 +121,15 @@ private:
     bool isInvulnerable_;
     float invulnerableTimer_;
 
-    // 键盘回调
+    // 能量属性
+    float currentEnergy_;
+    float maxEnergy_;
+    bool isExhausted_;
+    float baseMoveSpeed_; // 记录基础速度以便恢复
+
+    /**
+     * @brief 键盘按下
+     */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
     void onKeyReleased(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
 

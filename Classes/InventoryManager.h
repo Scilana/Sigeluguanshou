@@ -67,6 +67,16 @@ public:
     };
 
     static const int MAX_SLOTS = 30;  // 背包总槽位数
+    
+    /**
+     * @brief 获取单例实例
+     */
+    static InventoryManager* getInstance();
+    
+    /**
+     * @brief 销毁单例实例
+     */
+    static void destroyInstance();
 
     /**
      * @brief 初始化
@@ -183,11 +193,16 @@ public:
      */
     void clear();
 
-    CREATE_FUNC(InventoryManager);
+
 
 private:
     std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
+    int selectedSlotIndex_ = 0;               // 当前选中的槽位
+
+public:
+    int getSelectedSlotIndex() const;
+    void setSelectedSlotIndex(int index);
 
     /**
      * @brief 初始化默认物品

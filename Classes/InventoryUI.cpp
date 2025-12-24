@@ -39,6 +39,8 @@ bool InventoryUI::init(InventoryManager* inventory)
     initSlots();
     initControls();
 
+    selectedSlotIndex_ = -1; // -1 表示未选中
+
     // 键盘监听（ESC 和 B 关闭）
     auto keyListener = EventListenerKeyboard::create();
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
@@ -199,6 +201,24 @@ void InventoryUI::refresh()
     {
         updateSlot(slot.slotIndex);
     }
+
+    updateSelection();
+}
+
+void InventoryUI::updateSelection()
+{
+    // 更新选中框显示
+    for (auto& slot : slotSprites_)
+    {
+        if (slot.slotIndex == selectedSlotIndex_)
+        {
+             slot.background->setColor(Color3B(100, 90, 80)); // 选中稍微亮一点
+        }
+        else
+        {
+             slot.background->setColor(Color3B(60, 55, 50)); // 默认颜色
+        }
+    }
 }
 
 void InventoryUI::updateSlot(int slotIndex)
@@ -334,6 +354,44 @@ void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         keyCode == EventKeyboard::KeyCode::KEY_B)
     {
         close();
+        return;
+    }
+
+    // 数字键重新绑定快捷键
+    if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
+    {
+        int num = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
+        int targetSlotIndex = (num == 0) ? 9 : num - 1; // 1->0, 2->1 ... 0->9
+
+        // 如果当前有选中的物品，交换
+        if (selectedSlotIndex_ != -1)
+        {
+            if (selectedSlotIndex_ != targetSlotIndex)
+            {
+                inventory_->swapSlots(selectedSlotIndex_, targetSlotIndex);
+                
+                // 刷新界面
+                refresh();
+                
+                // 显示提示
+                if (infoLabel_)
+                {
+                    std::string itemName = InventoryManager::getItemName(inventory_->getSlot(targetSlotIndex).type);
+                    infoLabel_->setString(StringUtils::format("Moved %s to slot %d", itemName.c_str(), num));
+                }
+                
+                // 交换后，更新选中框位置或者取消选中
+                // 这里我们选择更新选中到新的位置，方便继续操作
+                selectedSlotIndex_ = targetSlotIndex;
+                updateSelection();
+            }
+        }
+        else
+        {
+           // 如果没有选中的，也许可以当作快速选中？
+           // 暂时不处理，或者作为一种快捷选中方式
+           // onSlotClicked(targetSlotIndex); // 可选：按下数字键直接选中对应槽位
+        }
     }
 }
 

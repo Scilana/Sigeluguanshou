@@ -12,8 +12,10 @@
 #include "InventoryUI.h"
 #include "MarketState.h"
 #include "MineScene.h"
+#include "SaveManager.h"
 
 class MarketUI;
+class WeatherManager;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -28,14 +30,26 @@ class GameScene : public cocos2d::Scene
 {
 public:
     /**
-     * @brief 创建场景
+     * @brief 创建场景（新游戏）
      */
     static cocos2d::Scene* createScene();
+
+    /**
+     * @brief 创建场景（从存档加载）
+     * @param loadFromSave 是否从存档加载
+     */
+    static cocos2d::Scene* createScene(bool loadFromSave);
 
     /**
      * @brief 初始化
      */
     virtual bool init() override;
+
+    /**
+     * @brief 初始化并加载存档
+     * @param loadFromSave 是否从存档加载
+     */
+    bool init(bool loadFromSave);
 
     /**
      * @brief 更新函数
@@ -49,9 +63,14 @@ private:
     // ==========================================
     // 核心组件
     // ==========================================
-    MapLayer* mapLayer_;       // 地图层
-    FarmManager* farmManager_; // 农场管理
-    Player* player_;           // 玩家
+    // ???
+    MapLayer* mapLayer_;
+    // ????
+    FarmManager* farmManager_;
+    // ??
+    Player* player_;
+    // ??????
+    WeatherManager* weatherManager_;
 
     // ==========================================
     // 背包与系统
@@ -81,12 +100,14 @@ private:
     void initCamera();
     void initControls();
     void initTrees(); // 初始化调试用树木标记
+    void initWeather();
 
     // ==========================================
     // 更新循环函数
     // ==========================================
     void updateCamera(); // 更新摄像机位置（跟随玩家）
     void updateUI();     // 更新UI显示
+    void updateWeather();
 
     // ==========================================
     // 控制与交互
@@ -97,11 +118,13 @@ private:
     void toggleMarket();
     void onMarketClosed();
     void enterMine();
+    void enterHouse();
 
     /**
      * @brief 检查玩家是否在电梯附近
      */
     bool isPlayerNearElevator() const;
+    bool isPlayerNearHouseDoor() const;
 
     // 电梯位置（农场地图上的坐标，需根据实际地图调整）
     // 假设在地图右上角附近 (例如 30*32, 20*32 处)
@@ -165,6 +188,8 @@ private:
     int getCropIdForItem(ItemType type) const;
     ItemType getItemTypeForCropId(int cropId) const;
 
+    int lastWeatherDay_ = 0;
+
     // ==========================================
     // 砍树系统 (New Architecture from GameScene1)
     // ==========================================
@@ -182,6 +207,7 @@ private:
         static const int CHOPS_NEEDED = 3; // 砍倒所需的次数
     };
     std::vector<TreeChopData> activeChops_; // 当前正在被砍的树
+    std::vector<cocos2d::Vec2> choppedTrees_; // 已砍倒的树木位置（用于存档）
 
     // 调试用树木结构 (旧)
     struct Tree
@@ -226,6 +252,30 @@ private:
      * @brief 更新砍树状态（如超时重置）
      */
     void updateChopping(float delta);
+
+    // ==========================================
+    // 存档系统
+    // ==========================================
+
+    /**
+     * @brief 保存游戏
+     */
+    void saveGame();
+
+    /**
+     * @brief 加载游戏
+     */
+    void loadGame();
+
+    /**
+     * @brief 收集游戏数据用于保存
+     */
+    SaveManager::SaveData collectSaveData();
+
+    /**
+     * @brief 应用加载的游戏数据
+     */
+    void applySaveData(const SaveManager::SaveData& data);
 };
 
 #endif // __GAME_SCENE_H__

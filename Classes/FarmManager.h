@@ -18,26 +18,6 @@ class MapLayer;
 class FarmManager : public cocos2d::Node
 {
 public:
-    struct ActionResult
-    {
-        bool success;
-        std::string message;
-        int cropId = -1;
-    };
-
-    static FarmManager* create(MapLayer* mapLayer);
-    bool init(MapLayer* mapLayer);
-    virtual void update(float delta) override;
-
-    ActionResult tillTile(const cocos2d::Vec2& tileCoord);
-    ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
-    ActionResult waterTile(const cocos2d::Vec2& tileCoord);
-    ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
-
-    int getDayCount() const { return dayCount_; }
-    void forceRedraw();
-
-private:
     struct FarmTile
     {
         bool tilled = false;
@@ -48,6 +28,46 @@ private:
         int progressDays = 0;     // 当前阶段已积累的天数
     };
 
+    struct ActionResult
+    {
+        bool success;
+        std::string message;
+        int cropId = -1;
+    };
+
+    static FarmManager* create(MapLayer* mapLayer);
+    virtual bool init(MapLayer* mapLayer);
+    virtual void update(float delta) override;
+
+    int getHour() const;
+    int getMinute() const;
+    float getDayProgress() const { return dayTimer_ / secondsPerDay_; }
+
+    ActionResult tillTile(const cocos2d::Vec2& tileCoord);
+    ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
+    ActionResult waterTile(const cocos2d::Vec2& tileCoord);
+    ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
+
+    int getDayCount() const { return dayCount_; }
+    void setDayCount(int dayCount) { dayCount_ = dayCount; }
+    void forceRedraw();
+
+    /**
+     * @brief 获取所有农田状态（用于存档）
+     */
+    std::vector<FarmTile> getAllTiles() const { return tiles_; }
+
+    /**
+     * @brief 设置所有农田状态（用于加载存档）
+     */
+    void setAllTiles(const std::vector<FarmTile>& tiles);
+
+    /**
+     * @brief 获取地图尺寸
+     */
+    cocos2d::Size getMapSize() const { return mapSizeTiles_; }
+
+private:
     struct CropDef
     {
         int id;

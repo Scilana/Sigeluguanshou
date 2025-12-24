@@ -154,22 +154,52 @@ void Monster::moveTowards(const Vec2& targetPos, float delta)
 {
     Vec2 myPos = this->getPosition();
     Vec2 direction = targetPos - myPos;
-    direction.normalize();
+    if (direction.length() > 0)
+    {
+        direction.normalize();
+    }
 
     Vec2 newPos = myPos + direction * moveSpeed_ * delta;
 
     // 碰撞检测（如果有地图层）
     if (mapLayer_)
     {
+        // 1. 检查是否在地图范围内
+        Size mapSize = mapLayer_->getMapSize();
+        if (newPos.x < 0 || newPos.x > mapSize.width ||
+            newPos.y < 0 || newPos.y > mapSize.height)
+        {
+            return; // 超出地图边界，不移动
+        }
+
+        // 2. 检查是否可行走
         if (mapLayer_->isWalkable(newPos))
         {
             this->setPosition(newPos);
+        }
+        else
+        {
+            // 简单的滑墙处理：尝试只移动 X 或 Y
+            Vec2 newPosX = myPos + Vec2(direction.x * moveSpeed_ * delta, 0);
+            if (mapLayer_->isWalkable(newPosX))
+            {
+                this->setPosition(newPosX);
+            }
+            else
+            {
+                Vec2 newPosY = myPos + Vec2(0, direction.y * moveSpeed_ * delta);
+                if (mapLayer_->isWalkable(newPosY))
+                {
+                    this->setPosition(newPosY);
+                }
+            }
         }
     }
     else
     {
         this->setPosition(newPos);
     }
+
 }
 
 void Monster::takeDamage(int damage)

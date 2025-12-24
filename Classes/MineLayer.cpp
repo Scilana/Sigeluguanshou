@@ -34,11 +34,15 @@ bool MineLayer::init(const std::string& tmxFile)
         mineralLayer_ = tmxMap->getLayer("mineral");
         if (!mineralLayer_)
             mineralLayer_ = tmxMap->getLayer("Mineral");
-        if (mineralLayer_) CCLOG("Found mineral layer");
+        if (!mineralLayer_)
+            mineralLayer_ = tmxMap->getLayer("mine1");
+        
+        if (mineralLayer_) CCLOG("Found mineral layer: %s", mineralLayer_->getLayerName().c_str());
+        
         stairsLayer_ = tmxMap->getLayer("stairs");
         if (!stairsLayer_)
             stairsLayer_ = tmxMap->getLayer("Stairs");
-        if (stairsLayer_) CCLOG("Found stairs layer");
+        if (stairsLayer_) CCLOG("Found stairs layer: %s", stairsLayer_->getLayerName().c_str());
 
 
         // 检查图层
@@ -104,5 +108,38 @@ bool MineLayer::isStairsAt(const Vec2& tileCoord) const
         return false;
 
     return stairsLayer_->getTileGIDAt(tileCoord) != 0;
+}
+
+bool MineLayer::isWalkable(const Vec2& position) const
+{
+    // 1. 检查障碍物 (Buildings 层，通过父类 MapLayer 检查)
+    if (!MapLayer::isWalkable(position)) return false;
+
+    // 2. 检查地面 (Back 层)
+    // 只有 Back 层有图块的地方才是地面，没有图块的地方是虚空/墙壁
+    auto tmxMap = getTMXMap();
+    if (!tmxMap) return false;
+
+    auto backLayer = tmxMap->getLayer("Back");
+    if (!backLayer) 
+    {
+        // 如果没有 Back 层，尝试找 baseLayer
+        // 或者直接信任父类的判断
+        return true; 
+    }
+
+    Vec2 tileCoord = positionToTileCoord(position);
+    
+    // 边界检查
+    Size mapSize = tmxMap->getMapSize();
+    if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
+        tileCoord.y < 0 || tileCoord.y >= mapSize.height)
+    {
+        return false;
+    }
+
+    // 检查 Back 层是否有图块
+    int gid = backLayer->getTileGIDAt(tileCoord);
+    return gid != 0;
 }
 
