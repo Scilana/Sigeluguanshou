@@ -133,8 +133,11 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     if (isSleeping_) {
         if (keyCode == EventKeyboard::KeyCode::KEY_K) {
             isSleeping_ = false;
-            if (player_) player_->enableKeyboardControl();
-            CCLOG("Player woke up");
+            if (player_) {
+                player_->enableKeyboardControl();
+                player_->recoverEnergy(270.0f); // 起床回满能量
+            }
+            CCLOG("Player woke up and recovered energy");
         }
         return; // Lock other keys
     }

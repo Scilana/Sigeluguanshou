@@ -52,6 +52,7 @@ list(APPEND GAME_SOURCE
      Classes/ElevatorUI.cpp
      Classes/SaveManager.cpp
      Classes/WeatherManager.cpp
+     Classes/EnergyBar.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -78,6 +79,7 @@ list(APPEND GAME_HEADER
      Classes/ElevatorUI.h
      Classes/SaveManager.h
      Classes/WeatherManager.h
+     Classes/EnergyBar.h
      )
 
 if(ANDROID)

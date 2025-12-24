@@ -12,6 +12,7 @@
 #include "Zombie.h"
 #include <cmath>
 #include <algorithm>
+#include "EnergyBar.h"
 
 USING_NS_CC;
 
@@ -386,6 +387,16 @@ void MineScene::initUI()
     helpLabel->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + 20));
     helpLabel->setColor(Color3B(200, 200, 200));
     uiLayer_->addChild(helpLabel, 1);
+
+    // 能量条
+    if (player_)
+    {
+        auto energyBar = EnergyBar::create(player_);
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+        this->addChild(energyBar, 100);
+    }
 }
 
 void MineScene::initControls()
@@ -762,6 +773,7 @@ void MineScene::handleMiningAction()
         if (result.success)
         {
             mined = true;
+            player_->consumeEnergy(4.0f); // 挖矿消耗能量
             showActionMessage(result.message, Color3B::GREEN);
         }
     }

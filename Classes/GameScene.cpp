@@ -9,6 +9,7 @@
 #include <cmath>
 #include <queue>
 #include <unordered_set>
+#include "EnergyBar.h"
 
 USING_NS_CC;
 
@@ -421,6 +422,15 @@ void GameScene::initUI()
 
     CCLOG("UI initialized - using simple fixed layer method");
 
+    // 能量条
+    if (player_)
+    {
+        auto energyBar = EnergyBar::create(player_);
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        auto origin = Director::getInstance()->getVisibleOrigin();
+        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+        this->addChild(energyBar, 100);
+    }
 }
 
 // ========== Weather Init ==========
@@ -793,6 +803,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     if (waterOnly) {
         if (current == ItemType::WateringCan) {
             result = farmManager_->waterTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
         }
         else {
             result = { false, "Need watering can to water", -1 };
@@ -802,9 +813,11 @@ void GameScene::handleFarmAction(bool waterOnly)
         switch (current) {
         case ItemType::Hoe:
             result = farmManager_->tillTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
             break;
         case ItemType::WateringCan:
             result = farmManager_->waterTile(tileCoord);
+            if (result.success) player_->consumeEnergy(2.0f);
             break;
         case ItemType::Scythe:
             result = farmManager_->harvestTile(tileCoord);
@@ -909,6 +922,7 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                 // 第1刀的反馈
                 showActionMessage("Thump! (1)", Color3B::WHITE);
+                player_->consumeEnergy(2.0f);
                 result = { true, "", -1 };
             }
             break;
@@ -949,6 +963,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                 mapLayer_->clearBaseTileAt(t);
             }
 
+            player_->consumeEnergy(4.0f);
             result = { true, "Rock broken!", -1 };
             break;
         }
@@ -968,6 +983,7 @@ void GameScene::handleFarmAction(bool waterOnly)
             if (result.success && inventory_)
             {
                 inventory_->removeItem(current, 1);
+                player_->consumeEnergy(2.0f);
                 result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
                 if (inventoryUI_) inventoryUI_->refresh();
             }

@@ -60,6 +60,14 @@ public:
      */
     cocos2d::Vec2 getFacingDirection() const { return facingDirection_; }
 
+    // ========== 能量系统 ==========
+    float getMaxEnergy() const { return maxEnergy_; }
+    float getCurrentEnergy() const { return currentEnergy_; }
+    void consumeEnergy(float amount);
+    void recoverEnergy(float amount);
+    bool isExhausted() const { return isExhausted_; }
+    void setExhausted(bool exhausted);
+
 private:
     float moveSpeed_;
     cocos2d::Vec2 moveDirection_;
@@ -80,6 +88,12 @@ private:
     int maxHp_;
     bool isInvulnerable_;
     float invulnerableTimer_;
+
+    // 能量属性
+    float currentEnergy_;
+    float maxEnergy_;
+    bool isExhausted_;
+    float baseMoveSpeed_; // 记录基础速度以便恢复
 
     /**
      * @brief 键盘按下
