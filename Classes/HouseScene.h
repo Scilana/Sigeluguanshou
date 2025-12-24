@@ -29,6 +29,8 @@ private:
     FarmManager* farmManager_{ nullptr };
     cocos2d::Label* timeLabel_{ nullptr };
     bool isSleeping_{ false };
+    cocos2d::Sprite* sleepSprite_{ nullptr };
+    void wakeUp();
 };
 
 #endif // __HOUSE_SCENE_H__

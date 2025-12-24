@@ -52,6 +52,29 @@ void HouseScene::updateUI()
     }
 }
 
+// 【新增】起床核心逻辑
+void HouseScene::wakeUp()
+{
+    if (!isSleeping_) return;
+
+    // 1. 标记状态为清醒
+    isSleeping_ = false;
+
+    // 2. 玩家角色：显示、恢复控制、回满体力
+    if (player_) {
+        player_->setVisible(true);        // ★ 显示站立的玩家
+        player_->enableKeyboardControl(); // 恢复键盘
+        player_->recoverEnergy(270.0f);   // 回满体力
+    }
+
+    // 3. 睡觉贴图：隐藏
+    if (sleepSprite_) {
+        sleepSprite_->setVisible(false);  // ★ 去除睡觉图
+    }
+
+    CCLOG("Player woke up! (Sprites toggled)");
+}
+
 void HouseScene::initBackground()
 {
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -71,6 +94,25 @@ void HouseScene::initBackground()
     ));
     background_->setScale(scale);
     this->addChild(background_, 0);
+
+    sleepSprite_ = Sprite::create("myhouse/sleeping.png");
+    if (sleepSprite_)
+    {
+        // 1. 设置中心点位置
+        sleepSprite_->setPosition(Vec2(180.5f, 77.5f));
+
+        // 2. (可选) 如果你的图片尺寸不是 53x55，可以强制缩放适应这个框
+         float targetW = 53.0f;
+         float targetH = 55.0f;
+         sleepSprite_->setScaleX(targetW / sleepSprite_->getContentSize().width);
+         sleepSprite_->setScaleY(targetH / sleepSprite_->getContentSize().height);
+
+        // 3. 初始隐藏
+        sleepSprite_->setVisible(false);
+
+        // 4. 加到背景上
+        background_->addChild(sleepSprite_, 10);
+    }
 }
 
 void HouseScene::initPlayer()
@@ -82,7 +124,7 @@ void HouseScene::initPlayer()
     if (!player_)
         return;
 
-    player_->setScale(0.9f);//放大人物
+    player_->setScale(0.9f);
 
     player_->setPosition(Vec2(
         origin.x + visibleSize.width * 0.5f,
@@ -99,8 +141,15 @@ void HouseScene::update(float delta)
 
     // Handle time passing even if GameScene is paused
     if (farmManager_) {
-        float speedMultiplier = isSleeping_ ? 40.0f : 1.0f; // 40x speed when sleeping
+        float speedMultiplier = isSleeping_ ? 20.0f : 1.0f; // 40x speed when sleeping
         farmManager_->update(delta * speedMultiplier);
+
+        //自动起床
+        if (isSleeping_ && farmManager_->getHour() == 6)
+        {
+            CCLOG("Alarm clock! 6:00 AM reached.");
+            wakeUp(); // 时间到了，自动起床！
+        }
     }
     
     updateUI();
@@ -132,40 +181,53 @@ void HouseScene::initControls()
 
 void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
+    // 如果正在睡觉
     if (isSleeping_) {
+        // 按 K 键手动起床
         if (keyCode == EventKeyboard::KeyCode::KEY_K) {
-            isSleeping_ = false;
-            if (player_) {
-                player_->enableKeyboardControl();
-                player_->recoverEnergy(270.0f); // 起床回满能量
-            }
-            CCLOG("Player woke up and recovered energy");
+            wakeUp(); // 直接调用我们刚才写的函数
         }
-        return; // Lock other keys
+        return; // 锁定其他按键
     }
 
     switch (keyCode)
     {
-    case EventKeyboard::KeyCode::KEY_ESCAPE:
-        Director::getInstance()->popScene();
-        break;
     case EventKeyboard::KeyCode::KEY_J:
+    {
+        if (!background_ || !player_) break;
+
+        // 1. 获取玩家在背景图内的坐标
+        Vec2 playerPosLocal = background_->convertToNodeSpace(player_->getPosition());
+
+        // 2. 定义触发区域 (Trigger Area)
+        // 只在 X: 154~177 范围内触发
+        // Y范围保持和床一样: 50~105
+        float triggerX = 154.0f;
+        float triggerY = 50.0f;
+        float triggerW = 177.0f - 154.0f; // 23 像素宽
+        float triggerH = 105.0f - 50.0f;  // 55 像素高
+
+        Rect triggerArea(triggerX, triggerY, triggerW, triggerH);
+
+        // 3. 判定
+        if (triggerArea.containsPoint(playerPosLocal))
         {
-            // Check if near bed (Bottom-Right area based on user feedback)
-            auto visibleSize = Director::getInstance()->getVisibleSize();
-            auto origin = Director::getInstance()->getVisibleOrigin();
-            Vec2 bedPos(origin.x + visibleSize.width * 0.75f, origin.y + visibleSize.height * 0.25f);
-            
-            float dist = player_->getPosition().distance(bedPos);
-            if (dist < 80.0f) {
-                isSleeping_ = true;
-                if (player_) player_->disableKeyboardControl();
-                CCLOG("Player started sleeping");
-            } else {
-                CCLOG("Too far from bed: %.1f", dist);
+            isSleeping_ = true;
+            player_->disableKeyboardControl();
+            player_->setVisible(false);     // 隐藏玩家
+
+            if (sleepSprite_) {
+                sleepSprite_->setVisible(true); // 显示刚才定好位置的贴图
             }
+
+            CCLOG("Player sleeping! Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
         }
-        break;
+        else
+        {
+            CCLOG("Not in sleep area. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
+        }
+    }
+    break;
     default:
         break;
     }
