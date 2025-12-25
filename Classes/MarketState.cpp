@@ -34,6 +34,16 @@ void MarketState::buildDefaultGoods()
     sellGoods_.push_back({ItemType::Tomato, 90, 90});
     sellGoods_.push_back({ItemType::Pumpkin, 180, 180});
     sellGoods_.push_back({ItemType::Blueberry, 110, 110});
+
+    // Fish
+    sellGoods_.push_back({ItemType::Fish, 50, 50});
+
+    // Ores (Fixed Prices)
+    sellGoods_.push_back({ItemType::CopperOre, 20, 20});
+    sellGoods_.push_back({ItemType::IronOre, 50, 50});
+    sellGoods_.push_back({ItemType::SilverOre, 100, 100});
+    sellGoods_.push_back({ItemType::GoldOre, 250, 250});
+    sellGoods_.push_back({ItemType::DiamondOre, 500, 500});
 }
 
 void MarketState::updatePrices(int dayCount)
@@ -76,6 +86,17 @@ void MarketState::updateContext(int dayCount)
 void MarketState::adjustGoodPrice(MarketGood& good) const
 {
     int price = good.basePrice;
+
+    // Fixed price items (Ores) - do not fluctuate
+    if (good.itemType == ItemType::CopperOre ||
+        good.itemType == ItemType::IronOre ||
+        good.itemType == ItemType::SilverOre ||
+        good.itemType == ItemType::GoldOre ||
+        good.itemType == ItemType::DiamondOre)
+    {
+        good.currentPrice = price;
+        return;
+    }
 
     switch (season_) {
     case Season::Spring:

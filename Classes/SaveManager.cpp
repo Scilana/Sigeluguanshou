@@ -3,6 +3,7 @@
 #include "json/stringbuffer.h"
 #include "json/prettywriter.h"
 #include "platform/CCFileUtils.h"
+#include "SkillManager.h"
 
 USING_NS_CC;
 
@@ -123,6 +124,18 @@ rapidjson::Document SaveManager::serializeToJson(const SaveData& data)
 
     // 树木存档已禁用（避免崩溃）
 
+    // 保存技能数据
+    rapidjson::Value skillsArray(rapidjson::kArrayType);
+    for (const auto& skill : data.skills)
+    {
+        rapidjson::Value skillObj(rapidjson::kObjectType);
+        skillObj.AddMember("type", skill.type, allocator);
+        skillObj.AddMember("level", skill.level, allocator);
+        skillObj.AddMember("actionCount", skill.actionCount, allocator);
+        skillsArray.PushBack(skillObj, allocator);
+    }
+    doc.AddMember("skills", skillsArray, allocator);
+
     return doc;
 }
 
@@ -229,13 +242,36 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
             }
         }
 
+
+
+        // 加载技能数据
+        data.skills.clear();
+        if (doc.HasMember("skills") && doc["skills"].IsArray())
+        {
+             const auto& skillsArray = doc["skills"].GetArray();
+             for (rapidjson::SizeType i = 0; i < skillsArray.Size(); i++)
+             {
+                 const auto& skillObj = skillsArray[i];
+                 SaveData::SkillData skill;
+                 skill.type = skillObj["type"].GetInt();
+                 skill.level = skillObj["level"].GetInt();
+                 skill.actionCount = skillObj["actionCount"].GetInt();
+                 data.skills.push_back(skill);
+             }
+        }
+
         // 树木存档已禁用（避免崩溃）
 
         return true;
     }
+    catch (const std::exception& e)
+    {
+        CCLOG("Error: Exception during save deserialization: %s", e.what());
+        return false;
+    }
     catch (...)
     {
-        CCLOG("Error: Failed to deserialize save data");
+        CCLOG("Error: Unknown exception during save deserialization");
         return false;
     }
 }

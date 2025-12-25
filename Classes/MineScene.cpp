@@ -124,7 +124,7 @@ void MineScene::initMap()
                 auto layer = dynamic_cast<TMXLayer*>(child);
                 if (layer)
                 {
-                     CCLOG("Layer Name: %s, Z: %d, Visible: %d", layer->getLayerName().c_str(), layer->getLocalZOrder(), layer->isVisible());
+                    CCLOG("Layer Name: %s, Z: %d, Visible: %d", layer->getLayerName().c_str(), layer->getLocalZOrder(), layer->isVisible());
                 }
             }
             CCLOG("------------------");
@@ -133,24 +133,25 @@ void MineScene::initMap()
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
-                CCLOG("✓ Front layer found!");
+                CCLOG("âœ“ Front layer found!");
                 // Front 通常是在玩家之上的遮挡层 (Roof/TreeTop)
                 // 这里设置为 20 (Player is 10)
-                frontLayer->setLocalZOrder(20); 
+                frontLayer->setLocalZOrder(20);
                 frontLayer->setVisible(true);
                 frontLayer->setOpacity(255);
-                CCLOG("✓ Front layer set to Z-order 20 (Above Player)");
+                CCLOG("âœ“ Front layer set to Z-order 20 (Above Player)");
             }
             else
             {
-                CCLOG("✗ WARNING: Front layer not found in TMX map");
+                CCLOG("âœ— WARNING: Front layer not found in TMX map");
             }
 
             // 处理 Back 层（背景，在 Front 上面）
+            // 注：这里保留原注释逻辑，尽管通常 Back 在最底层，但代码逻辑未变
             auto backLayer = tmxMap->getLayer("Back");
             if (backLayer)
             {
-                CCLOG("✓ Back layer found - keeping in tmxMap");
+                CCLOG("âœ“ Back layer found - keeping in tmxMap");
                 CCLOG("  - Original opacity: %d", backLayer->getOpacity());
                 CCLOG("  - Layer size: %.0f x %.0f tiles", backLayer->getLayerSize().width, backLayer->getLayerSize().height);
 
@@ -180,15 +181,15 @@ void MineScene::initMap()
                 backLayer->setOpacity(255);  // 确保完全不透明
 
                 CCLOG("  - Back layer visible: %s, opacity: %d",
-                      backLayer->isVisible() ? "YES" : "NO",
-                      backLayer->getOpacity());
+                    backLayer->isVisible() ? "YES" : "NO",
+                    backLayer->getOpacity());
             }
 
             // 处理 Buildings 层（墙壁/碰撞层，在 Back 上面）
             auto buildingsLayer = tmxMap->getLayer("Buildings");
             if (buildingsLayer)
             {
-                CCLOG("✓ Buildings layer found!");
+                CCLOG("âœ“ Buildings layer found!");
                 CCLOG("  - Visible: %s", buildingsLayer->isVisible() ? "YES" : "NO");
                 CCLOG("  - Original opacity: %d", buildingsLayer->getOpacity());
                 CCLOG("  - Layer Size: (%.0f, %.0f)", buildingsLayer->getLayerSize().width, buildingsLayer->getLayerSize().height);
@@ -196,18 +197,18 @@ void MineScene::initMap()
                 buildingsLayer->setLocalZOrder(-50);  // 在 Back 上面
                 buildingsLayer->setVisible(true);  // 确保可见
                 buildingsLayer->setOpacity(255);  // 确保完全不透明
-                CCLOG("✓ Buildings layer set to Z-order -50, forced visible, opacity: 255");
+                CCLOG("âœ“ Buildings layer set to Z-order -50, forced visible, opacity: 255");
             }
             else
             {
-                CCLOG("✗ WARNING: Buildings layer not found in TMX map");
+                CCLOG("âœ— WARNING: Buildings layer not found in TMX map");
             }
 
             // 处理 mine1 层（矿石贴图，放在玩家下方，让玩家能遮住矿石）
             auto mine1Layer = tmxMap->getLayer("mine1");
             if (mine1Layer)
             {
-                CCLOG("✓ mine1 layer found!");
+                CCLOG("âœ“ mine1 layer found!");
                 CCLOG("  - Position: (%.2f, %.2f)", mine1Layer->getPosition().x, mine1Layer->getPosition().y);
                 CCLOG("  - Visible: %s", mine1Layer->isVisible() ? "YES" : "NO");
                 CCLOG("  - Original opacity: %d", mine1Layer->getOpacity());
@@ -217,16 +218,16 @@ void MineScene::initMap()
                 mine1Layer->setLocalZOrder(-25);  // 在 Buildings(-50) 上面，但在玩家(10)下面
                 mine1Layer->setVisible(true);
                 mine1Layer->setOpacity(255);  // 确保完全不透明
-                CCLOG("✓ mine1 layer set to Z-order -25 (above Buildings, below Player), opacity: 255");
+                CCLOG("âœ“ mine1 layer set to Z-order -25 (above Buildings, below Player), opacity: 255");
             }
             else
             {
-                CCLOG("✗ WARNING: mine1 layer not found in TMX map");
+                CCLOG("âœ— WARNING: mine1 layer not found in TMX map");
             }
         }
         else
         {
-            CCLOG("✗ WARNING: TMX map is null");
+            CCLOG("âœ— WARNING: TMX map is null");
         }
     }
     else
@@ -271,7 +272,7 @@ void MineScene::initPlayer()
             {
                 foundWalkable = true;
                 startPos = mapCenter;
-                CCLOG("✓ Center position is walkable");
+                CCLOG("âœ“ Center position is walkable");
             }
             else
             {
@@ -294,8 +295,8 @@ void MineScene::initPlayer()
                             {
                                 startPos = testPos;
                                 foundWalkable = true;
-                                CCLOG("✓ Found walkable position at (%.2f, %.2f), radius: %d",
-                                      testPos.x, testPos.y, radius);
+                                CCLOG("âœ“ Found walkable position at (%.2f, %.2f), radius: %d",
+                                    testPos.x, testPos.y, radius);
                             }
                         }
                     }
@@ -304,18 +305,18 @@ void MineScene::initPlayer()
 
             if (!foundWalkable)
             {
-                CCLOG("✗ WARNING: Could not find walkable position, trying random...");
+                CCLOG("âœ— WARNING: Could not find walkable position, trying random...");
                 startPos = getRandomWalkablePosition();
             }
 
             player_->setPosition(startPos);
-            CCLOG("✓ Player positioned at (%.2f, %.2f)", startPos.x, startPos.y);
+            CCLOG("âœ“ Player positioned at (%.2f, %.2f)", startPos.x, startPos.y);
         }
         else
         {
             auto visibleSize = Director::getInstance()->getVisibleSize();
             player_->setPosition(Vec2(visibleSize.width / 2, visibleSize.height / 2));
-            CCLOG("✗ WARNING: No map layer, using screen center");
+            CCLOG("âœ— WARNING: No map layer, using screen center");
         }
 
         player_->enableKeyboardControl();
@@ -325,7 +326,7 @@ void MineScene::initPlayer()
         }
 
         this->addChild(player_, 10);
-        CCLOG("✓ Player added to scene");
+        CCLOG("âœ“ Player added to scene");
     }
     else
     {
@@ -376,7 +377,7 @@ void MineScene::initUI()
     itemLabel_->setPosition(Vec2(origin.x + visibleSize.width - 20, origin.y + visibleSize.height - 20));
     itemLabel_->setColor(Color3B::WHITE);
     uiLayer_->addChild(itemLabel_, 1);
-    
+
     // 添加操作提示
     auto tipLabel = Label::createWithSystemFont("(Keys 1-9 to switch)", "Arial", 12);
     tipLabel->setAnchorPoint(Vec2(1, 0.5));
@@ -401,11 +402,11 @@ void MineScene::initUI()
     if (player_)
     {
         auto energyBar = EnergyBar::create(player_);
-    if (energyBar)
-    {
-        energyBar->setName("EnergyBar");
-        this->addChild(energyBar, 100);
-    }
+        if (energyBar)
+        {
+            energyBar->setName("EnergyBar");
+            this->addChild(energyBar, 100);
+        }
     }
 }
 
@@ -438,20 +439,20 @@ void MineScene::initElevator()
 
     Size mapSize = map->getContentSize();
     Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
-    
+
     // Create Elevator Sprite
     elevatorSprite_ = Sprite::create("myhouse/elevator.png"); // Try house asset first
     if (!elevatorSprite_) {
         // Fallback: Create a visual placeholder if file missing
         auto draw = DrawNode::create();
-        draw->drawSolidRect(Vec2(-20,-20), Vec2(20,20), Color4F(0.4f, 0.4f, 0.5f, 1.0f)); // Greyish
+        draw->drawSolidRect(Vec2(-20, -20), Vec2(20, 20), Color4F(0.4f, 0.4f, 0.5f, 1.0f)); // Greyish
         elevatorSprite_ = Sprite::create();
         elevatorSprite_->addChild(draw);
-        elevatorSprite_->setContentSize(Size(40,40));
+        elevatorSprite_->setContentSize(Size(40, 40));
     }
-    
+
     elevatorSprite_->setPosition(centerPos);
-    this->addChild(elevatorSprite_, 5); 
+    this->addChild(elevatorSprite_, 5);
 }
 
 void MineScene::initChests()
@@ -461,13 +462,13 @@ void MineScene::initChests()
     // 宝箱数量：至多一个，甚至不刷
     // 设定 40% 的概率出现一个宝箱
     int chestCount = (rand() % 100 < 40) ? 1 : 0;
-    
+
     if (chestCount > 0)
     {
         // 1. 检查这一周这一层的宝箱是否已经开过
         int currentWeek = (dayCount_ - 1) / 7 + 1;
-        
-        if (openedChestsPerWeek_.count(currentFloor_) > 0 && 
+
+        if (openedChestsPerWeek_.count(currentFloor_) > 0 &&
             openedChestsPerWeek_[currentFloor_] == currentWeek)
         {
             // 这一周已经开过了，直接不生成，避免玩家重复进出刷宝箱或看到已开箱子
@@ -498,20 +499,20 @@ void MineScene::update(float delta)
     if (energyBar && camera)
     {
         auto visibleSize = Director::getInstance()->getVisibleSize();
-        energyBar->setPosition(Vec2(camera->getPositionX() + visibleSize.width / 2 - 50, 
-                                    camera->getPositionY() - visibleSize.height / 2 + 110));
+        energyBar->setPosition(Vec2(camera->getPositionX() + visibleSize.width / 2 - 50,
+            camera->getPositionY() - visibleSize.height / 2 + 110));
     }
     updateMonsters(delta);
-    
+
     // 1. 模拟时间流逝
     accumulatedSeconds_ += delta;
-    
+
     // 2. 检查是否到达午夜 (120秒 = 24小时，午夜即 120秒)
     // 假设 0.0 是午夜前一天? 还是说 0.0 就是 0:00?
     // FarmManager start 0.0, progressDay at 120.0. 
     // Usually Stardew day ends at 2AM (26h). 
     // 用户要求 "凌晨十二点" (12:00 AM / 0:00) -> 24h -> 120s
-    if (accumulatedSeconds_ >= secondsPerDay_) 
+    if (accumulatedSeconds_ >= secondsPerDay_)
     {
         CCLOG("It's midnight! Passing out...");
         if (inventory_) inventory_->removeMoney(20);
@@ -519,7 +520,7 @@ void MineScene::update(float delta)
         Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
         return;
     }
-    
+
     // 3. 检查生命值 (死亡逻辑)
     if (player_ && player_->getHp() <= 0)
     {
@@ -568,7 +569,7 @@ void MineScene::updateCamera()
     {
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Size mapSize = mineLayer_->getMapSize();
-        
+
         float minX = visibleSize.width / 2;
         float maxX = mapSize.width - visibleSize.width / 2;
         float minY = visibleSize.height / 2;
@@ -602,14 +603,14 @@ void MineScene::updateUI()
         ItemType type = inventory_->getSlot(selectedItemIndex_).type;
         std::string name = InventoryManager::getItemName(type);
         if (type == ItemType::None) name = "Empty";
-        
+
         // 显示选中状态 [1] Pickaxe
         int num = (selectedItemIndex_ + 1) % 10;
         if (num == 0) num = 10; // 显示习惯 1-0
-        
+
         itemLabel_->setString(StringUtils::format("[%d] %s", selectedItemIndex_ == 9 ? 0 : selectedItemIndex_ + 1, name.c_str()));
     }
-    
+
     // 更新血量显示 (假设 uiLayer 有 healthLabel_, 如果没有需要 initUI 添加)
     // 之前 initUI 只有 floorLabel_ 等。如果有 healthLabel_ 最好。
     // 检查 initUI 发现没有创建 healthLabel_ 的代码，这需要补上.
@@ -618,19 +619,19 @@ void MineScene::updateUI()
     // 查看 initUI，有 floorLabel_, itemLabel_, actionLabel_
     // 我们在 initUI chunk 中已经添加了 healthLabel_ 的声明？
     // 看起来 MineScene.h 中有 healthLabel_，但 cpp initUI 没初始化。
-    
+
     if (!healthLabel_ && uiLayer_)
     {
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Vec2 origin = Director::getInstance()->getVisibleOrigin();
-        
+
         healthLabel_ = Label::createWithSystemFont("HP: 100/100", "Arial", 20);
         healthLabel_->setAnchorPoint(Vec2(0, 0.5));
         healthLabel_->setPosition(Vec2(origin.x + 20, origin.y + visibleSize.height - 50));
         healthLabel_->setColor(Color3B::RED);
         uiLayer_->addChild(healthLabel_, 1);
     }
-    
+
     if (healthLabel_ && player_)
     {
         healthLabel_->setString(StringUtils::format("HP: %d/%d", player_->getHp(), 100)); // 假定已添加 getMaxHp()
@@ -656,7 +657,7 @@ void MineScene::updateMonsters(float delta)
                 // 由于无法直接调用GameScene方法，这里暂时省略掉落物捡起逻辑
                 // 可以添加一个 ItemNode 类来在场景中显示掉落物
             }
-            
+
             it = monsters_.erase(it);
         }
         else
@@ -670,14 +671,14 @@ void MineScene::updateMonsters(float delta)
                 {
                     // 玩家受伤
                     player_->takeDamage(monster->getAttackPower()); // 调用真实扣血
-                    
+
                     // 刷新UI
                     updateUI();
                     // 简单击退
                     Vec2 pushDir = player_->getPosition() - monster->getPosition();
                     pushDir.normalize();
                     player_->setPosition(player_->getPosition() + pushDir * 20.0f);
-                    
+
                     showActionMessage("Ouch!", Color3B::RED);
                 }
             }
@@ -691,20 +692,20 @@ void MineScene::initToolbar()
 {
     // 初始化工具栏物品 (使用 ID 0-9)
     toolbarItems_.clear();
-    
+
     // 确保背包里有基础工具（测试用）
     if (inventory_)
     {
         // 检查是否有剑和镐
         bool hasSword = false;
         bool hasPickaxe = false;
-        for (int i=0; i<10; ++i) {
+        for (int i = 0; i < 10; ++i) {
             ItemType t = inventory_->getSlot(i).type;
-            if (t == ItemType::WoodenSword || t == ItemType::IronSword || 
+            if (t == ItemType::WoodenSword || t == ItemType::IronSword ||
                 t == ItemType::GoldSword || t == ItemType::DiamondSword) hasSword = true;
             if (t == ItemType::Pickaxe) hasPickaxe = true;
         }
-        
+
         if (!hasSword) {
             inventory_->addItem(ItemType::WoodenSword, 1);
             CCLOG("Starter Kit: Added Sword");
@@ -713,7 +714,7 @@ void MineScene::initToolbar()
             inventory_->addItem(ItemType::Pickaxe, 1);
             CCLOG("Starter Kit: Added Pickaxe");
         }
-        
+
         for (int i = 0; i < 10; ++i)
         {
             auto slot = inventory_->getSlot(i);
@@ -725,7 +726,7 @@ void MineScene::initToolbar()
         // Fallback if no inventory
         for (int i = 0; i < 10; ++i) toolbarItems_.push_back(ItemType::None);
     }
-    
+
     // 恢复选中的物品
     if (inventory_)
     {
@@ -735,7 +736,7 @@ void MineScene::initToolbar()
     {
         selectedItemIndex_ = 0;
     }
-    
+
     // 如果有UI，选中默认
     this->selectItemByIndex(selectedItemIndex_);
 }
@@ -744,14 +745,14 @@ void MineScene::selectItemByIndex(int idx)
 {
     if (idx < 0 || idx >= 10) return;
     selectedItemIndex_ = idx;
-    
+
     // 重新获取当前工具类型（因为背包可能变动）
     if (inventory_) {
         toolbarItems_[idx] = inventory_->getSlot(idx).type;
         // 同步选中状态到 InventoryManager
         inventory_->setSelectedSlotIndex(idx);
     }
-    
+
     updateUI();
 }
 
@@ -771,7 +772,7 @@ void MineScene::toggleInventory()
     // 设置回调
     inventoryUI_->setCloseCallback([this]() {
         onInventoryClosed();
-    });
+        });
 
     // 添加到 uiLayer_ 或者直接 Scene
     // uiLayer_ 的 ZOrder 是 1000，背包需要在更上面
@@ -780,10 +781,11 @@ void MineScene::toggleInventory()
     if (uiLayer_) {
         uiLayer_->addChild(inventoryUI_, 100); // 相对 uiLayer 的 Top
         inventoryUI_->setPosition(Vec2::ZERO); // 覆盖整个屏幕
-    } else {
+    }
+    else {
         this->addChild(inventoryUI_, 2000);
     }
-    
+
     inventoryUI_->show();
 }
 
@@ -809,8 +811,10 @@ void MineScene::executeMining(const Vec2& tileCoord)
 
 void MineScene::handleMiningAction()
 {
+    // 1. 基础指针与状态检查
     if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) return;
 
+    // 2. 体力检查
     float energyPercent = player_->getCurrentEnergy() / player_->getMaxEnergy();
     if (energyPercent <= 0.2f)
     {
@@ -818,58 +822,73 @@ void MineScene::handleMiningAction()
         return;
     }
 
+    // 3. 工具检查 (必须是 Pickaxe)
     ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
     if (currentTool != ItemType::Pickaxe)
     {
         showActionMessage("Need a Pickaxe!", Color3B::RED);
-        handleAttackAction();
+        handleAttackAction(); // 如果不是镐子，尝试执行攻击
         return;
     }
 
+    // 4. 【核心修改】九宫格检测逻辑
+    // 获取玩家当前所在的瓦片坐标 (Tile Coordinate)
     Vec2 playerPos = player_->getPosition();
-    Vec2 facingDir = player_->getFacingDirection();
-    if (facingDir.length() < 0.1f) facingDir = Vec2(0, -1);
-    
-    // [Optimization 1] Check multiple tiles
-    std::vector<Vec2> targets;
-    Vec2 baseTarget = playerPos + facingDir * 32.0f;
-    targets.push_back(baseTarget);
-
-    // Add side tiles
-    if (std::abs(facingDir.x) < 0.1f) { // Vertical
-        targets.push_back(baseTarget + Vec2(24, 0));
-        targets.push_back(baseTarget + Vec2(-24, 0));
-    } else { // Horizontal
-        targets.push_back(baseTarget + Vec2(0, 24));
-        targets.push_back(baseTarget + Vec2(0, -24));
-    }
-    targets.push_back(playerPos); // Feet
+    Vec2 playerTileCoord = mineLayer_->positionToTileCoord(playerPos);
 
     bool mined = false;
+
+    // 疲劳延迟逻辑 (保留原逻辑)
     float delay = 0.0f;
     if (energyPercent <= 0.5f) delay = 0.2f;
 
-    for (const auto& target : targets)
+    // 定义九宫格的偏移量 (包含中心点(0,0)以及周围8个方向)
+    std::vector<Vec2> offsets = {
+        Vec2(0, 0),   // 脚下
+        Vec2(1, 0),   // 右
+        Vec2(-1, 0),  // 左
+        Vec2(0, 1),   // 下 (Tiled坐标系Y轴方向取决于地图配置，但九宫格覆盖所有相邻)
+        Vec2(0, -1),  // 上
+        Vec2(1, 1),   // 右下
+        Vec2(1, -1),  // 右上
+        Vec2(-1, 1),  // 左下
+        Vec2(-1, -1)  // 左上
+    };
+
+    for (const auto& offset : offsets)
     {
-        Vec2 tileCoord = mineLayer_->positionToTileCoord(target);
-        if (mineLayer_->isMineralAt(tileCoord))
+        // 计算目标瓦片坐标
+        Vec2 targetTile = playerTileCoord + offset;
+
+        // 检查该位置是否有矿石
+        if (mineLayer_->isMineralAt(targetTile))
         {
-             mined = true;
-             // Execute mining directly here?
-             // Reusing executeMining logic but adapting it to not be async/delayed for loop?
-             // Or just break and do the first one found.
-             // We can use the delay logic but applied to the *found* tile.
-             
-             if (delay > 0) {
-                auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, tileCoord]() { executeMining(tileCoord); }), nullptr);
+            mined = true;
+
+            // 播放挥舞动画
+            player_->playSwingAnimation();
+
+            // 执行挖掘逻辑 (带延迟处理)
+            if (delay > 0) {
+                auto seq = Sequence::create(
+                    DelayTime::create(delay),
+                    CallFunc::create([this, targetTile]() {
+                        executeMining(targetTile);
+                        }),
+                    nullptr
+                );
                 this->runAction(seq);
-             } else {
-                executeMining(tileCoord);
-             }
-             break;
+            }
+            else {
+                executeMining(targetTile);
+            }
+
+            // 找到一个矿石就退出，避免一次操作挖掉周围所有矿石 (如果想群挖，可以删除 break)
+            break;
         }
     }
 
+    // 5. 如果周围九格都没有矿石，执行空挥动画
     if (!mined)
     {
         player_->playSwingAnimation();
@@ -880,22 +899,22 @@ void MineScene::handleMiningAction()
 void MineScene::handleAttackAction()
 {
     if (currentAttackCooldown_ > 0) return;
-    
+
     // 播放攻击动画
     player_->playSwingAnimation();
     currentAttackCooldown_ = attackCooldown_;
-    
+
     Vec2 playerPos = player_->getPosition();
     float attackRange = 50.0f; // 默认范围
     int attackDamage = 1;      // 默认空手伤害
-    
+
     // 获取当前装备的武器
-    if (inventory_) 
+    if (inventory_)
     {
         ItemType item = inventory_->getSlot(selectedItemIndex_).type;
         // 检查是否是武器 (简单的列表检查，或者在 ItemType 中有分类)
         // 假设 Sword 相关的都是
-        if (item == ItemType::WoodenSword || item == ItemType::IronSword || 
+        if (item == ItemType::WoodenSword || item == ItemType::IronSword ||
             item == ItemType::GoldSword || item == ItemType::DiamondSword)
         {
             // 使用 Weapon 类获取伤害
@@ -916,25 +935,25 @@ void MineScene::handleAttackAction()
             // 这里我们允许空手，伤害为1
         }
     }
-    
+
     bool hit = false;
     for (auto monster : monsters_)
     {
         if (monster->isDead()) continue;
-        
+
         float dist = playerPos.distance(monster->getPosition());
         if (dist <= attackRange)
         {
             monster->takeDamage(attackDamage);
             hit = true;
-            
+
             // 击退
             Vec2 knockback = monster->getPosition() - playerPos;
             knockback.normalize();
             monster->setPosition(monster->getPosition() + knockback * 30.0f);
         }
     }
-    
+
     if (hit)
     {
         showActionMessage("Hit!", Color3B::ORANGE);
@@ -944,13 +963,13 @@ void MineScene::handleAttackAction()
 void MineScene::handleChestInteraction()
 {
     if (!player_) return;
-    
+
     Vec2 playerPos = player_->getPosition();
-    
+
     for (auto chest : chests_)
     {
         if (chest->isOpened()) continue;
-        
+
         float dist = playerPos.distance(chest->getPosition());
         if (dist < 40.0f)
         {
@@ -960,7 +979,7 @@ void MineScene::handleChestInteraction()
                 if (inventory_->addItem(result.item, result.count))
                 {
                     showActionMessage(result.message, Color3B::YELLOW);
-                    
+
                     // 记录开启状态（按周记录持久化）
                     int currentWeek = (dayCount_ - 1) / 7 + 1;
                     openedChestsPerWeek_[currentFloor_] = currentWeek;
@@ -974,12 +993,12 @@ void MineScene::handleChestInteraction()
 void MineScene::showActionMessage(const std::string& text, const Color3B& color)
 {
     if (!actionLabel_) return;
-    
+
     actionLabel_->setString(text);
     actionLabel_->setColor(color);
     actionLabel_->setOpacity(255);
     actionLabel_->stopAllActions();
-    
+
     auto seq = Sequence::create(
         DelayTime::create(0.5f),
         FadeOut::create(1.0f),
@@ -1034,26 +1053,26 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         else
         {
             // 如果没电梯，暂时允许直接回城 (Fallback)
-             backToFarm();
+            backToFarm();
         }
         break;
 
-    /* [Removed Shortcuts]
-    case EventKeyboard::KeyCode::KEY_Q:
-        goToPreviousFloor();
-        break;
+        /* [Removed Shortcuts]
+        case EventKeyboard::KeyCode::KEY_Q:
+            goToPreviousFloor();
+            break;
 
-    case EventKeyboard::KeyCode::KEY_E:
-        goToNextFloor();
-        break;
-    */
+        case EventKeyboard::KeyCode::KEY_E:
+            goToNextFloor();
+            break;
+        */
 
     case EventKeyboard::KeyCode::KEY_TAB:
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
         break;
 
-    // 数字键选择物品
+        // 数字键选择物品
     case EventKeyboard::KeyCode::KEY_1: selectItemByIndex(0); break;
     case EventKeyboard::KeyCode::KEY_2: selectItemByIndex(1); break;
     case EventKeyboard::KeyCode::KEY_3: selectItemByIndex(2); break;
@@ -1111,31 +1130,31 @@ void MineScene::goToNextFloor()
 bool MineScene::isPlayerOnStairs() const
 {
     if (!player_ || !mineLayer_) return false;
-    
+
     Vec2 playerPos = player_->getPosition();
     Vec2 tileCoord = mineLayer_->positionToTileCoord(playerPos);
-    
+
     return mineLayer_->isStairsAt(tileCoord);
 }
 
 void MineScene::spawnMonster()
 {
     if (!mineLayer_ || !player_) return;
-    
+
     Vec2 pos = getRandomWalkablePosition();
-    
+
     // 确保不在玩家太近的地方生成
     if (pos.distance(player_->getPosition()) < 200.0f) return;
-    
+
     Monster* monster = nullptr;
-    
+
     // 根据楼层决定生成的怪物类型
     int roll = rand() % 100;
-    
+
     // 僵尸生成概率随楼层增加
-    int zombieChance = (currentFloor_ - 1) * 20; 
+    int zombieChance = (currentFloor_ - 1) * 20;
     if (zombieChance > 80) zombieChance = 80;
-    
+
     if (roll < zombieChance)
     {
         monster = Zombie::create(currentFloor_);
@@ -1144,16 +1163,16 @@ void MineScene::spawnMonster()
     {
         monster = Slime::create(currentFloor_);
     }
-    
+
     if (monster)
     {
         monster->setPosition(pos);
         monster->setTargetPlayer(player_);
         monster->setMapLayer(mineLayer_);
-        
+
         this->addChild(monster, 10);
         monsters_.push_back(monster);
-        
+
         CCLOG("Spawned %s at (%.1f, %.1f)", monster->getMonsterName().c_str(), pos.x, pos.y);
     }
 }
@@ -1172,23 +1191,23 @@ float MineScene::getChestSpawnChance() const
 Vec2 MineScene::getRandomWalkablePosition() const
 {
     if (!mineLayer_) return Vec2::ZERO;
-    
+
     Size mapSize = mineLayer_->getMapSize();
     int maxAttempts = 50;
-    
+
     for (int i = 0; i < maxAttempts; ++i)
     {
         float x = (rand() % (int)mapSize.width);
         float y = (rand() % (int)mapSize.height);
         Vec2 pos(x, y);
-        
+
         if (mineLayer_->isWalkable(pos))
         {
             return pos;
         }
     }
-    
-    return Vec2(mapSize.width/2, mapSize.height/2);
+
+    return Vec2(mapSize.width / 2, mapSize.height / 2);
 }
 
 
@@ -1208,30 +1227,30 @@ void MineScene::initWishingWell()
 
     // 在地图上找一个位置放置许愿池
     Vec2 pos = getRandomWalkablePosition();
-    
+
     // 创建许愿池视觉 (蓝色圆形)
     auto wellNode = DrawNode::create();
     wellNode->drawDot(Vec2::ZERO, 20, Color4F(0.2f, 0.4f, 1.0f, 0.8f)); // 水池
     wellNode->drawCircle(Vec2::ZERO, 22, 0, 30, false, Color4F::GRAY); // 边框
-    
+
     wishingWell_ = Node::create();
     wishingWell_->setPosition(pos);
     wishingWell_->addChild(wellNode);
     this->addChild(wishingWell_, 5); // 与宝箱同层
-    
+
     // 提示文字
     auto label = Label::createWithSystemFont("Wishing Well\n(Press K)", "Arial", 12);
     label->setPosition(Vec2(0, 30));
     label->setAlignment(TextHAlignment::CENTER);
     wishingWell_->addChild(label);
-    
+
     CCLOG("Wishing Well initialized at (%.1f, %.1f)", pos.x, pos.y);
 }
 
 void MineScene::handleWishAction()
 {
     if (!player_ || !wishingWell_ || !inventory_) return;
-    
+
     // 检查距离
     float dist = player_->getPosition().distance(wishingWell_->getPosition());
     if (dist > 60.0f)
@@ -1239,7 +1258,7 @@ void MineScene::handleWishAction()
         showActionMessage("Too far from Wishing Well!", Color3B::GRAY);
         return;
     }
-    
+
     // 检查当前手持物品
     ItemType currentItem = inventory_->getSlot(selectedItemIndex_).type;
     if (currentItem == ItemType::None)
@@ -1247,7 +1266,7 @@ void MineScene::handleWishAction()
         showActionMessage("Hold an item to wish!", Color3B::YELLOW);
         return;
     }
-    
+
     // 扣除物品
     if (inventory_->removeItem(currentItem, 1))
     {
@@ -1257,7 +1276,7 @@ void MineScene::handleWishAction()
             ScaleTo::create(0.1f, 1.0f),
             nullptr
         ));
-        
+
         // 随机奖励
         int randVal = rand() % 100;
         if (randVal < 30) // 30% 啥也没有
@@ -1282,15 +1301,15 @@ void MineScene::handleWishAction()
         else // 30% 好东西
         {
             // 随机给个矿石或更稀有的
-            ItemType rewards[] = {ItemType::GoldOre, ItemType::DiamondSword, ItemType::GoldSword};
+            ItemType rewards[] = { ItemType::GoldOre, ItemType::DiamondSword, ItemType::GoldSword };
             ItemType reward = rewards[rand() % 3];
-            
+
             // 如果是武器且已有，折算成钱
             if ((reward == ItemType::DiamondSword || reward == ItemType::GoldSword) && inventory_->hasItem(reward, 1))
             {
-                 int gold = 500;
-                 inventory_->addMoney(gold);
-                 showActionMessage("Great fortune! (500 Gold)", Color3B::ORANGE);
+                int gold = 500;
+                inventory_->addMoney(gold);
+                showActionMessage("Great fortune! (500 Gold)", Color3B::ORANGE);
             }
             else
             {
@@ -1301,15 +1320,15 @@ void MineScene::handleWishAction()
                 else
                 {
                     //背包满了
-                     int gold = Weapon::getWeaponPrice(reward); 
-                     inventory_->addMoney(gold);
-                     showActionMessage("Bag full, took Gold instead.", Color3B::ORANGE);
+                    int gold = Weapon::getWeaponPrice(reward);
+                    inventory_->addMoney(gold);
+                    showActionMessage("Bag full, took Gold instead.", Color3B::ORANGE);
                 }
             }
         }
-        
+
         // 刷新UI
-        updateUI(); 
+        updateUI();
     }
 }
 
@@ -1320,21 +1339,22 @@ void MineScene::showElevatorUI()
         elevatorUI_->close();
         elevatorUI_ = nullptr;
     }
-    
+
     elevatorUI_ = ElevatorUI::create();
     if (elevatorUI_)
     {
         elevatorUI_->setFloorSelectCallback(CC_CALLBACK_1(MineScene::onElevatorFloorSelected, this));
         elevatorUI_->setCloseCallback(CC_CALLBACK_0(MineScene::onElevatorClosed, this));
-        
+
         // 添加到 uiLayer_ 以保证其在屏幕正中心显示
         if (uiLayer_) {
             uiLayer_->addChild(elevatorUI_, 2000);
             elevatorUI_->setPosition(Vec2::ZERO);
-        } else {
+        }
+        else {
             this->addChild(elevatorUI_, 2000);
         }
-        
+
         elevatorUI_->show();
     }
 }

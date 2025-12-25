@@ -8,6 +8,7 @@
 #include "WeatherManager.h"
 #include "SkillManager.h"
 #include "SkillTreeUI.h"
+#include <algorithm>
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -23,6 +24,12 @@ namespace
     const Color4B kDawnLightColor(255, 180, 120, 70);
     const Color4B kDuskLightColor(120, 100, 160, 110);
     const Color4B kNightLightColor(20, 30, 60, 160);
+    const float kToolbarSlotSize = 48.0f;
+    const float kToolbarSlotPadding = 6.0f;
+    const float kToolbarIconPadding = 6.0f;
+    const Color4B kToolbarBarColor(40, 35, 30, 220);
+    const Color3B kToolbarSlotColor(70, 60, 50);
+    const Color3B kToolbarSlotSelectedColor(170, 150, 95);
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
     {
@@ -52,6 +59,25 @@ namespace
         if (hour < 20.0f)
             return lerpColor(kDuskLightColor, kNightLightColor, (hour - 19.0f) / 1.0f);
         return kNightLightColor;
+    }
+
+    Sprite* createToolbarIcon(ItemType itemType)
+    {
+        std::string path = InventoryManager::getItemIconPath(itemType);
+        if (path.empty() || !FileUtils::getInstance()->isFileExist(path)) {
+            return nullptr;
+        }
+
+        auto icon = Sprite::create(path);
+        if (!icon) {
+            return nullptr;
+        }
+
+        auto size = icon->getContentSize();
+        float maxSize = kToolbarSlotSize - kToolbarIconPadding * 2.0f;
+        float scale = std::min(maxSize / size.width, maxSize / size.height);
+        icon->setScale(scale);
+        return icon;
     }
 }
 
@@ -108,6 +134,7 @@ bool GameScene::init()
     SkillManager::getInstance();
     marketState_.init();
     initWeather();
+    initNpcs();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -178,6 +205,19 @@ void GameScene::initFarm()
     if (farmManager_)
     {
         mapLayer_->addChild(farmManager_, 5);
+
+        // 设置交易箱回调
+        farmManager_->setPriceFunction([this](ItemType type) {
+            return marketState_.getSellPrice(type);
+        });
+        
+        farmManager_->setEarningsCallback([this](int earnings) {
+            if (inventory_) {
+                 inventory_->addMoney(earnings);
+            }
+            showActionMessage(StringUtils::format("Shipping: +%d G", earnings), Color3B(255, 215, 0));
+        });
+
         if (player_) {
             player_->setFarmManager(farmManager_);
         }
@@ -400,7 +440,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | E: Skills | P: Market | M: Mine | ESC: Menu",
+        "1-8: Switch item | J: Use | K: Water | B: Inventory | E: Skills | P: Market | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -433,7 +473,7 @@ void GameScene::initUI()
     uiLayer_->addChild(actionLabel_, 1);
 
     // ===== 当前物品显示 =====
-    itemLabel_ = Label::createWithSystemFont("Current item: Hoe (1-0 to switch)", "Arial", 18);
+    itemLabel_ = Label::createWithSystemFont("Current item: Hoe (1-8 to switch)", "Arial", 18);
     itemLabel_->setAnchorPoint(Vec2(0, 0.5f));
     itemLabel_->setPosition(Vec2(
         origin.x + 20,
@@ -443,6 +483,7 @@ void GameScene::initUI()
     uiLayer_->addChild(itemLabel_, 1);
 
     initToolbar();
+    initToolbarUI();
 
     // ===== 钓鱼 UI 初始化 (跟随玩家) =====
     if (player_)
@@ -525,6 +566,43 @@ void GameScene::initWeather()
 
     }
 
+}
+
+// ========== 初始化 NPCs ==========
+void GameScene::initNpcs()
+{
+    CCLOG("Initializing NPCs...");
+
+    if (!mapLayer_ || !uiLayer_) return;
+
+    // Wizard
+    auto wizard = Npc::create("Wizard", "npcImages/wizard.png");
+    if (wizard) {
+        // Place relative to map
+        wizard->setPosition(Vec2(500, 400));
+        wizard->setScale(0.5f); // Scale down if sprite is too big
+        mapLayer_->addChild(wizard, 10);
+        npcs_.push_back(wizard);
+    }
+
+    // Cleaner
+    auto cleaner = Npc::create("Cleaner", "npcImages/cleaner.png");
+    if (cleaner) {
+        cleaner->setPosition(Vec2(600, 400));
+        cleaner->setScale(0.5f); // Scale down
+        mapLayer_->addChild(cleaner, 10);
+        npcs_.push_back(cleaner);
+    }
+
+    // DialogueBox
+    dialogueBox_ = DialogueBox::create(nullptr);
+    if (dialogueBox_) {
+        // Add to UI layer
+        uiLayer_->addChild(dialogueBox_, 2000); // Very high Z
+        dialogueBox_->setVisible(false);
+    }
+    
+    CCLOG("NPCs initialized: %d", (int)npcs_.size());
 }
 
 // ========== 初始化控制 ==========
@@ -640,18 +718,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_8:
         selectItemByIndex(7);
-        break;
-    case EventKeyboard::KeyCode::KEY_9:
-        selectItemByIndex(8);
-        break;
-    case EventKeyboard::KeyCode::KEY_0:
-        selectItemByIndex(9);
-        break;
-    case EventKeyboard::KeyCode::KEY_MINUS: // Allow selecting item 10
-        selectItemByIndex(10);
-        break;
-    case EventKeyboard::KeyCode::KEY_EQUAL: // Allow selecting item 11
-        selectItemByIndex(11);
         break;
     default:
         break;
@@ -858,6 +924,8 @@ void GameScene::updateUI()
         positionLabel_->setString(posStr);
 
     }
+
+    refreshToolbarUI();
 
 }
 
@@ -1108,7 +1176,12 @@ void GameScene::handleFarmAction(bool waterOnly)
                         mapLayer_->clearBaseTileAt(t);
                     }
 
-                    player_->consumeEnergy(4.0f);
+                    int reduction = SkillManager::getInstance()->getMiningHitReduction();
+                    // 每级减少 0.4 体力消耗 (max 5级 = 减少2.0)
+                    float cost = 4.0f - (reduction * 0.4f);
+                    cost = std::max(1.0f, cost);
+                    
+                    player_->consumeEnergy(cost);
                     result = { true, "Rock broken!", -1 };
                     SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
                     break;
@@ -1227,11 +1300,11 @@ void GameScene::openChestInventory(StorageChest* chest)
         inventoryUI_->close();
     }
 
-    // 创建背包 UI，但这次指向箱子的 Inventory
-    inventoryUI_ = InventoryUI::create(chest->getInventory());
+    // 创建背包 UI，以玩家背包为主，箱子为合作伙伴
+    inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (inventoryUI_) {
-        // 设置合作伙伴为玩家背包，这样按 J 可以转移到背包
-        inventoryUI_->setPartnerInventory(inventory_);
+        // 设置合作伙伴为箱子背包，并传递是否为交易箱
+        inventoryUI_->setPartnerInventory(chest->getInventory(), chest->isShippingBin());
         
         inventoryUI_->setCloseCallback([this]() {
             onInventoryClosed();
@@ -1338,10 +1411,12 @@ bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) c
         return false;
 
     // 只检测3个方向：左、右、脚下
-    const Vec2 offsets[3] = {
+    const Vec2 offsets[5] = {
         Vec2(0, 0),   // 玩家脚下
         Vec2(1, 0),   // 右边
-        Vec2(-1, 0)   // 左边
+        Vec2(-1, 0),
+        Vec2(0, 1),
+        Vec2(0,-1)
     };
 
     const int TREE_ROOT_GID = 43658; // 树根的实际GID (tileset id=901)
@@ -1832,18 +1907,186 @@ void GameScene::initToolbar()
         ItemType::Scythe,
         ItemType::Axe,
         ItemType::Pickaxe,
-        ItemType::FishingRod, // ID 5 (index 5)
+        ItemType::FishingRod,
         ItemType::SeedTurnip,
-        ItemType::SeedPotato,
-        ItemType::SeedCorn,
-        ItemType::SeedTomato,
-        ItemType::SeedPumpkin,
-        ItemType::SeedBlueberry
+        ItemType::SeedPotato
     };
 
     selectedItemIndex_ = 0;
     selectItemByIndex(0);
 
+}
+
+void GameScene::initToolbarUI()
+{
+    if (!uiLayer_ || toolbarItems_.empty()) {
+        return;
+    }
+
+    if (toolbarUI_) {
+        toolbarUI_->removeFromParent();
+        toolbarUI_ = nullptr;
+        toolbarSlots_.clear();
+        toolbarIcons_.clear();
+        toolbarCounts_.clear();
+        toolbarCountCache_.clear();
+        toolbarSelectedCache_ = -1;
+    }
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
+
+    int slotCount = static_cast<int>(toolbarItems_.size());
+    float barWidth = slotCount * kToolbarSlotSize + (slotCount + 1) * kToolbarSlotPadding;
+    float barHeight = kToolbarSlotSize + kToolbarSlotPadding * 2.0f;
+
+    toolbarUI_ = LayerColor::create(kToolbarBarColor, barWidth, barHeight);
+    toolbarUI_->setPosition(Vec2(
+        origin.x + (visibleSize.width - barWidth) * 0.5f,
+        origin.y + 8.0f));
+    uiLayer_->addChild(toolbarUI_, 2);
+
+    auto border = DrawNode::create();
+    border->drawRect(Vec2(0, 0), Vec2(barWidth, barHeight),
+        Color4F(0.5f, 0.45f, 0.4f, 1.0f));
+    border->setLineWidth(2);
+    toolbarUI_->addChild(border, 1);
+
+    toolbarSlots_.reserve(slotCount);
+    toolbarIcons_.reserve(slotCount);
+    toolbarCounts_.reserve(slotCount);
+    toolbarCountCache_.assign(slotCount, -1);
+
+    for (int i = 0; i < slotCount; ++i)
+    {
+        auto slotBg = Sprite::create();
+        slotBg->setAnchorPoint(Vec2(0, 0));
+        slotBg->setTextureRect(Rect(0, 0, kToolbarSlotSize, kToolbarSlotSize));
+        slotBg->setColor(kToolbarSlotColor);
+        slotBg->setPosition(Vec2(
+            kToolbarSlotPadding + i * (kToolbarSlotSize + kToolbarSlotPadding),
+            kToolbarSlotPadding));
+
+        auto slotBorder = DrawNode::create();
+        slotBorder->drawRect(
+            Vec2(0, 0),
+            Vec2(kToolbarSlotSize, kToolbarSlotSize),
+            Color4F(0.35f, 0.3f, 0.25f, 1.0f));
+        slotBorder->setLineWidth(2);
+        slotBg->addChild(slotBorder, 1);
+
+        toolbarUI_->addChild(slotBg, 2);
+        toolbarSlots_.push_back(slotBg);
+
+        auto icon = createToolbarIcon(toolbarItems_[i]);
+        if (icon) {
+            icon->setPosition(Vec2(kToolbarSlotSize * 0.5f, kToolbarSlotSize * 0.5f));
+            slotBg->addChild(icon, 0);
+        }
+        toolbarIcons_.push_back(icon);
+
+        auto countLabel = Label::createWithSystemFont("", "Arial", 14);
+        countLabel->setAnchorPoint(Vec2(1, 0));
+        countLabel->setPosition(Vec2(kToolbarSlotSize - 4.0f, 4.0f));
+        countLabel->setColor(Color3B::WHITE);
+        slotBg->addChild(countLabel, 2);
+        toolbarCounts_.push_back(countLabel);
+    }
+
+    refreshToolbarUI();
+}
+
+void GameScene::refreshToolbarUI()
+{
+    if (toolbarSlots_.empty()) {
+        return;
+    }
+
+    if (inventory_)
+    {
+        int maxSlots = std::min(static_cast<int>(toolbarItems_.size()), inventory_->getSlotCount());
+        for (int i = 0; i < maxSlots; ++i)
+        {
+            const auto& slot = inventory_->getSlot(i);
+            ItemType newType = slot.isEmpty() ? ItemType::None : slot.type;
+
+            if (toolbarItems_[i] != newType)
+            {
+                toolbarItems_[i] = newType;
+
+                if (i < static_cast<int>(toolbarIcons_.size()) && toolbarIcons_[i])
+                {
+                    toolbarIcons_[i]->removeFromParent();
+                    toolbarIcons_[i] = nullptr;
+                }
+
+                auto icon = createToolbarIcon(newType);
+                if (icon && i < static_cast<int>(toolbarSlots_.size()))
+                {
+                    icon->setPosition(Vec2(kToolbarSlotSize * 0.5f, kToolbarSlotSize * 0.5f));
+                    toolbarSlots_[i]->addChild(icon, 0);
+                }
+
+                if (i < static_cast<int>(toolbarIcons_.size()))
+                {
+                    toolbarIcons_[i] = icon;
+                }
+
+                if (i < static_cast<int>(toolbarCountCache_.size()))
+                {
+                    toolbarCountCache_[i] = -1;
+                }
+
+                if (i == selectedItemIndex_)
+                {
+                    if (player_) {
+                        player_->setCurrentTool(newType);
+                    }
+                    if (itemLabel_) {
+                        std::string name = InventoryManager::getItemName(newType);
+                        itemLabel_->setString(StringUtils::format("Current item: %s (1-8 to switch)", name.c_str()));
+                    }
+                }
+            }
+        }
+    }
+
+    if (toolbarSelectedCache_ != selectedItemIndex_) {
+        for (int i = 0; i < static_cast<int>(toolbarSlots_.size()); ++i) {
+            bool isSelected = (i == selectedItemIndex_);
+            toolbarSlots_[i]->setColor(isSelected ? kToolbarSlotSelectedColor : kToolbarSlotColor);
+        }
+        toolbarSelectedCache_ = selectedItemIndex_;
+    }
+
+    if (toolbarCountCache_.size() != toolbarItems_.size()) {
+        toolbarCountCache_.assign(toolbarItems_.size(), -1);
+    }
+
+    for (int i = 0; i < static_cast<int>(toolbarItems_.size()); ++i)
+    {
+        if (i >= static_cast<int>(toolbarCounts_.size())) {
+            break;
+        }
+
+        int count = -1;
+        if (inventory_ && i < inventory_->getSlotCount()) {
+            const auto& slot = inventory_->getSlot(i);
+            if (!slot.isEmpty() && InventoryManager::isStackable(slot.type)) {
+                count = slot.count;
+            }
+        }
+
+        if (toolbarCountCache_[i] != count) {
+            toolbarCountCache_[i] = count;
+            if (count > 1) {
+                toolbarCounts_[i]->setString(StringUtils::format("%d", count));
+            }
+            else {
+                toolbarCounts_[i]->setString("");
+            }
+        }
+    }
 }
 
 void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
@@ -1873,10 +2116,11 @@ void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", name.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-8 to switch)", name.c_str()));
     }
 
     showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
+    refreshToolbarUI();
 }
 
 
@@ -1910,9 +2154,51 @@ ItemType GameScene::getItemTypeForCropId(int cropId) const
 
 void GameScene::onMouseDown(Event* event)
 {
+    if (dialogueBox_ && dialogueBox_->isVisible()) return;
+
     EventMouse* e = (EventMouse*)event;
     if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
     {
+        // 1. NPC Interaction Check
+        // Convert screen click to map space
+        // Assuming Camera is centering player or moving.
+        // We need to unproject or simple offset calculation.
+        
+        auto camera = getDefaultCamera();
+        Vec2 camPos = Vec2(camera->getPositionX(), camera->getPositionY());
+        Size visibleSize = Director::getInstance()->getVisibleSize();
+        
+        Vec2 mouseLoc = e->getLocationInView();
+        mouseLoc.y = visibleSize.height - mouseLoc.y; // Invert Y
+        
+        // World Pos = Camera Pos - VisibleCenter + MouseScreenPos
+        Vec2 worldPos = camPos - Vec2(visibleSize.width/2, visibleSize.height/2) + mouseLoc;
+        
+        for (auto npc : npcs_) {
+            // Convert worldPos to the NPC's parent's coordinate system (which is likely the mapLayer_)
+            // Assuming NPCs are children of mapLayer_ or a similar node whose position is relative to the camera.
+            // For simplicity, if NPCs are directly on the scene, worldPos is fine.
+            // If they are children of mapLayer_, we need to convert.
+            // Let's assume npcs_ are directly added to the scene or a layer that moves with the camera.
+            // If npc->getParent() is mapLayer_, then npc->getParent()->convertToNodeSpace(worldPos) is correct.
+            // If npc is child of scene, then worldPos is already in scene coordinates.
+            // For now, let's assume npc->getParent() is the scene or a layer that doesn't move relative to camera.
+            // If NPCs are on mapLayer_, then the bounding box check needs to be relative to mapLayer_'s position.
+            // A more robust way is to convert the mouse click to mapLayer_ coordinates first.
+            Vec2 mapLayerClickPos = mapLayer_->convertToNodeSpace(worldPos);
+
+            if (npc->getBoundingBox().containsPoint(mapLayerClickPos)) {
+                // Clicked on NPC
+                CCLOG("Clicked NPC: %s", npc->getNpcName().c_str());
+                if (dialogueBox_) { // Ensure dialogueBox_ is initialized
+                    dialogueBox_->setNpc(npc);
+                    dialogueBox_->showDialogue();
+                }
+                return; // Consume click
+            }
+        }
+
+        // 2. Fishing Logic (Existing)
         // Check current item
         if (toolbarItems_.empty()) return;
         
@@ -1927,6 +2213,7 @@ void GameScene::onMouseDown(Event* event)
             if (fishingState_ == FishingState::NONE)
             {
                  if (isFishing_) return;
+                 if (player_ && player_->isFishingAnimationPlaying()) return;
                  fishingState_ = FishingState::CHARGING;
                  chargePower_ = 0.0f;
                  CCLOG("Start Charging...");
@@ -1941,6 +2228,8 @@ void GameScene::onMouseDown(Event* event)
             {
                  CCLOG("Pulled too early!");
                  fishingState_ = FishingState::NONE;
+                 if (exclamationMark_) exclamationMark_->setVisible(false);
+                 if (player_) player_->startFishingReel();
                  showActionMessage("Too early!", Color3B::RED);
             }
             return; 
@@ -1954,10 +2243,10 @@ void GameScene::onMouseDown(Event* event)
         Vec2 clickPos = e->getLocationInView();
         clickPos.y = Director::getInstance()->getWinSize().height - clickPos.y; 
         Vec3 cameraPos = this->getDefaultCamera()->getPosition3D();
-        Vec2 worldPos = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
+        Vec2 worldPos2 = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
         
         if (mapLayer_) {
-            Vec2 t = mapLayer_->positionToTileCoord(worldPos);
+            Vec2 t = mapLayer_->positionToTileCoord(worldPos2);
             CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
         }
     }
@@ -1975,6 +2264,7 @@ void GameScene::onMouseUp(Event* event)
             
             // Wait 1.0 - 4.0s
             waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
+            if (player_) player_->startFishingCast();
             CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
         }
     }
@@ -1984,6 +2274,7 @@ void GameScene::updateFishingState(float delta)
 {
     if (fishingState_ == FishingState::CHARGING)
     {
+        // 钓鱼技能提高充能速度 (可选，或者影响条的大小)
         chargePower_ += delta * 1.5f; 
         if (chargePower_ > 1.0f) chargePower_ = 1.0f;
         
@@ -2011,6 +2302,7 @@ void GameScene::updateFishingState(float delta)
         {
             fishingState_ = FishingState::NONE;
             if (exclamationMark_) exclamationMark_->setVisible(false);
+            if (player_) player_->startFishingReel();
             CCLOG("Missed...");
             showActionMessage("Missed...", Color3B::GRAY);
         }
@@ -2022,30 +2314,41 @@ void GameScene::startFishing()
     isFishing_ = true;
     fishingState_ = FishingState::REELING; 
 
-    if (player_) player_->setMoveSpeed(0); // Using new setMoveSpeed API
+    if (player_) {
+        player_->setMoveSpeed(0);
+        player_->startFishingWait();
+    }
 
     auto fishingLayer = FishingLayer::create();
     fishingLayer->setFinishCallback([this](bool success) {
-        this->isFishing_ = false;
-        this->fishingState_ = FishingState::NONE; 
-        
-        if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
-        if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
-        if (this->player_) this->player_->setMoveSpeed(150.0f); // Restore speed (was hardcoded, assumed 150)
+        auto finish = [this, success]() {
+            this->isFishing_ = false;
+            this->fishingState_ = FishingState::NONE;
 
-        if (success)
-        {
-            CCLOG("Fishing SUCCESS!");
-            showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
-            SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
-            // No inventory addItem API anymore? 
-            // We can't add item to Toolbar easily if it's full/fixed.
-            // For now just show message.
-        }
-        else
-        {
-            CCLOG("Fishing FAILED.");
-            showActionMessage("Fish got away...", Color3B::RED);
+            if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
+            if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
+            if (this->player_) this->player_->setMoveSpeed(150.0f);
+
+            if (success)
+            {
+                CCLOG("Fishing SUCCESS!");
+                showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+                SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
+                // No inventory addItem API anymore? 
+                // We can't add item to Toolbar easily if it's full/fixed.
+                // For now just show message.
+            }
+            else
+            {
+                CCLOG("Fishing FAILED.");
+                showActionMessage("Fish got away...", Color3B::RED);
+            }
+        };
+
+        if (this->player_) {
+            this->player_->startFishingReel(finish);
+        } else {
+            finish();
         }
     });
 
@@ -2084,7 +2387,7 @@ void GameScene::toggleInventory()
     }
 
     // 创建背包UI
-    inventoryUI_ = InventoryUI::create(inventory_);
+    inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (!inventoryUI_)
     {
         CCLOG("ERROR: Failed to create InventoryUI!");
@@ -2109,7 +2412,7 @@ void GameScene::toggleInventory()
         }
         
         if (nearbyChest) {
-            inventoryUI_->setPartnerInventory(nearbyChest->getInventory());
+            inventoryUI_->setPartnerInventory(nearbyChest->getInventory(), nearbyChest->isShippingBin());
         }
     }
 
@@ -2529,6 +2832,26 @@ SaveManager::SaveData GameScene::collectSaveData()
     // 树木存档功能已禁用（避免崩溃问题）
     // 注意：砍倒的树木在重新加载游戏后会恢复
 
+    // 树木存档功能已禁用（避免崩溃）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+
+    // 保存技能数据
+    if (auto skillMgr = SkillManager::getInstance())
+    {
+        for (int i = 0; i < (int)SkillManager::SkillType::Count; ++i)
+        {
+            auto type = (SkillManager::SkillType)i;
+            const auto& sd = skillMgr->getSkillData(type);
+            
+            SaveManager::SaveData::SkillData skillSave;
+            skillSave.type = (int)type;
+            skillSave.level = sd.level;
+            skillSave.actionCount = sd.actionCount;
+            data.skills.push_back(skillSave);
+        }
+        CCLOG("Saving %zu skills", data.skills.size());
+    }
+
     return data;
 }
 
@@ -2645,6 +2968,17 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
     // 注意：砍倒的树木在重新加载游戏后会恢复
     CCLOG("Tree restoration skipped (feature disabled for stability)");
     choppedTrees_.clear();
+
+    // 恢复技能数据
+    if (auto skillMgr = SkillManager::getInstance())
+    {
+        CCLOG("Restoring skills...");
+        for (const auto& skillData : data.skills)
+        {
+            skillMgr->setSkillData((SkillManager::SkillType)skillData.type, skillData.level, skillData.actionCount);
+        }
+        CCLOG("✓ Skills restored: %zu skills", data.skills.size());
+    }
 
     CCLOG("========================================");
     CCLOG("✓ Save data applied successfully!");

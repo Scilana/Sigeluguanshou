@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <vector>
 #include "StorageChest.h"
+#include "ShippingBin.h"
+#include <functional>
+#include "InventoryManager.h" // Needed for ItemType
 
 class MapLayer;
 
@@ -48,6 +51,7 @@ public:
     ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
     ActionResult waterTile(const cocos2d::Vec2& tileCoord);
     ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
+   
 
     int getDayCount() const { return dayCount_; }
     void setDayCount(int dayCount) { dayCount_ = dayCount; }
@@ -62,6 +66,17 @@ public:
      * @brief 设置所有农田状态（用于加载存档）
      */
     void setAllTiles(const std::vector<FarmTile>& tiles);
+
+    /**
+     * @brief 市场/交易箱相关回调
+     */
+    using PriceFunction = std::function<int(ItemType)>;
+    using EarningsCallback = std::function<void(int)>;
+    
+    void setPriceFunction(const PriceFunction& func) { priceFunction_ = func; }
+    void setEarningsCallback(const EarningsCallback& cb) { earningsCallback_ = cb; }
+
+    ShippingBin* getShippingBin() const { return shippingBin_; }
 
     /**
      * @brief 获取地图尺寸
@@ -97,6 +112,7 @@ private:
     cocos2d::Size mapSizeTiles_;
     cocos2d::Size tileSize_;
     cocos2d::DrawNode* overlay_;
+    cocos2d::Node* cropLayer_;
 
     float dayTimer_;
     float secondsPerDay_;
@@ -105,6 +121,12 @@ private:
     std::vector<FarmTile> tiles_;
     std::unordered_map<int, CropDef> crops_;
     std::vector<StorageChest*> storageChests_;
+    ShippingBin* shippingBin_{ nullptr };
+    
+    PriceFunction priceFunction_;
+    EarningsCallback earningsCallback_;
+    
+    std::string getCropTextureName(int cropId, int stage) const;
 };
 
 #endif // __FARM_MANAGER_H__

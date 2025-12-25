@@ -23,6 +23,31 @@ FarmManager* FarmManager::create(MapLayer* mapLayer)
     return nullptr;
 }
 
+std::string FarmManager::getCropTextureName(int cropId, int stage) const  //类似于之前的lambda
+{
+    std::string name;
+
+    // 根据 ID 查表 (对应你在 initCropDefs 里定义的 ID)
+    switch (cropId)
+    {
+    case 0: name = "turnip";     break; // ID 0
+    case 1: name = "potato";     break; // ID 1
+    case 2: name = "corn";       break; // ID 2
+    case 3: name = "strawberry"; break; // ★ ID 3 原番茄改为草莓
+    case 4: name = "pumpkin";    break; // ID 4
+    case 5: name = "blueberry";  break; // ID 5
+    default: name = "turnip";    break;
+    }
+
+    // 你的图片是 1,2,3,4 (turnip1.png)
+    // 程序的阶段是 0,1,2,3 (stage)
+    // 所以要 +1
+    int imgNum = stage + 1;
+
+    // 拼接路径： "crops/" + 名字 + 数字 + ".png"
+    return StringUtils::format("crops/%s%d.png", name.c_str(), imgNum);
+}
+
 bool FarmManager::init(MapLayer* mapLayer)
 {
     if (!Node::init())
@@ -30,7 +55,7 @@ bool FarmManager::init(MapLayer* mapLayer)
 
     mapLayer_ = mapLayer;
     dayTimer_ = 30.0f; // Start at 6:00 AM (120s = 24h -> 30s = 6h)
-    secondsPerDay_ = 120.0f; // 120 seconds = 1 in-game day
+    secondsPerDay_ = 300.0f; // 300 seconds = 1 in-game day (Real 5 minutes)
     dayCount_ = 1;
 
     if (mapLayer_)
@@ -43,8 +68,23 @@ bool FarmManager::init(MapLayer* mapLayer)
 
     tiles_.resize(static_cast<size_t>(mapSizeTiles_.width * mapSizeTiles_.height));
 
+    // 1. 泥土层 (overlay_)：画褐色方块，Z序为 5
     overlay_ = DrawNode::create();
-    this->addChild(overlay_, 1);
+    this->addChild(overlay_, 5);
+
+    // 2. 作物层 (cropLayer_)：放作物图片，Z序为 10 (必须比泥土高，才能盖住泥土)
+    // 2. 作物层 (cropLayer_)：放作物图片，Z序为 10 (必须比泥土高，才能盖住泥土)
+    cropLayer_ = Node::create();
+    this->addChild(cropLayer_, 10);
+
+    // 3. 初始化交易箱 (位置固定在农场小屋旁，例如 [20, 12])
+    // 注意：需要确保该位置没有障碍物或特殊处理
+    Vec2 binPos(24, 15); // 假设的位置，需根据实际地图调整
+    shippingBin_ = ShippingBin::create(binPos);
+    if (shippingBin_) {
+        this->addChild(shippingBin_, 15); // Z序比作物高
+        storageChests_.push_back(shippingBin_); // 加入此列表以便通用碰撞检测生效
+    }
 
     this->scheduleUpdate();
     redrawOverlay();
@@ -61,10 +101,72 @@ void FarmManager::initCropDefs()
     // 6 种作物：简单周期与售价
     crops_[0] = {0, "Turnip", {1, 1, 1}, 60};
     crops_[1] = {1, "Potato", {1, 2, 2}, 80};
-    crops_[2] = {2, "Corn", {2, 2, 2, 2}, 120};
+    crops_[2] = { 2, "Corn", {2, 2, 4}, 120 };
     crops_[3] = {3, "Tomato", {1, 2, 2}, 90};
     crops_[4] = {4, "Pumpkin", {2, 3, 3}, 180};
     crops_[5] = {5, "Blueberry", {1, 2, 2}, 110};
+}
+
+void FarmManager::progressDay()
+{
+    // 1. 处理交易箱结算
+    if (shippingBin_ && priceFunction_) {
+        int totalEarnings = 0;
+        auto inv = shippingBin_->getInventory();
+        auto& slots = inv->getAllSlots();
+        
+        // 遍历所有物品并计算价值
+        // 注意：这里需要直接访问 InventoryManager 的底层或复制 slots，避免迭代器失效
+        // 由于我们要清空，所以只统计价值
+        for (const auto& slot : slots) {
+            if (!slot.isEmpty()) {
+                int price = priceFunction_(slot.type);
+                if (price > 0) {
+                    totalEarnings += price * slot.count;
+                }
+            }
+        }
+        
+        // 清空交易箱
+        inv->clear();
+        
+        // 发放收益
+        if (totalEarnings > 0 && earningsCallback_) {
+            earningsCallback_(totalEarnings);
+        }
+    }
+
+    // 2. 作物生长逻辑
+    dayCount_++;
+    
+    for (auto& tile : tiles_)
+    {
+        if (tile.hasCrop)
+        {
+            if (tile.watered)
+            {
+                auto def = getCropDef(tile.cropId);
+                // 只有未成熟的才生长
+                if (tile.stage < (int)def.stageDays.size())
+                {
+                    tile.progressDays++;
+                    if (tile.progressDays >= def.stageDays[tile.stage])
+                    {
+                        tile.stage++;
+                        tile.progressDays = 0;
+                    }
+                }
+                
+                // 生长后重置浇水状态（在此处重置还是下面统一重置？）
+                // 通常是第二天早上地干了
+            }
+        }
+        
+        // 每天重置浇水状态
+        tile.watered = false;
+    }
+    
+    redrawOverlay();
 }
 
 void FarmManager::update(float delta)
@@ -289,36 +391,7 @@ void FarmManager::removeStorageChest(StorageChest* chest)
     }
 }
 
-void FarmManager::progressDay()
-{
-    dayCount_ += 1;
 
-    for (auto& tile : tiles_)
-    {
-        if (!tile.hasCrop)
-        {
-            tile.watered = false;
-            continue;
-        }
-
-        if (tile.watered)
-        {
-            tile.progressDays += 1;
-            auto def = getCropDef(tile.cropId);
-            if (tile.stage < static_cast<int>(def.stageDays.size()) &&
-                tile.progressDays >= def.stageDays[tile.stage])
-            {
-                tile.stage += 1;
-                tile.progressDays = 0;
-            }
-        }
-
-        tile.watered = false; // reset daily
-    }
-
-    redrawOverlay();
-    CCLOG("Day advanced to %d", dayCount_);
-}
 
 void FarmManager::forceRedraw()
 {
@@ -341,46 +414,115 @@ void FarmManager::setAllTiles(const std::vector<FarmTile>& tiles)
 
 void FarmManager::redrawOverlay()
 {
+    // 1. 清理上一帧的画面
     overlay_->clear();
+    cropLayer_->removeAllChildren(); // ★ 清除所有精灵（包括泥土和作物）
 
-    if (!mapLayer_)
-        return;
+    if (!mapLayer_) return;
 
+    // 如果 soil.png 加载失败，需要用这个 fallback 画方块，所以保留计算
     float halfW = tileSize_.width / 2.0f;
     float halfH = tileSize_.height / 2.0f;
 
+    // 遍历所有格子
     for (int y = 0; y < mapSizeTiles_.height; ++y)
     {
         for (int x = 0; x < mapSizeTiles_.width; ++x)
         {
+            // 获取格子数据
             const auto& tile = tiles_[static_cast<size_t>(y * mapSizeTiles_.width + x)];
-            if (!tile.tilled)
-                continue;
 
+            // 如果没锄地，直接跳过
+            if (!tile.tilled) continue;
+
+            // 计算屏幕坐标
             Vec2 tileCoord(static_cast<float>(x), static_cast<float>(y));
             Vec2 center = mapLayer_->tileCoordToPosition(tileCoord);
-            Vec2 bl(center.x - halfW + 1.5f, center.y - halfH + 1.5f);
-            Vec2 tr(center.x + halfW - 1.5f, center.y + halfH - 1.5f);
 
-            // Base tilled quad
-            overlay_->drawSolidRect(bl, tr, kTilledColor);
+            // =========================================================
+            // 【第一步】绘制地皮 (使用 soil.png 替代褐色方块)
+            // =========================================================
 
-            // Water overlay
-            if (tile.watered)
+            // ★ 请确保 Resources 目录下有 soil.png，或者根据你的路径修改为 "crops/soil.png"
+            auto soilSprite = Sprite::create("soil.png");
+
+            if (soilSprite)
             {
-                overlay_->drawSolidRect(bl + Vec2(2, 2), tr - Vec2(2, 2), kWaterColor);
+                // 1. 像素画防模糊
+                soilSprite->getTexture()->setAliasTexParameters();
+
+                // 2. 智能缩放 (如果素材是 16x16 则放大，32x32 则保持)
+                if (soilSprite->getContentSize().height <= 16.0f) {
+                    soilSprite->setScale(2.0f);
+                }
+                else {
+                    soilSprite->setScale(1.0f);
+                }
+
+                // 3. 设置位置
+                soilSprite->setPosition(center);
+
+                // 4. 【关键】处理浇水效果
+                // 因为图片是不透明的，会遮住 overlay_ 的绘制，所以直接改图片颜色
+                if (tile.watered)
+                {
+                    // 湿润状态：带蓝色的灰色 (模拟湿泥土)
+                    soilSprite->setColor(Color3B(180, 180, 255));
+                }
+                else
+                {
+                    // 干燥状态：白色 (显示原图本色)
+                    soilSprite->setColor(Color3B::WHITE);
+                }
+
+                // 5. 添加到层级：Z序设为 0 (最底层)
+                cropLayer_->addChild(soilSprite, 0);
+            }
+            else
+            {
+                // 【保底方案】如果找不到 soil.png，为了防止穿帮，依然画褐色方块
+                Vec2 bl(center.x - halfW + 1.5f, center.y - halfH + 1.5f);
+                Vec2 tr(center.x + halfW - 1.5f, center.y + halfH - 1.5f);
+                overlay_->drawSolidRect(bl, tr, kTilledColor);
+
+                if (tile.watered) {
+                    overlay_->drawSolidRect(bl, tr, Color4F(0.0f, 0.0f, 0.5f, 0.3f));
+                }
             }
 
-            // Crop overlay
+            // =========================================================
+            // 【第二步】绘制作物 (保持之前的逻辑，Z序更高)
+            // =========================================================
             if (tile.hasCrop)
             {
-                Color4F cropColor = isMature(tile) ? kMatureColor : kCropColor;
-                Vec2 cropInset(6, 6);
-                overlay_->drawSolidRect(bl + cropInset, tr - cropInset, cropColor);
+                // 1. 拿到图片名
+                std::string filename = getCropTextureName(tile.cropId, tile.stage);
 
-                if (isMature(tile))
+                // 2. 创建图片精灵
+                auto sprite = Sprite::create(filename);
+                if (sprite)
                 {
-                    overlay_->drawRect(bl + Vec2(1, 1), tr - Vec2(1, 1), Color4F(1, 1, 0, 0.9f));
+                    // 关闭抗锯齿
+                    sprite->getTexture()->setAliasTexParameters();
+
+                    // 获取图片原始大小
+                    Size imgSize = sprite->getContentSize();
+
+                    // 缩放逻辑
+                    if (imgSize.height <= 16.0f) {
+                        sprite->setScale(2.0f);
+                    }
+                    else {
+                        sprite->setScale(1.0f);
+                    }
+
+                    // 设置位置
+                    sprite->setPosition(center);
+
+                    // 【关键】添加到层级：Z序设为 1 (盖在泥土上面)
+                    cropLayer_->addChild(sprite, 1);
+
+
                 }
             }
         }
