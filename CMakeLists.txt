@@ -53,6 +53,8 @@ list(APPEND GAME_SOURCE
      Classes/SaveManager.cpp
      Classes/WeatherManager.cpp
      Classes/EnergyBar.cpp
+     Classes/StorageChest.cpp
+     Classes/QuantityPopup.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -80,6 +82,8 @@ list(APPEND GAME_HEADER
      Classes/SaveManager.h
      Classes/WeatherManager.h
      Classes/EnergyBar.h
+     Classes/StorageChest.h
+     Classes/QuantityPopup.h
      )
 
 if(ANDROID)

@@ -232,6 +232,63 @@ bool FarmManager::isMature(const FarmTile& tile) const
     return tile.stage >= static_cast<int>(def.stageDays.size());
 }
 
+bool FarmManager::isTileClearForPlacement(const Vec2& tileCoord) const
+{
+    if (!isValidTile(tileCoord)) return false;
+
+    // 检查是否有作物或已耕地
+    auto& tile = tiles_[static_cast<size_t>(tileCoord.y * mapSizeTiles_.width + tileCoord.x)];
+    if (tile.hasCrop || tile.tilled) return false;
+
+    // 检查地图层碰撞 (建筑、水塘等)
+    if (mapLayer_ && mapLayer_->hasCollisionAt(tileCoord)) return false;
+
+    // 检查是否已有箱子
+    if (getStorageChestAt(tileCoord)) return false;
+
+    return true;
+}
+
+void FarmManager::addStorageChest(StorageChest* chest)
+{
+    if (!chest) return;
+    
+    // 检查是否已存在（避免重复添加）
+    for (auto existing : storageChests_) {
+        if (existing == chest) return;
+    }
+
+    storageChests_.push_back(chest);
+    
+    // 设置 Z-order 确保在地面之上
+    this->addChild(chest, 20); 
+    
+    // 确保坐标对齐到格子中心
+    Vec2 pos = mapLayer_->tileCoordToPosition(chest->getTileCoord());
+    chest->setPosition(pos);
+    
+    CCLOG("Storage chest added at (%.0f, %.0f)", chest->getTileCoord().x, chest->getTileCoord().y);
+}
+
+StorageChest* FarmManager::getStorageChestAt(const Vec2& tileCoord) const
+{
+    for (auto chest : storageChests_) {
+        if (chest->getTileCoord().fuzzyEquals(tileCoord, 0.1f)) {
+            return chest;
+        }
+    }
+    return nullptr;
+}
+
+void FarmManager::removeStorageChest(StorageChest* chest)
+{
+    auto it = std::find(storageChests_.begin(), storageChests_.end(), chest);
+    if (it != storageChests_.end()) {
+        storageChests_.erase(it);
+        chest->removeFromParent();
+    }
+}
+
 void FarmManager::progressDay()
 {
     dayCount_ += 1;

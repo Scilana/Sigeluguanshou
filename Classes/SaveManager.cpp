@@ -100,6 +100,27 @@ rapidjson::Document SaveManager::serializeToJson(const SaveData& data)
     }
     doc.AddMember("farmTiles", farmTilesArray, allocator);
 
+    // 保存储物箱数据
+    rapidjson::Value storageChestsArray(rapidjson::kArrayType);
+    for (const auto& chest : data.storageChests)
+    {
+        rapidjson::Value chestObj(rapidjson::kObjectType);
+        chestObj.AddMember("x", chest.x, allocator);
+        chestObj.AddMember("y", chest.y, allocator);
+        
+        rapidjson::Value slotsArray(rapidjson::kArrayType);
+        for (const auto& slot : chest.slots)
+        {
+            rapidjson::Value slotObj(rapidjson::kObjectType);
+            slotObj.AddMember("type", slot.type, allocator);
+            slotObj.AddMember("count", slot.count, allocator);
+            slotsArray.PushBack(slotObj, allocator);
+        }
+        chestObj.AddMember("slots", slotsArray, allocator);
+        storageChestsArray.PushBack(chestObj, allocator);
+    }
+    doc.AddMember("storageChests", storageChestsArray, allocator);
+
     // 树木存档已禁用（避免崩溃）
 
     return doc;
@@ -177,6 +198,34 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
                 tile.stage = tileObj["stage"].GetInt();
                 tile.progressDays = tileObj["progressDays"].GetInt();
                 data.farmTiles.push_back(tile);
+            }
+        }
+
+        // 加载储物箱数据
+        data.storageChests.clear();
+        if (doc.HasMember("storageChests") && doc["storageChests"].IsArray())
+        {
+            const auto& chestsArray = doc["storageChests"].GetArray();
+            for (rapidjson::SizeType i = 0; i < chestsArray.Size(); i++)
+            {
+                const auto& chestObj = chestsArray[i];
+                SaveData::StorageChestData chest;
+                chest.x = chestObj["x"].GetInt();
+                chest.y = chestObj["y"].GetInt();
+                
+                if (chestObj.HasMember("slots") && chestObj["slots"].IsArray())
+                {
+                    const auto& slotsArray = chestObj["slots"].GetArray();
+                    for (rapidjson::SizeType j = 0; j < slotsArray.Size(); j++)
+                    {
+                        const auto& slotObj = slotsArray[j];
+                        SaveData::StorageChestData::SlotData slot;
+                        slot.type = slotObj["type"].GetInt();
+                        slot.count = slotObj["count"].GetInt();
+                        chest.slots.push_back(slot);
+                    }
+                }
+                data.storageChests.push_back(chest);
             }
         }
 

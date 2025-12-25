@@ -4,12 +4,24 @@ USING_NS_CC;
 
 static InventoryManager* s_instance = nullptr;
 
+InventoryManager* InventoryManager::create(int slotCount)
+{
+    InventoryManager* ret = new (std::nothrow) InventoryManager();
+    if (ret && ret->init(slotCount))
+    {
+        ret->autorelease();
+        return ret;
+    }
+    CC_SAFE_DELETE(ret);
+    return nullptr;
+}
+
 InventoryManager* InventoryManager::getInstance()
 {
     if (!s_instance)
     {
         s_instance = new (std::nothrow) InventoryManager();
-        if (s_instance && s_instance->init())
+        if (s_instance && s_instance->init(30))
         {
             // 不调用 autorelease，保持引用计数为 1
             CCLOG("InventoryManager instance created");
@@ -32,12 +44,14 @@ void InventoryManager::destroyInstance()
     }
 }
 
-bool InventoryManager::init()
+bool InventoryManager::init(int slotCount)
 {
     if (!Node::init())
         return false;
 
-    // 初始化所有槽位为空
+    // 初始化所有槽位
+    slots_.clear();
+    slots_.resize(slotCount);
     for (auto& slot : slots_)
     {
         slot.clear();
@@ -46,9 +60,13 @@ bool InventoryManager::init()
     // 初始化默认金币和物品
     money_ = 500;
     selectedSlotIndex_ = 0;
-    initDefaultItems();
+    
+    // 只有主背包（30格）才初始化默认物品
+    if (slotCount == 30) {
+        initDefaultItems();
+    }
 
-    CCLOG("InventoryManager initialized with %d slots and %d gold", MAX_SLOTS, money_);
+    CCLOG("InventoryManager initialized with %d slots and %d gold", (int)slots_.size(), money_);
 
     return true;
 }
@@ -126,7 +144,7 @@ bool InventoryManager::addItem(ItemType itemType, int count)
     return true;
 }
 
-bool InventoryManager::removeItem(ItemType itemType, int count)
+bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
 {
     if (itemType == ItemType::None || count <= 0)
         return false;
@@ -162,6 +180,23 @@ bool InventoryManager::removeItem(ItemType itemType, int count)
     return true;
 }
 
+bool InventoryManager::removeItemFromSlot(int slotIndex, int count)
+{
+    if (slotIndex < 0 || slotIndex >= (int)slots_.size() || count <= 0)
+        return false;
+
+    auto& slot = slots_[slotIndex];
+    if (slot.isEmpty() || slot.count < count)
+        return false;
+
+    slot.count -= count;
+    if (slot.count <= 0)
+    {
+        slot.clear();
+    }
+    return true;
+}
+
 bool InventoryManager::hasItem(ItemType itemType, int count) const
 {
     return getItemCount(itemType) >= count;
@@ -183,14 +218,14 @@ int InventoryManager::getItemCount(ItemType itemType) const
 const InventoryManager::ItemSlot& InventoryManager::getSlot(int slotIndex) const
 {
     static ItemSlot emptySlot;
-    if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
+    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
         return emptySlot;
     return slots_[slotIndex];
 }
 
 void InventoryManager::setSlot(int slotIndex, ItemType itemType, int count)
 {
-    if (slotIndex < 0 || slotIndex >= MAX_SLOTS)
+    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
         return;
 
     slots_[slotIndex].type = itemType;
@@ -199,7 +234,7 @@ void InventoryManager::setSlot(int slotIndex, ItemType itemType, int count)
 
 void InventoryManager::swapSlots(int index1, int index2)
 {
-    if (index1 < 0 || index1 >= MAX_SLOTS || index2 < 0 || index2 >= MAX_SLOTS)
+    if (index1 < 0 || index1 >= (int)slots_.size() || index2 < 0 || index2 >= (int)slots_.size())
         return;
 
     ItemSlot temp = slots_[index1];
@@ -240,7 +275,7 @@ void InventoryManager::clear()
 
 int InventoryManager::findEmptySlot() const
 {
-    for (int i = 0; i < MAX_SLOTS; ++i)
+    for (int i = 0; i < (int)slots_.size(); ++i)
     {
         if (slots_[i].isEmpty())
             return i;
@@ -250,7 +285,7 @@ int InventoryManager::findEmptySlot() const
 
 int InventoryManager::findItemSlot(ItemType itemType) const
 {
-    for (int i = 0; i < MAX_SLOTS; ++i)
+    for (int i = 0; i < (int)slots_.size(); ++i)
     {
         if (slots_[i].type == itemType)
             return i;
@@ -362,16 +397,8 @@ int InventoryManager::getMaxStack(ItemType itemType)
     if (!isStackable(itemType))
         return 1;
 
-    // 种子最多99
-    if (itemType == ItemType::SeedTurnip || itemType == ItemType::SeedPotato ||
-        itemType == ItemType::SeedCorn || itemType == ItemType::SeedTomato ||
-        itemType == ItemType::SeedPumpkin || itemType == ItemType::SeedBlueberry)
-    {
-        return 99;
-    }
-
-    // 其他物品最多99
-    return 99;
+    // 其他物品最多 64 个
+    return 64;
 }
 
 int InventoryManager::getSelectedSlotIndex() const

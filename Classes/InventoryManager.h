@@ -68,10 +68,14 @@ public:
         void clear() { type = ItemType::None; count = 0; }
     };
 
-    static const int MAX_SLOTS = 30;  // 背包总槽位数
+    /**
+     * @brief 创建背包管理器
+     * @param slotCount 槽位数量，默认为 30
+     */
+    static InventoryManager* create(int slotCount = 30);
     
     /**
-     * @brief 获取单例实例
+     * @brief 获取单例实例 (主背包)
      */
     static InventoryManager* getInstance();
     
@@ -82,8 +86,9 @@ public:
 
     /**
      * @brief 初始化
+     * @param slotCount 槽位数量
      */
-    virtual bool init() override;
+    virtual bool init(int slotCount = 30);
 
     /**
      * @brief 添加物品
@@ -102,6 +107,14 @@ public:
     bool removeItem(ItemType itemType, int count = 1);
 
     /**
+     * @brief 从指定槽位移除物品
+     * @param slotIndex 槽位索引
+     * @param count 数量
+     * @return 是否成功移除
+     */
+    bool removeItemFromSlot(int slotIndex, int count = 1);
+
+    /**
      * @brief 检查是否有指定物品
      * @param itemType 物品类型
      * @param count 数量
@@ -118,7 +131,7 @@ public:
 
     /**
      * @brief 获取指定槽位的物品
-     * @param slotIndex 槽位索引（0-29）
+     * @param slotIndex 槽位索引
      * @return 物品槽位引用
      */
     const ItemSlot& getSlot(int slotIndex) const;
@@ -127,7 +140,7 @@ public:
      * @brief 获取所有槽位
      * @return 槽位数组
      */
-    const std::array<ItemSlot, MAX_SLOTS>& getAllSlots() const { return slots_; }
+    const std::vector<ItemSlot>& getAllSlots() const { return slots_; }
 
     /**
      * @brief 设置槽位物品
@@ -143,6 +156,11 @@ public:
      * @param index2 槽位2索引
      */
     void swapSlots(int index1, int index2);
+
+    /**
+     * @brief 获取槽位总数
+     */
+    int getSlotCount() const { return (int)slots_.size(); }
 
     /**
      * @brief 获取金币数量
@@ -198,7 +216,7 @@ public:
 
 
 private:
-    std::array<ItemSlot, MAX_SLOTS> slots_;  // 物品槽位数组
+    std::vector<ItemSlot> slots_;  // 物品槽位数组
     int money_;                               // 金币数量
     int selectedSlotIndex_ = 0;               // 当前选中的槽位
 

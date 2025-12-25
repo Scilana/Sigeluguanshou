@@ -13,6 +13,7 @@
 #include "MarketState.h"
 #include "MineScene.h"
 #include "SaveManager.h"
+#include "StorageChest.h"
 
 class MarketUI;
 class WeatherManager;
@@ -150,6 +151,16 @@ private:
      * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
      */
     void handleFarmAction(bool waterOnly);
+
+    /**
+     * @brief 处理储物箱放置 (K键)
+     */
+    void handleChestPlacement();
+
+    /**
+     * @brief 打开储物箱界面
+     */
+    void openChestInventory(StorageChest* chest);
 
     /**
      * @brief 显示一次性的操作提示

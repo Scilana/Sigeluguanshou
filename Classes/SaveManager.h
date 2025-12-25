@@ -55,9 +55,19 @@ public:
         };
         std::vector<FarmTileData> farmTiles;
 
-        // 树木存档已禁用（避免崩溃）
-        // struct ChoppedTreeData { int x; int y; };
-        // std::vector<ChoppedTreeData> choppedTrees;
+        // 储物箱数据
+        struct StorageChestData
+        {
+            int x;
+            int y;
+            struct SlotData
+            {
+                int type;
+                int count;
+            };
+            std::vector<SlotData> slots;
+        };
+        std::vector<StorageChestData> storageChests;
     };
 
     /**

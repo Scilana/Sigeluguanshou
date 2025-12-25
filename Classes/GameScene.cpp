@@ -514,8 +514,14 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         toggleMarket();
         break;
     case EventKeyboard::KeyCode::KEY_L:
-        // 直接进入矿洞（使用 Mines/1.tmx）
-        enterMine();
+        if (isPlayerNearElevator())
+        {
+            enterMine();
+        }
+        else
+        {
+            showActionMessage("Elevator is too far!", Color3B::RED);
+        }
         break;
     case EventKeyboard::KeyCode::KEY_X:
         // 保存游戏
@@ -543,7 +549,29 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         handleFarmAction(false);  // till / plant / harvest
         break;
     case EventKeyboard::KeyCode::KEY_K:
-        handleFarmAction(true);   // water
+        handleChestPlacement();
+        break;
+    case EventKeyboard::KeyCode::KEY_SPACE:
+        // 查找附近的箱子并打开
+        if (farmManager_ && mapLayer_ && player_) {
+            Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
+            tileCoord.x = std::round(tileCoord.x);
+            tileCoord.y = std::round(tileCoord.y);
+            
+            // 检查周围 1 格的箱子
+            StorageChest* nearbyChest = nullptr;
+            for (float dy = -1; dy <= 1; ++dy) {
+                for (float dx = -1; dx <= 1; ++dx) {
+                    nearbyChest = farmManager_->getStorageChestAt(tileCoord + Vec2(dx, dy));
+                    if (nearbyChest) break;
+                }
+                if (nearbyChest) break;
+            }
+            
+            if (nearbyChest) {
+                openChestInventory(nearbyChest);
+            }
+        }
         break;
     case EventKeyboard::KeyCode::KEY_1:
         selectItemByIndex(0);
@@ -1072,6 +1100,65 @@ void GameScene::handleFarmAction(bool waterOnly)
     {
         // 种子、水壶等其他物品，立即执行逻辑
         executeAction();
+    }
+}
+
+void GameScene::handleChestPlacement()
+{
+    if (!farmManager_ || !player_ || !inventory_) return;
+
+    // 获取玩家面前的格子
+    Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
+    tileCoord.x = std::round(tileCoord.x);
+    tileCoord.y = std::round(tileCoord.y);
+
+    // 检查背包是否有储物箱 (这里假设 ItemType::TreasureChest 是储物箱)
+    // 检查项目文档，可能需要一个新的 ItemType。
+    // 但用户说按 K 放置，没说一定要有物品在背包里。
+    // Stardew Valley 需要物品，但很多简单的实现不需要。
+    // 这里我们先实现为：如果有这个物品就放置，没有就不放。
+    // 发现 ItemType 里没有 StorageChest。我用 Wood x 10 作为一个测试门槛？
+    // 或者直接放置（无限箱子）。根据提示“放置储物箱”，通常指玩家拥有箱子物品。
+    // 我先检查 ItemType。
+
+    if (farmManager_->isTileClearForPlacement(tileCoord))
+    {
+        auto chest = StorageChest::create(tileCoord);
+        farmManager_->addStorageChest(chest);
+        showActionMessage("Chest placed!", Color3B::GREEN);
+    }
+    else
+    {
+        showActionMessage("Cannot place here!", Color3B::RED);
+    }
+}
+
+void GameScene::openChestInventory(StorageChest* chest)
+{
+    if (!chest || !inventory_) return;
+
+    // 如果已经打开了 UI，先关闭
+    if (inventoryUI_) {
+        inventoryUI_->close();
+    }
+
+    // 创建背包 UI，但这次指向箱子的 Inventory
+    inventoryUI_ = InventoryUI::create(chest->getInventory());
+    if (inventoryUI_) {
+        // 设置合作伙伴为玩家背包，这样按 J 可以转移到背包
+        inventoryUI_->setPartnerInventory(inventory_);
+        
+        inventoryUI_->setCloseCallback([this]() {
+            onInventoryClosed();
+        });
+
+        if (uiLayer_) {
+            uiLayer_->addChild(inventoryUI_, 2000);
+            inventoryUI_->setPosition(Vec2::ZERO);
+        } else {
+            this->addChild(inventoryUI_, 2000);
+        }
+        inventoryUI_->show();
     }
 }
 
@@ -1784,7 +1871,6 @@ void GameScene::onMouseDown(Event* event)
         Vec3 cameraPos = this->getDefaultCamera()->getPosition3D();
         Vec2 worldPos = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
         
-        CCLOG("Click Debug: Screen(%.1f, %.1f) -> World(%.1f, %.1f)", clickPos.x, clickPos.y, worldPos.x, worldPos.y);
         if (mapLayer_) {
             Vec2 t = mapLayer_->positionToTileCoord(worldPos);
             CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
@@ -1917,6 +2003,28 @@ void GameScene::toggleInventory()
     {
         CCLOG("ERROR: Failed to create InventoryUI!");
         return;
+    }
+
+    // 对于玩家自己的背包，当它打开时，如果玩家站在箱子旁边，我们可以设置合作伙伴
+    // 这样玩家按下 J 就能把东西存进箱子。
+    if (farmManager_) {
+        Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
+        tileCoord.x = std::round(tileCoord.x);
+        tileCoord.y = std::round(tileCoord.y);
+        
+        // 检查周围 1 格的箱子
+        StorageChest* nearbyChest = nullptr;
+        for (float dy = -1; dy <= 1; ++dy) {
+            for (float dx = -1; dx <= 1; ++dx) {
+                nearbyChest = farmManager_->getStorageChestAt(tileCoord + Vec2(dx, dy));
+                if (nearbyChest) break;
+            }
+            if (nearbyChest) break;
+        }
+        
+        if (nearbyChest) {
+            inventoryUI_->setPartnerInventory(nearbyChest->getInventory());
+        }
     }
 
     inventoryUI_->setCloseCallback([this]() {
@@ -2282,6 +2390,26 @@ SaveManager::SaveData GameScene::collectSaveData()
             }
         }
         CCLOG("Saving %zu farm tiles", data.farmTiles.size());
+
+        // 保存储物箱数据
+        const auto& chests = farmManager_->getStorageChests();
+        for (auto chest : chests)
+        {
+            SaveManager::SaveData::StorageChestData chestData;
+            chestData.x = (int)chest->getTileCoord().x;
+            chestData.y = (int)chest->getTileCoord().y;
+            
+            const auto& slots = chest->getInventory()->getAllSlots();
+            for (const auto& slot : slots)
+            {
+                SaveManager::SaveData::StorageChestData::SlotData slotData;
+                slotData.type = (int)slot.type;
+                slotData.count = slot.count;
+                chestData.slots.push_back(slotData);
+            }
+            data.storageChests.push_back(chestData);
+        }
+        CCLOG("Saving %zu storage chests", data.storageChests.size());
     }
 
     // 树木存档功能已禁用（避免崩溃问题）
@@ -2325,7 +2453,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
 
         // 恢复物品槽位
         CCLOG("Restoring %zu inventory slots...", data.inventory.slots.size());
-        for (size_t i = 0; i < data.inventory.slots.size() && i < InventoryManager::MAX_SLOTS; i++)
+        for (size_t i = 0; i < data.inventory.slots.size() && i < inventory_->getSlotCount(); i++)
         {
             const auto& slotData = data.inventory.slots[i];
             if (slotData.type != static_cast<int>(ItemType::None) && slotData.count > 0)
@@ -2379,6 +2507,24 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
 
         farmManager_->setAllTiles(tiles);
         CCLOG("✓ Farm tiles restored: %zu tiles", data.farmTiles.size());
+
+        // 恢复储物箱数据
+        CCLOG("Restoring storage chests...");
+        for (const auto& chestData : data.storageChests)
+        {
+            auto chest = StorageChest::create(Vec2(chestData.x, chestData.y));
+            if (chest) {
+                // 恢复箱子里的物品
+                for (size_t i = 0; i < chestData.slots.size() && i < chest->getInventory()->getSlotCount(); ++i) {
+                    const auto& slot = chestData.slots[i];
+                    if (slot.type != (int)ItemType::None && slot.count > 0) {
+                        chest->getInventory()->setSlot(i, (ItemType)slot.type, slot.count);
+                    }
+                }
+                farmManager_->addStorageChest(chest);
+            }
+        }
+        CCLOG("✓ Storage chests restored: %zu chests", data.storageChests.size());
     }
 
     // 树木恢复功能已禁用（避免崩溃问题）

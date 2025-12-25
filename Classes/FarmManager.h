@@ -5,6 +5,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include "StorageChest.h"
 
 class MapLayer;
 
@@ -67,6 +68,15 @@ public:
      */
     cocos2d::Size getMapSize() const { return mapSizeTiles_; }
 
+    /**
+     * @brief 储物箱相关
+     */
+    bool isTileClearForPlacement(const cocos2d::Vec2& tileCoord) const;
+    void addStorageChest(StorageChest* chest);
+    StorageChest* getStorageChestAt(const cocos2d::Vec2& tileCoord) const;
+    const std::vector<StorageChest*>& getStorageChests() const { return storageChests_; }
+    void removeStorageChest(StorageChest* chest);
+
 private:
     struct CropDef
     {
@@ -94,6 +104,7 @@ private:
 
     std::vector<FarmTile> tiles_;
     std::unordered_map<int, CropDef> crops_;
+    std::vector<StorageChest*> storageChests_;
 };
 
 #endif // __FARM_MANAGER_H__

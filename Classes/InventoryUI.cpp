@@ -1,4 +1,6 @@
 #include "InventoryUI.h"
+#include "InventoryManager.h"
+#include "QuantityPopup.h"
 
 USING_NS_CC;
 
@@ -126,7 +128,7 @@ void InventoryUI::initSlots()
         for (int col = 0; col < COLS; ++col)
         {
             int slotIndex = row * COLS + col;
-            if (slotIndex >= InventoryManager::MAX_SLOTS)
+            if (slotIndex >= inventory_->getSlotCount())
                 break;
 
             SlotSprite slot;
@@ -452,12 +454,12 @@ void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 updateSelection();
             }
         }
-        else
-        {
-           // 如果没有选中的，也许可以当作快速选中？
-           // 暂时不处理，或者作为一种快捷选中方式
-           // onSlotClicked(targetSlotIndex); // 可选：按下数字键直接选中对应槽位
-        }
+    }
+
+    // J 键转移物品
+    if (keyCode == EventKeyboard::KeyCode::KEY_J)
+    {
+        handleTransfer();
     }
 }
 
@@ -548,5 +550,36 @@ cocos2d::Color3B InventoryUI::getItemColor(ItemType itemType) const
 
     default:
         return Color3B(128, 128, 128);
+    }
+}
+
+void InventoryUI::handleTransfer()
+{
+    if (!partnerInventory_ || selectedSlotIndex_ == -1) return;
+
+    const auto& slot = inventory_->getSlot(selectedSlotIndex_);
+    if (slot.isEmpty()) return;
+
+    // 如果数量 > 1，弹出数量选择框
+    if (slot.count > 1) {
+        int currentIndex = selectedSlotIndex_; // 闭包捕获
+        auto popup = QuantityPopup::create(slot.count, [this, currentIndex, slot](int count) {
+            // 执行移动逻辑
+            if (this->partnerInventory_->addItem(slot.type, count)) {
+                this->inventory_->removeItemFromSlot(currentIndex, count);
+                this->refresh();
+            } else {
+                this->infoLabel_->setString("Target inventory full!");
+            }
+        });
+        Director::getInstance()->getRunningScene()->addChild(popup, 3000);
+    } else {
+        // 直接移动 1 个
+        if (partnerInventory_->addItem(slot.type, 1)) {
+            inventory_->removeItemFromSlot(selectedSlotIndex_, 1);
+            refresh();
+        } else {
+            infoLabel_->setString("Target inventory full!");
+        }
     }
 }

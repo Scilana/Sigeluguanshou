@@ -41,6 +41,11 @@ public:
     void refresh();
 
     /**
+     * @brief 设置合作伙伴仓库（显示另一个窗口的数据以进行转账）
+     */
+    void setPartnerInventory(InventoryManager* partner) { partnerInventory_ = partner; }
+
+    /**
      * @brief 显示动画
      */
     void show();
@@ -63,8 +68,8 @@ private:
     int selectedSlotIndex_;                          // 当前选中的槽位索引
     void updateSelection();                          // 更新选中状态显示
 
-    static const int ROWS = 5;                       // 行数
-    static const int COLS = 6;                       // 列数
+    static const int ROWS = 4;                       // 行数 (4x8=32)
+    static const int COLS = 8;                       // 列数
     static const float SLOT_SIZE;                    // 格子大小
     static const float SLOT_SPACING;                 // 格子间距
 
@@ -134,6 +139,9 @@ private:
      * @return 颜色
      */
     cocos2d::Color3B getItemColor(ItemType itemType) const;
+
+    InventoryManager* partnerInventory_{ nullptr };
+    void handleTransfer();
 };
 
 #endif // __INVENTORY_UI_H__
