@@ -27,12 +27,16 @@ public:
         int actionsPerLevel = 5;
     };
 
+    using LevelUpCallback = std::function<void(SkillType, int)>;
+    void setLevelUpCallback(const LevelUpCallback& callback) { levelUpCallback_ = callback; }
+
     static SkillManager* getInstance();
     static void destroyInstance();
 
     virtual bool init() override;
 
     void recordAction(SkillType type, int count = 1);
+    void setSkillData(SkillType type, int level, int actionCount); // For loading
     const SkillData& getSkillData(SkillType type) const;
     int getSkillLevel(SkillType type) const;
     int getActionCount(SkillType type) const;
@@ -51,6 +55,7 @@ private:
     static SkillManager* instance_;
     std::array<SkillData, static_cast<size_t>(SkillType::Count)> skills_;
     uint64_t version_ = 0;
+    LevelUpCallback levelUpCallback_;
 
     void recalcLevel(SkillData& skill);
     static size_t toIndex(SkillType type);

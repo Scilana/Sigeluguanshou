@@ -55,7 +55,7 @@ bool FarmManager::init(MapLayer* mapLayer)
 
     mapLayer_ = mapLayer;
     dayTimer_ = 30.0f; // Start at 6:00 AM (120s = 24h -> 30s = 6h)
-    secondsPerDay_ = 120.0f; // 120 seconds = 1 in-game day
+    secondsPerDay_ = 300.0f; // 300 seconds = 1 in-game day (Real 5 minutes)
     dayCount_ = 1;
 
     if (mapLayer_)
@@ -73,8 +73,18 @@ bool FarmManager::init(MapLayer* mapLayer)
     this->addChild(overlay_, 5);
 
     // 2. 作物层 (cropLayer_)：放作物图片，Z序为 10 (必须比泥土高，才能盖住泥土)
+    // 2. 作物层 (cropLayer_)：放作物图片，Z序为 10 (必须比泥土高，才能盖住泥土)
     cropLayer_ = Node::create();
     this->addChild(cropLayer_, 10);
+
+    // 3. 初始化交易箱 (位置固定在农场小屋旁，例如 [20, 12])
+    // 注意：需要确保该位置没有障碍物或特殊处理
+    Vec2 binPos(24, 15); // 假设的位置，需根据实际地图调整
+    shippingBin_ = ShippingBin::create(binPos);
+    if (shippingBin_) {
+        this->addChild(shippingBin_, 15); // Z序比作物高
+        storageChests_.push_back(shippingBin_); // 加入此列表以便通用碰撞检测生效
+    }
 
     this->scheduleUpdate();
     redrawOverlay();
@@ -95,6 +105,68 @@ void FarmManager::initCropDefs()
     crops_[3] = {3, "Tomato", {1, 2, 2}, 90};
     crops_[4] = {4, "Pumpkin", {2, 3, 3}, 180};
     crops_[5] = {5, "Blueberry", {1, 2, 2}, 110};
+}
+
+void FarmManager::progressDay()
+{
+    // 1. 处理交易箱结算
+    if (shippingBin_ && priceFunction_) {
+        int totalEarnings = 0;
+        auto inv = shippingBin_->getInventory();
+        auto& slots = inv->getAllSlots();
+        
+        // 遍历所有物品并计算价值
+        // 注意：这里需要直接访问 InventoryManager 的底层或复制 slots，避免迭代器失效
+        // 由于我们要清空，所以只统计价值
+        for (const auto& slot : slots) {
+            if (!slot.isEmpty()) {
+                int price = priceFunction_(slot.type);
+                if (price > 0) {
+                    totalEarnings += price * slot.count;
+                }
+            }
+        }
+        
+        // 清空交易箱
+        inv->clear();
+        
+        // 发放收益
+        if (totalEarnings > 0 && earningsCallback_) {
+            earningsCallback_(totalEarnings);
+        }
+    }
+
+    // 2. 作物生长逻辑
+    dayCount_++;
+    
+    for (auto& tile : tiles_)
+    {
+        if (tile.hasCrop)
+        {
+            if (tile.watered)
+            {
+                auto def = getCropDef(tile.cropId);
+                // 只有未成熟的才生长
+                if (tile.stage < (int)def.stageDays.size())
+                {
+                    tile.progressDays++;
+                    if (tile.progressDays >= def.stageDays[tile.stage])
+                    {
+                        tile.stage++;
+                        tile.progressDays = 0;
+                    }
+                }
+                
+                // 生长后重置浇水状态（在此处重置还是下面统一重置？）
+                // 通常是第二天早上地干了
+            }
+        }
+        
+        // 每天重置浇水状态
+        tile.watered = false;
+    }
+    
+    redrawOverlay();
 }
 
 void FarmManager::update(float delta)
@@ -319,36 +391,7 @@ void FarmManager::removeStorageChest(StorageChest* chest)
     }
 }
 
-void FarmManager::progressDay()
-{
-    dayCount_ += 1;
 
-    for (auto& tile : tiles_)
-    {
-        if (!tile.hasCrop)
-        {
-            tile.watered = false;
-            continue;
-        }
-
-        if (tile.watered)
-        {
-            tile.progressDays += 1;
-            auto def = getCropDef(tile.cropId);
-            if (tile.stage < static_cast<int>(def.stageDays.size()) &&
-                tile.progressDays >= def.stageDays[tile.stage])
-            {
-                tile.stage += 1;
-                tile.progressDays = 0;
-            }
-        }
-
-        tile.watered = false; // reset daily
-    }
-
-    redrawOverlay();
-    CCLOG("Day advanced to %d", dayCount_);
-}
 
 void FarmManager::forceRedraw()
 {

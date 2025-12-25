@@ -1,16 +1,17 @@
 #include "InventoryUI.h"
 #include "InventoryManager.h"
 #include "QuantityPopup.h"
+#include "MarketState.h"
 
 USING_NS_CC;
 
 const float InventoryUI::SLOT_SIZE = 60.0f;
 const float InventoryUI::SLOT_SPACING = 10.0f;
 
-InventoryUI* InventoryUI::create(InventoryManager* inventory)
+InventoryUI* InventoryUI::create(InventoryManager* inventory, MarketState* marketState)
 {
     InventoryUI* ret = new (std::nothrow) InventoryUI();
-    if (ret && ret->init(inventory))
+    if (ret && ret->init(inventory, marketState))
     {
         ret->autorelease();
         return ret;
@@ -23,12 +24,13 @@ InventoryUI* InventoryUI::create(InventoryManager* inventory)
     }
 }
 
-bool InventoryUI::init(InventoryManager* inventory)
+bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
 {
     if (!Layer::init())
         return false;
 
     inventory_ = inventory;
+    marketState_ = marketState;
     if (!inventory_)
     {
         CCLOG("ERROR: InventoryUI requires a valid InventoryManager!");
@@ -560,12 +562,83 @@ void InventoryUI::handleTransfer()
     const auto& slot = inventory_->getSlot(selectedSlotIndex_);
     if (slot.isEmpty()) return;
 
-    // 如果数量 > 1，弹出数量选择框
+    // --- Shipping Bin Logic ---
+    if (partnerIsShippingBin_)
+    {
+        // 1. Check if sellable
+        int price = 0;
+        if (marketState_) {
+            price = marketState_->getSellPrice(slot.type);
+        }
+
+        if (price <= 0) {
+            infoLabel_->setString("Cannot sell this item!");
+            // Shake effect or red flash could be added here
+            return;
+        }
+
+        // 2. Transfer logic (similar to normal, but with feedback)
+        
+        // Helper to perform transfer and show message
+        auto doTransfer = [this, price](int count) {
+            if (this->partnerInventory_->addItem(this->inventory_->getSlot(this->selectedSlotIndex_).type, count)) {
+                
+                std::string itemName = InventoryManager::getItemName(this->inventory_->getSlot(this->selectedSlotIndex_).type);
+                
+                this->inventory_->removeItemFromSlot(this->selectedSlotIndex_, count);
+                this->refresh();
+                
+                int totalValue = price * count;
+                this->infoLabel_->setString(StringUtils::format("Placed %s in bin (+%dG)", itemName.c_str(), totalValue));
+            } else {
+                this->infoLabel_->setString("Shipping bin full!");
+            }
+        };
+
+        if (slot.count > 1) {
+            int currentIndex = selectedSlotIndex_;
+            // 注意：这里需要重新获取 slot 信息或者传递捕获，因为 QuantityPopup 是异步的
+            // 为了简化，我们直接用 currentIndex 重新获取
+            // 修正：QuantityPopup 的回调里不能依赖 slot 引用，必须拷贝或者重新获取
+            auto popup = QuantityPopup::create(slot.count, [this, currentIndex, price, doTransfer](int count) {
+                 // 重新检查 slot
+                 // 由于 doTransfer 捕获了 this 和 selectedSlotIndex_ (隐式?) 
+                 // 我们需要确保 selectedSlotIndex_ 没变，或者我们在 doTransfer 里用 currentIndex
+                 // 简单的做法：直接把逻辑写在这里
+                 
+                 // 上面的 doTransfer 用了 `this->selectedSlotIndex_`，这可能是不安全的如果用户改选了
+                 // 真正安全的做法是重新检查 inventory_->getSlot(currentIndex)
+                 
+                 const auto& verifySlot = this->inventory_->getSlot(currentIndex);
+                 if (verifySlot.isEmpty()) return; 
+                 
+                 // 复用逻辑
+                 if (this->partnerInventory_->addItem(verifySlot.type, count)) {
+                     std::string itemName = InventoryManager::getItemName(verifySlot.type);
+                     this->inventory_->removeItemFromSlot(currentIndex, count);
+                     this->refresh();
+                     this->infoLabel_->setString(StringUtils::format("Placed %s in bin (+%dG)", itemName.c_str(), price * count));
+                 } else {
+                     this->infoLabel_->setString("Shipping bin full!");
+                 }
+            });
+            Director::getInstance()->getRunningScene()->addChild(popup, 3000);
+            return;
+        } else {
+            doTransfer(1);
+            return;
+        }
+    }
+    // --------------------------
+
+    // Normal Transfer (Storage Chest)
     if (slot.count > 1) {
-        int currentIndex = selectedSlotIndex_; // 闭包捕获
-        auto popup = QuantityPopup::create(slot.count, [this, currentIndex, slot](int count) {
-            // 执行移动逻辑
-            if (this->partnerInventory_->addItem(slot.type, count)) {
+        int currentIndex = selectedSlotIndex_; 
+        auto popup = QuantityPopup::create(slot.count, [this, currentIndex](int count) { // Remove 'slot' capture to avoid stale ref
+            const auto& currentSlot = this->inventory_->getSlot(currentIndex); // Re-fetch
+            if (currentSlot.isEmpty()) return;
+
+            if (this->partnerInventory_->addItem(currentSlot.type, count)) {
                 this->inventory_->removeItemFromSlot(currentIndex, count);
                 this->refresh();
             } else {
@@ -574,7 +647,6 @@ void InventoryUI::handleTransfer()
         });
         Director::getInstance()->getRunningScene()->addChild(popup, 3000);
     } else {
-        // 直接移动 1 个
         if (partnerInventory_->addItem(slot.type, 1)) {
             inventory_->removeItemFromSlot(selectedSlotIndex_, 1);
             refresh();

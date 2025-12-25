@@ -61,7 +61,20 @@ void SkillManager::recordAction(SkillType type, int count)
     if (skill.level != prevLevel)
     {
         CCLOG("Skill %s leveled up: %d", skill.name.c_str(), skill.level);
+        if (levelUpCallback_) {
+            levelUpCallback_(type, skill.level);
+        }
     }
+    version_++;
+}
+
+void SkillManager::setSkillData(SkillType type, int level, int actionCount)
+{
+    auto& skill = skills_[toIndex(type)];
+    skill.level = level;
+    skill.actionCount = actionCount;
+    // 确保等级不超过限制（虽然加载的数据理论上是正确的，但防一防）
+    skill.level = std::min(skill.maxLevel, skill.level);
     version_++;
 }
 
