@@ -93,6 +93,7 @@ private:
     // UI层与元素
     // ==========================================
     cocos2d::Layer* uiLayer_;
+    cocos2d::LayerColor* dayNightLayer_;
     cocos2d::Label* timeLabel_;
     cocos2d::Label* moneyLabel_;
     cocos2d::Label* positionLabel_;  // 显示玩家位置（调试用）
@@ -117,6 +118,7 @@ private:
     void updateCamera(); // 更新摄像机位置（跟随玩家）
     void updateUI();     // 更新UI显示
     void updateWeather();
+    void updateDayNightLighting();
 
     // ==========================================
     // 控制与交互

@@ -17,6 +17,40 @@ namespace
 {
     const Vec2 kHouseDoorTile(20.0f, 15.0f);
     const float kHouseDoorRadius = 40.0f;
+    const Color4B kDayLightColor(255, 255, 255, 0);
+    const Color4B kDawnLightColor(255, 180, 120, 70);
+    const Color4B kDuskLightColor(120, 100, 160, 110);
+    const Color4B kNightLightColor(20, 30, 60, 160);
+
+    Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
+    {
+        t = clampf(t, 0.0f, 1.0f);
+        auto lerpByte = [t](GLubyte a, GLubyte b) {
+            return static_cast<GLubyte>(a + (b - a) * t);
+        };
+        return Color4B(
+            lerpByte(from.r, to.r),
+            lerpByte(from.g, to.g),
+            lerpByte(from.b, to.b),
+            lerpByte(from.a, to.a));
+    }
+
+    Color4B getAmbientColorForHour(float hour)
+    {
+        if (hour < 5.0f)
+            return kNightLightColor;
+        if (hour < 6.0f)
+            return lerpColor(kNightLightColor, kDawnLightColor, (hour - 5.0f) / 1.0f);
+        if (hour < 7.0f)
+            return lerpColor(kDawnLightColor, kDayLightColor, (hour - 6.0f) / 1.0f);
+        if (hour < 18.0f)
+            return kDayLightColor;
+        if (hour < 19.0f)
+            return lerpColor(kDayLightColor, kDuskLightColor, (hour - 18.0f) / 1.0f);
+        if (hour < 20.0f)
+            return lerpColor(kDuskLightColor, kNightLightColor, (hour - 19.0f) / 1.0f);
+        return kNightLightColor;
+    }
 }
 
 Scene* GameScene::createScene()
@@ -47,6 +81,7 @@ bool GameScene::init()
     player_ = nullptr;
     weatherManager_ = nullptr;
     uiLayer_ = nullptr;
+    dayNightLayer_ = nullptr;
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
     marketUI_ = nullptr;
@@ -291,6 +326,11 @@ void GameScene::initUI()
 
     CCLOG("UI Layer created with global z-order 1000");
 
+    // Day/night lighting overlay (tints world, UI drawn above it).
+    dayNightLayer_ = LayerColor::create(Color4B(0, 0, 0, 0), visibleSize.width, visibleSize.height);
+    dayNightLayer_->setPosition(Vec2(origin.x, origin.y));
+    uiLayer_->addChild(dayNightLayer_, -2);
+
     // ===== 顶部信息栏背景 =====
 
     auto topBar = LayerColor::create(Color4B(0, 0, 0, 180), visibleSize.width, 60);
@@ -424,6 +464,8 @@ void GameScene::initUI()
         exclamationMark_->setVisible(false);
         player_->addChild(exclamationMark_);
     }
+
+    updateDayNightLighting();
 
     CCLOG("UI initialized - using simple fixed layer method");
 
@@ -625,6 +667,8 @@ void GameScene::update(float delta)
     updateUI();
 
     updateWeather();
+
+    updateDayNightLighting();
 
     // 处理砍树计时
     updateChopping(delta);
@@ -832,6 +876,17 @@ void GameScene::updateWeather()
     {
         weatherManager_->updateWeather(marketState_.getWeather());
     }
+}
+
+void GameScene::updateDayNightLighting()
+{
+    if (!farmManager_ || !dayNightLayer_)
+        return;
+
+    float hour = farmManager_->getHour() + farmManager_->getMinute() / 60.0f;
+    Color4B ambient = getAmbientColorForHour(hour);
+    dayNightLayer_->setColor(Color3B(ambient.r, ambient.g, ambient.b));
+    dayNightLayer_->setOpacity(ambient.a);
 }
 
 void GameScene::handleFarmAction(bool waterOnly)
