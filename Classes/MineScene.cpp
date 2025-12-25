@@ -13,16 +13,17 @@
 #include <cmath>
 #include <algorithm>
 #include "EnergyBar.h"
+#include "HouseScene.h"
 
 USING_NS_CC;
 
 // 定义静态成员
 std::map<int, int> MineScene::openedChestsPerWeek_;
 
-MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor, int dayCount)
+MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds)
 {
     MineScene* ret = new (std::nothrow) MineScene();
-    if (ret && ret->init(inventory, currentFloor, dayCount))
+    if (ret && ret->init(inventory, currentFloor, dayCount, accumulatedSeconds))
     {
         ret->autorelease();
         return ret;
@@ -31,7 +32,7 @@ MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor,
     return nullptr;
 }
 
-bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount)
+bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds)
 {
     if (!Scene::init())
         return false;
@@ -39,6 +40,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount
     inventory_ = inventory;
     currentFloor_ = currentFloor;
     dayCount_ = dayCount;
+    accumulatedSeconds_ = accumulatedSeconds;
     CCLOG("========================================");
     CCLOG("Initializing Mine Scene (Floor %d)", currentFloor);
     CCLOG("========================================");
@@ -475,6 +477,33 @@ void MineScene::update(float delta)
                                     camera->getPositionY() - visibleSize.height / 2 + 110));
     }
     updateMonsters(delta);
+    
+    // 1. 模拟时间流逝
+    accumulatedSeconds_ += delta;
+    
+    // 2. 检查是否到达午夜 (120秒 = 24小时，午夜即 120秒)
+    // 假设 0.0 是午夜前一天? 还是说 0.0 就是 0:00?
+    // FarmManager start 0.0, progressDay at 120.0. 
+    // Usually Stardew day ends at 2AM (26h). 
+    // 用户要求 "凌晨十二点" (12:00 AM / 0:00) -> 24h -> 120s
+    if (accumulatedSeconds_ >= secondsPerDay_) 
+    {
+        CCLOG("It's midnight! Passing out...");
+        if (inventory_) inventory_->removeMoney(20);
+        showActionMessage("Passed out...", Color3B::RED);
+        Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+        return;
+    }
+    
+    // 3. 检查生命值 (死亡逻辑)
+    if (player_ && player_->getHp() <= 0)
+    {
+        CCLOG("Player died in mine!");
+        if (inventory_) inventory_->clear(); // 清空背包
+        showActionMessage("You died...", Color3B::RED);
+        Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+        return;
+    }
 
     // 攻击冷却
     if (currentAttackCooldown_ > 0)
@@ -1009,7 +1038,7 @@ void MineScene::goToPreviousFloor()
     }
 
     CCLOG("Switching to previous floor: %d -> %d", currentFloor_, prevFloor);
-    auto prevScene = MineScene::createScene(inventory_, prevFloor, dayCount_);
+    auto prevScene = MineScene::createScene(inventory_, prevFloor, dayCount_, accumulatedSeconds_);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, prevScene));
 }
 
@@ -1024,7 +1053,7 @@ void MineScene::goToNextFloor()
     }
 
     CCLOG("Switching to next floor: %d -> %d", currentFloor_, nextFloor);
-    auto nextScene = MineScene::createScene(inventory_, nextFloor, dayCount_);
+    auto nextScene = MineScene::createScene(inventory_, nextFloor, dayCount_, accumulatedSeconds_);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
 }
 

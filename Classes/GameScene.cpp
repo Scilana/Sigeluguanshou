@@ -609,6 +609,19 @@ void GameScene::update(float delta)
     // 更新钓鱼状态
     updateFishingState(delta);
 
+    // [New] Time / Fatigue Check
+    if (farmManager_)
+    {
+        if (farmManager_->getHour() == 0) // Midnight
+        {
+             // Prevent multiple triggers if already passing out (scene replacement stops update anyway)
+             CCLOG("It's midnight on the farm! Passing out...");
+             if (inventory_) inventory_->removeMoney(20);
+             showActionMessage("Passed out...", Color3B::RED);
+             Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+             return;
+        }
+    }
 }
 
 void GameScene::updateCamera()
@@ -2038,9 +2051,16 @@ void GameScene::enterMine()
             CCLOG("✗ Auto-save failed!");
         }
 
-        // 创建矿洞场景，传入背包实例和选择的楼层，以及当前日期
+        // 创建矿洞场景，传入背包实例和选择的楼层，以及当前日期和时间
         int dayCount = farmManager_ ? farmManager_->getDayCount() : 1;
-        auto mineScene = MineScene::createScene(inventory_, floor, dayCount);
+        // 获取当前天已经累积的秒数 (FarmManager::dayTimer_ is private but getDayProgress() returns fraction)
+        // getDayProgress() returns dayTimer_ / secondsPerDay_. So time = fraction * 120.
+        float accumulatedSeconds = 0.0f;
+        if (farmManager_) {
+            accumulatedSeconds = farmManager_->getDayProgress() * 120.0f; 
+        }
+        
+        auto mineScene = MineScene::createScene(inventory_, floor, dayCount, accumulatedSeconds);
         if (mineScene)
         {
             auto transition = TransitionFade::create(0.5f, mineScene);

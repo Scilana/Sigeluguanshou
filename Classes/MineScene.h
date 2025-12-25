@@ -39,14 +39,15 @@ public:
      * @param inventory 背包管理器引用（从主场景传递）
      * @param currentFloor 当前矿洞层数
      */
-    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1, int dayCount = 1);
+    // accumulatedSeconds: 当天已经过去的秒数
+    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1, int dayCount = 1, float accumulatedSeconds = 0.0f);
 
     /**
      * @brief 初始化
      * @param inventory 背包管理器引用
      * @param currentFloor 当前矿洞层数
      */
-    virtual bool init(InventoryManager* inventory, int currentFloor, int dayCount);
+    virtual bool init(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds);
 
     /**
      * @brief 每帧更新
@@ -96,6 +97,9 @@ private:
     // ========== 怪物系统 ==========
     std::vector<Monster*> monsters_;
     float monsterSpawnTimer_;
+
+    float accumulatedSeconds_; // 当天累积时间
+    float secondsPerDay_ = 120.0f; // 与 FarmManager 保持一致
 
     // ========== 宝箱系统 ==========
     std::vector<TreasureChest*> chests_;

@@ -29,7 +29,7 @@ bool FarmManager::init(MapLayer* mapLayer)
         return false;
 
     mapLayer_ = mapLayer;
-    dayTimer_ = 0.0f;
+    dayTimer_ = 30.0f; // Start at 6:00 AM (120s = 24h -> 30s = 6h)
     secondsPerDay_ = 120.0f; // 120 seconds = 1 in-game day
     dayCount_ = 1;
 

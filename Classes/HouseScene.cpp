@@ -1,24 +1,60 @@
 #include "HouseScene.h"
 #include "FarmManager.h"
 #include "Player.h"
+#include "GameScene.h"
 
 USING_NS_CC;
 
-HouseScene* HouseScene::createScene()
+HouseScene* HouseScene::createScene(bool isPassedOut)
 {
-    return HouseScene::create();
+
+    HouseScene* ret = new (std::nothrow) HouseScene();
+    if (ret && ret->init(isPassedOut))
+    {
+        ret->autorelease();
+        return ret;
+    }
+    CC_SAFE_DELETE(ret);
+    return nullptr;
 }
 
 bool HouseScene::init()
 {
+    return init(false);
+}
+
+bool HouseScene::init(bool isPassedOut)
+{
     if (!Scene::init())
         return false;
+
+    isPassedOut_ = isPassedOut;
+    // ... rest of init
 
     initBackground();
     initPlayer();
     initControls();
     initUI();
     this->scheduleUpdate();
+
+    if (isPassedOut_)
+    {
+        // 如果是晕倒模式，直接开始睡觉流程
+        isSleeping_ = true;
+        if (player_) {
+            player_->setVisible(false);
+            player_->disableKeyboardControl();
+        }
+        if (sleepSprite_) sleepSprite_->setVisible(true);
+        CCLOG("Player passed out - starting in sleep mode");
+    }
+    else
+    {
+        // 正常进入，生成在门口
+        if (player_) player_->setPosition(Vec2(220, 100)); // 门口附近
+        if (sleepSprite_) sleepSprite_->setVisible(false);
+    }
+
     return true;
 }
 
@@ -49,6 +85,15 @@ void HouseScene::updateUI()
         } else {
             timeLabel_->setColor(Color3B::WHITE);
         }
+    }
+    else if (isPassedOut_ && timeLabel_)
+    {
+        // Mock time display for passed out scene without FarmManager
+        // 假设睡3秒，进度从 0% -> 100% (Midnight -> 6AM)
+        // 6AM = 6:00
+        // We can just show "Sleep..." or static "Next Day"
+        timeLabel_->setString("Recovering energy... (Next Day 6:00)");
+        timeLabel_->setColor(Color3B::YELLOW);
     }
 }
 
@@ -151,6 +196,21 @@ void HouseScene::update(float delta)
             wakeUp(); // 时间到了，自动起床！
         }
     }
+    else if (isPassedOut_)
+    {
+        // 如果是从矿洞晕倒回来的，没有 FarmManager，使用本地模拟时间
+        // 假设晕倒时是午夜 (0:00)，我们需要睡到 6:00
+        // 午夜对应 localTime = 0. 或者我们只需要一个简单的计时器
+        // 简单处理：让它睡 2 秒钟然后醒来，假装到了早上
+        
+        static float sleepTimer = 0.0f;
+        sleepTimer += delta;
+        if (sleepTimer > 3.0f) // 睡3秒
+        {
+            sleepTimer = 0.0f;
+            wakeUp();
+        }
+    }
     
     updateUI();
 
@@ -243,7 +303,17 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         if (doorArea.containsPoint(playerPosLocal))
         {
             CCLOG("Exiting house...");
-            Director::getInstance()->popScene();
+            CCLOG("Exiting house...");
+            if (isPassedOut_) // 如果是从矿洞/晕倒回来的，栈可能为空，必须 replaceScene
+            {
+                 // 返回 GameScene (会自动读取存档或重置)
+                 Director::getInstance()->replaceScene(TransitionFade::create(0.5f, GameScene::createScene()));
+            }
+            else
+            {
+                 // 正常流程，pop 回到 GameScene
+                 Director::getInstance()->popScene();
+            }
         }
         else
         {

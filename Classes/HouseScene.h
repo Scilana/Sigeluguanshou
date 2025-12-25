@@ -8,8 +8,9 @@ class Player;
 class HouseScene : public cocos2d::Scene
 {
 public:
-    static HouseScene* createScene();
+    static HouseScene* createScene(bool isPassedOut = false);
     virtual bool init() override;
+    virtual bool init(bool isPassedOut);
     virtual void update(float delta) override;
 
     CREATE_FUNC(HouseScene);
@@ -29,6 +30,7 @@ private:
     FarmManager* farmManager_{ nullptr };
     cocos2d::Label* timeLabel_{ nullptr };
     bool isSleeping_{ false };
+    bool isPassedOut_{ false }; // 标记是否是因为晕倒/死亡送回来的
     cocos2d::Sprite* sleepSprite_{ nullptr };
     void wakeUp();
 };
