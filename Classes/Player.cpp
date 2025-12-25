@@ -167,6 +167,19 @@ bool Player::init()
     return true;
 }
 
+void Player::onEnter()
+{
+    // 1. 必须调用父类的 onEnter
+    Sprite::onEnter();
+
+    // 2. 场景恢复显示时，强制重置按键状态
+    // 这样可以防止从房子出来时，因为没收到“松开按键”信号而一直自动跑
+    resetKeyStates();
+
+    // 3. 强制切换回待机动画
+    playAnimation(PlayerState::IDLE);
+}
+
 // 加载动画的具体实现
 void Player::loadAnimations()
 {

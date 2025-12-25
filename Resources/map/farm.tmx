@@ -1,17 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="1">
- <tileset firstgid="1" source="farm_tiles2.tsx"/>
+ <tileset firstgid="1" name="farm_tiles2" tilewidth="32" tileheight="32" tilecount="256" columns="16">
+  <grid orientation="orthogonal" width="51" height="51"/>
+  <image source="tileset2.png" width="512" height="512"/>
+ </tileset>
  <tileset firstgid="257" name="farm_tiles3" tilewidth="32" tileheight="32" tilecount="40000" columns="200">
   <image source="tileset3.png" width="6400" height="6400"/>
  </tileset>
- <tileset firstgid="40257" source="farm_tile4.tsx"/>
- <tileset firstgid="42757" source="farm_tile5.tsx"/>
- <tileset firstgid="45257" source="spring.tsx"/>
- <tileset firstgid="45725" source="farmnew.tsx"/>
- <tileset firstgid="46749" source="farmnew1.tsx"/>
- <tileset firstgid="47949" source="farmming.tsx"/>
- <tileset firstgid="49149" source="farmmine.tsx"/>
- <tileset firstgid="50349" source="update.tsx"/>
+ <tileset firstgid="40257" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+  <image source="tileset4.png" width="1600" height="1600"/>
+ </tileset>
+ <tileset firstgid="42757" name="farm_tile5" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+  <image source="tileset5.png" width="1600" height="1600"/>
+ </tileset>
+ <tileset firstgid="45257" name="spring" tilewidth="32" tileheight="32" tilecount="468" columns="12">
+  <image source="Spring.png" width="400" height="1264"/>
+ </tileset>
+ <tileset firstgid="45725" name="farmnew" tilewidth="32" tileheight="32" tilecount="1024" columns="32">
+  <image source="farmnew.png" width="1024" height="1024"/>
+ </tileset>
+ <tileset firstgid="46749" name="farmnew1" tilewidth="32" tileheight="32" tilecount="1200" columns="30">
+  <image source="farmnew1.png" width="960" height="1280"/>
+ </tileset>
+ <tileset firstgid="47949" name="farmming" tilewidth="32" tileheight="32" tilecount="1200" columns="40">
+  <image source="farmming.png" width="1280" height="960"/>
+ </tileset>
+ <tileset firstgid="49149" name="farmmine" tilewidth="32" tileheight="32" tilecount="1200" columns="40">
+  <image source="farmmine.png" width="1280" height="960"/>
+ </tileset>
+ <tileset firstgid="50349" name="update" tilewidth="32" tileheight="32" tilecount="1036" columns="37">
+  <image source="minegate.png" width="1200" height="896"/>
+ </tileset>
+ <tileset firstgid="51385" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+  <image source="tileset4.png" width="1600" height="1600"/>
+ </tileset>
+ <tileset firstgid="53885" name="minekuai" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
+  <image source="ming_walls.png" width="512" height="512"/>
+ </tileset>
+ <tileset firstgid="54909" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+  <image source="tileset4.png" width="1600" height="1600"/>
+ </tileset>
  <layer id="1" name="图块层 1" width="40" height="30">
   <data encoding="base64" compression="zlib">
    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

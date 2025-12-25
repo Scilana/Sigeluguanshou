@@ -81,6 +81,8 @@ public:
 
     void setCurrentTool(ItemType tool) { currentToolType_ = tool; }  //锄头系统
 
+    virtual void onEnter() override;
+
 private:
     // ========== 动画相关定义 ==========
 
@@ -134,6 +136,8 @@ private:
      * @brief 攻击动画播放结束后的回调函数
      */
     void onAttackAnimationFinished();
+
+    
 
     // ========== 移动与属性 ==========
 

@@ -321,32 +321,38 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_ENTER:
     {
         if (!background_ || !player_) break;
-        
+
         // 1. 获取玩家在背景图内的坐标
         Vec2 playerPosLocal = background_->convertToNodeSpace(player_->getPosition());
-        
-        // 2. 定义门的位置区域 (背景图底部中心)
-        // 假设门在大约中心位置 X: 150~210, Y: 0~40
-        Rect doorArea(150.0f, 0.0f, 60.0f, 40.0f);
-        
+
+        // 2. 定义区域
+        // 原坐标(画图软件): x[61, 97], y[170, 190]
+        // 转换后(Cocos):   x[61, 97], y[2, 22]   <-- 也就是图片的最底端
+
+        // Rect(x, y, width, height)
+        // x = 61
+        // y = 2
+        // width = 97 - 61 = 36
+        // height = 22 - 2 = 20
+        Rect doorArea(61.0f, 2.0f, 36.0f, 20.0f);
+
+        // 3. 判定
         if (doorArea.containsPoint(playerPosLocal))
         {
             CCLOG("Exiting house...");
-            CCLOG("Exiting house...");
-            if (isPassedOut_) // 如果是从矿洞/晕倒回来的，栈可能为空，必须 replaceScene
+            if (isPassedOut_)
             {
-                 // 返回 GameScene (会自动读取存档或重置)
-                 Director::getInstance()->replaceScene(TransitionFade::create(0.5f, GameScene::createScene()));
+                Director::getInstance()->replaceScene(TransitionFade::create(0.5f, GameScene::createScene()));
             }
             else
             {
-                 // 正常流程，pop 回到 GameScene
-                 Director::getInstance()->popScene();
+                Director::getInstance()->popScene();
             }
         }
         else
         {
-            CCLOG("Not near the door. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
+            // 调试日志：显示玩家当前坐标 vs 门的位置
+            CCLOG("Pos: (%.1f, %.1f) - Target Y is roughly 2~22", playerPosLocal.x, playerPosLocal.y);
         }
     }
     break;
