@@ -756,7 +756,7 @@ void GameScene::update(float delta)
         {
              // Prevent multiple triggers if already passing out (scene replacement stops update anyway)
              CCLOG("It's midnight on the farm! Passing out...");
-             if (inventory_) inventory_->removeMoney(20);
+             if (inventory_) inventory_->removeMoney(200);
              showActionMessage("Passed out...", Color3B::RED);
              Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
              return;

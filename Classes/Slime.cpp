@@ -31,7 +31,7 @@ void Slime::initStats()
 {
     // 史莱姆基础属性
     name_ = "Slime";
-    maxHp_ = 30;           // 低血量
+    maxHp_ = 5;           // 低血量
     attackPower_ = 5;      // 低攻击
     moveSpeed_ = 60.0f;    // 较快移动
     attackRange_ = 35.0f;
@@ -39,7 +39,6 @@ void Slime::initStats()
 
     // 根据楼层等级增强属性
     float multiplier = 1.0f + (floorLevel_ - 1) * 0.4f;
-    maxHp_ = static_cast<int>(maxHp_ * multiplier);
     attackPower_ = static_cast<int>(attackPower_ * multiplier);
     moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.15f);
 
@@ -52,15 +51,34 @@ void Slime::initStats()
 void Slime::initDisplay()
 {
     // 尝试加载贴图
-    std::string spritePath = getSpritePath();
+    std::string spritePath = "monsters/slime.png";
     bool spriteLoaded = false;
 
     if (!spritePath.empty())
     {
         if (this->initWithFile(spritePath))
         {
+            // Close anti-aliasing for pixel art
+            this->getTexture()->setAliasTexParameters();
+            
+            // Adjust scale if needed
+            // Removed forced 2x scaling based on user feedback "Too big"
+            // if (this->getContentSize().height <= 16) {
+            //    this->setScale(2.0f);
+            // }
+            
             CCLOG("Slime sprite loaded: %s", spritePath.c_str());
             spriteLoaded = true;
+
+            // Make it move (Squash and Stretch animation)
+            // Base scale is 1.0 (since we resized image). 
+            // Stretch Y, Squash X -> Squash Y, Stretch X
+            // Note: ScaleTo takes absolute scale.
+            float duration = 0.6f;
+            auto contrast = ScaleTo::create(duration, 0.9f, 1.1f);
+            auto expand = ScaleTo::create(duration, 1.1f, 0.9f);
+            auto seq = Sequence::create(contrast, expand, nullptr);
+            this->runAction(RepeatForever::create(seq));
         }
     }
 

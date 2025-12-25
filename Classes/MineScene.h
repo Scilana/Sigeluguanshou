@@ -73,9 +73,11 @@ private:
     // 物品栏（使用 InventoryManager 中定义的 ItemType）
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
-    void initToolbar();              // 初始化工具栏
-    void selectItemByIndex(int idx); // 根据索引选择物品
-
+    void initToolbar();
+    void selectItemByIndex(int idx);
+    void initToolbarUI();
+    void refreshToolbarUI();
+    
     // 打开/关闭背包
     void toggleInventory();
     void onInventoryClosed();
@@ -91,13 +93,17 @@ private:
 
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
-    cocos2d::Label* itemLabel_;       // 当前工具名称显示
-    cocos2d::Label* actionLabel_;     // 动作/交互提示显示
-    cocos2d::Label* healthLabel_;     // 血量显示
-
-    // [新增] 电梯相关
-    cocos2d::Sprite* elevatorSprite_{ nullptr }; // 电梯精灵
-    ElevatorUI* elevatorUI_{ nullptr };          // 电梯UI界面
+    cocos2d::Label* itemLabel_;       // current tool label
+    cocos2d::LayerColor* toolbarUI_ = nullptr;
+    std::vector<cocos2d::Sprite*> toolbarSlots_;
+    std::vector<cocos2d::Sprite*> toolbarIcons_;
+    std::vector<cocos2d::Label*> toolbarCounts_;
+    std::vector<int> toolbarCountCache_;
+    int toolbarSelectedCache_ = -1;
+    cocos2d::Label* actionLabel_;     // action hint label
+    cocos2d::Label* healthLabel_;     // health label
+    cocos2d::Sprite* elevatorSprite_{ nullptr }; // [New] Elevator
+    ElevatorUI* elevatorUI_{ nullptr };          // [New] UI
 
     // 电梯相关方法
     void initElevator();

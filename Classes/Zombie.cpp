@@ -31,7 +31,7 @@ void Zombie::initStats()
 {
     // 僵尸基础属性
     name_ = "Zombie";
-    maxHp_ = 50;           // 高血量
+    maxHp_ = 5;           // 高血量
     attackPower_ = 10;     // 高攻击
     moveSpeed_ = 35.0f;    // 较慢移动
     attackRange_ = 40.0f;
@@ -39,7 +39,6 @@ void Zombie::initStats()
 
     // 根据楼层等级增强属性
     float multiplier = 1.0f + (floorLevel_ - 1) * 0.6f;
-    maxHp_ = static_cast<int>(maxHp_ * multiplier);
     attackPower_ = static_cast<int>(attackPower_ * multiplier);
     moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.1f);
 
@@ -61,6 +60,19 @@ void Zombie::initDisplay()
         {
             CCLOG("Zombie sprite loaded: %s", spritePath.c_str());
             spriteLoaded = true;
+
+            // Pixel art settings
+            this->getTexture()->setAliasTexParameters();
+            
+            // "Sway" animation (Idle)
+            // Rotate slightly left and right to simulate breathing/standing
+            float duration = 1.0f;
+            float angle = 5.0f;
+            auto swayRight = RotateBy::create(duration, angle);
+            auto swayLeft = RotateBy::create(duration * 2, -angle * 2);
+            auto swayReturn = RotateBy::create(duration, angle);
+            auto seq = Sequence::create(swayRight, swayLeft, swayReturn, nullptr);
+            this->runAction(RepeatForever::create(seq));
         }
     }
 
