@@ -54,9 +54,12 @@ list(APPEND GAME_SOURCE
      Classes/WeatherManager.cpp
      Classes/EnergyBar.cpp
      Classes/StorageChest.cpp
+     Classes/ShippingBin.cpp
      Classes/QuantityPopup.cpp
      Classes/SkillManager.cpp
      Classes/SkillTreeUI.cpp
+     Classes/DialogueBox.cpp
+     Classes/Npc.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -85,9 +88,12 @@ list(APPEND GAME_HEADER
      Classes/WeatherManager.h
      Classes/EnergyBar.h
      Classes/StorageChest.h
+     Classes/ShippingBin.h
      Classes/QuantityPopup.h
      Classes/SkillManager.h
      Classes/SkillTreeUI.h
+     Classes/DialogueBox.h
+     Classes/Npc.h
      )
 
 if(ANDROID)

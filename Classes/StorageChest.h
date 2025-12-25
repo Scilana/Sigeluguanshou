@@ -22,12 +22,14 @@ public:
     InventoryManager* getInventory() const { return inventory_; }
     cocos2d::Vec2 getTileCoord() const { return tileCoord_; }
     
+    virtual bool isShippingBin() const { return false; }
+
     /**
      * @brief 视觉表现相关
      */
-    void initDisplay();
+    virtual void initDisplay();
 
-private:
+protected:
     cocos2d::Vec2 tileCoord_;
     InventoryManager* inventory_;
     cocos2d::DrawNode* displayNode_;

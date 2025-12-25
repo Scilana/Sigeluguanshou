@@ -14,6 +14,8 @@
 #include "MineScene.h"
 #include "SaveManager.h"
 #include "StorageChest.h"
+#include "DialogueBox.h"
+#include "Npc.h"
 
 class MarketUI;
 class WeatherManager;
@@ -119,6 +121,7 @@ private:
     void initControls();
     void initTrees(); // 初始化调试用树木标记
     void initWeather();
+    void initNpcs();
     void initToolbarUI();
     void refreshToolbarUI();
 
@@ -206,6 +209,12 @@ private:
     cocos2d::Sprite* chargeBarBg_ = nullptr;
     cocos2d::Sprite* chargeBarFg_ = nullptr;
     cocos2d::Sprite* exclamationMark_ = nullptr;
+    
+    // ==========================================
+    // NPC System
+    // ==========================================
+    DialogueBox* dialogueBox_ = nullptr;
+    std::vector<Npc*> npcs_;
 
     // ==========================================
     // 农场与工具栏操作

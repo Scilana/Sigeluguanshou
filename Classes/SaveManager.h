@@ -68,6 +68,15 @@ public:
             std::vector<SlotData> slots;
         };
         std::vector<StorageChestData> storageChests;
+
+        // 技能数据
+        struct SkillData
+        {
+            int type;
+            int level;
+            int actionCount;
+        };
+        std::vector<SkillData> skills;
     };
 
     /**

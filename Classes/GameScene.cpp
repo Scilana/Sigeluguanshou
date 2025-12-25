@@ -134,6 +134,7 @@ bool GameScene::init()
     SkillManager::getInstance();
     marketState_.init();
     initWeather();
+    initNpcs();
 
     // --- 【Fishing Inputs】 ---
     auto mouseListener = EventListenerMouse::create();
@@ -204,6 +205,19 @@ void GameScene::initFarm()
     if (farmManager_)
     {
         mapLayer_->addChild(farmManager_, 5);
+
+        // 设置交易箱回调
+        farmManager_->setPriceFunction([this](ItemType type) {
+            return marketState_.getSellPrice(type);
+        });
+        
+        farmManager_->setEarningsCallback([this](int earnings) {
+            if (inventory_) {
+                 inventory_->addMoney(earnings);
+            }
+            showActionMessage(StringUtils::format("Shipping: +%d G", earnings), Color3B(255, 215, 0));
+        });
+
         if (player_) {
             player_->setFarmManager(farmManager_);
         }
@@ -552,6 +566,43 @@ void GameScene::initWeather()
 
     }
 
+}
+
+// ========== 初始化 NPCs ==========
+void GameScene::initNpcs()
+{
+    CCLOG("Initializing NPCs...");
+
+    if (!mapLayer_ || !uiLayer_) return;
+
+    // Wizard
+    auto wizard = Npc::create("Wizard", "npcImages/wizard.png");
+    if (wizard) {
+        // Place relative to map
+        wizard->setPosition(Vec2(500, 400));
+        wizard->setScale(0.5f); // Scale down if sprite is too big
+        mapLayer_->addChild(wizard, 10);
+        npcs_.push_back(wizard);
+    }
+
+    // Cleaner
+    auto cleaner = Npc::create("Cleaner", "npcImages/cleaner.png");
+    if (cleaner) {
+        cleaner->setPosition(Vec2(600, 400));
+        cleaner->setScale(0.5f); // Scale down
+        mapLayer_->addChild(cleaner, 10);
+        npcs_.push_back(cleaner);
+    }
+
+    // DialogueBox
+    dialogueBox_ = DialogueBox::create(nullptr);
+    if (dialogueBox_) {
+        // Add to UI layer
+        uiLayer_->addChild(dialogueBox_, 2000); // Very high Z
+        dialogueBox_->setVisible(false);
+    }
+    
+    CCLOG("NPCs initialized: %d", (int)npcs_.size());
 }
 
 // ========== 初始化控制 ==========
@@ -1125,7 +1176,12 @@ void GameScene::handleFarmAction(bool waterOnly)
                         mapLayer_->clearBaseTileAt(t);
                     }
 
-                    player_->consumeEnergy(4.0f);
+                    int reduction = SkillManager::getInstance()->getMiningHitReduction();
+                    // 每级减少 0.4 体力消耗 (max 5级 = 减少2.0)
+                    float cost = 4.0f - (reduction * 0.4f);
+                    cost = std::max(1.0f, cost);
+                    
+                    player_->consumeEnergy(cost);
                     result = { true, "Rock broken!", -1 };
                     SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
                     break;
@@ -1244,11 +1300,11 @@ void GameScene::openChestInventory(StorageChest* chest)
         inventoryUI_->close();
     }
 
-    // 创建背包 UI，但这次指向箱子的 Inventory
-    inventoryUI_ = InventoryUI::create(chest->getInventory());
+    // 创建背包 UI，以玩家背包为主，箱子为合作伙伴
+    inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (inventoryUI_) {
-        // 设置合作伙伴为玩家背包，这样按 J 可以转移到背包
-        inventoryUI_->setPartnerInventory(inventory_);
+        // 设置合作伙伴为箱子背包，并传递是否为交易箱
+        inventoryUI_->setPartnerInventory(chest->getInventory(), chest->isShippingBin());
         
         inventoryUI_->setCloseCallback([this]() {
             onInventoryClosed();
@@ -1355,10 +1411,12 @@ bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) c
         return false;
 
     // 只检测3个方向：左、右、脚下
-    const Vec2 offsets[3] = {
+    const Vec2 offsets[5] = {
         Vec2(0, 0),   // 玩家脚下
         Vec2(1, 0),   // 右边
-        Vec2(-1, 0)   // 左边
+        Vec2(-1, 0),
+        Vec2(0, 1),
+        Vec2(0,-1)
     };
 
     const int TREE_ROOT_GID = 43658; // 树根的实际GID (tileset id=901)
@@ -2096,9 +2154,51 @@ ItemType GameScene::getItemTypeForCropId(int cropId) const
 
 void GameScene::onMouseDown(Event* event)
 {
+    if (dialogueBox_ && dialogueBox_->isVisible()) return;
+
     EventMouse* e = (EventMouse*)event;
     if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
     {
+        // 1. NPC Interaction Check
+        // Convert screen click to map space
+        // Assuming Camera is centering player or moving.
+        // We need to unproject or simple offset calculation.
+        
+        auto camera = getDefaultCamera();
+        Vec2 camPos = Vec2(camera->getPositionX(), camera->getPositionY());
+        Size visibleSize = Director::getInstance()->getVisibleSize();
+        
+        Vec2 mouseLoc = e->getLocationInView();
+        mouseLoc.y = visibleSize.height - mouseLoc.y; // Invert Y
+        
+        // World Pos = Camera Pos - VisibleCenter + MouseScreenPos
+        Vec2 worldPos = camPos - Vec2(visibleSize.width/2, visibleSize.height/2) + mouseLoc;
+        
+        for (auto npc : npcs_) {
+            // Convert worldPos to the NPC's parent's coordinate system (which is likely the mapLayer_)
+            // Assuming NPCs are children of mapLayer_ or a similar node whose position is relative to the camera.
+            // For simplicity, if NPCs are directly on the scene, worldPos is fine.
+            // If they are children of mapLayer_, we need to convert.
+            // Let's assume npcs_ are directly added to the scene or a layer that moves with the camera.
+            // If npc->getParent() is mapLayer_, then npc->getParent()->convertToNodeSpace(worldPos) is correct.
+            // If npc is child of scene, then worldPos is already in scene coordinates.
+            // For now, let's assume npc->getParent() is the scene or a layer that doesn't move relative to camera.
+            // If NPCs are on mapLayer_, then the bounding box check needs to be relative to mapLayer_'s position.
+            // A more robust way is to convert the mouse click to mapLayer_ coordinates first.
+            Vec2 mapLayerClickPos = mapLayer_->convertToNodeSpace(worldPos);
+
+            if (npc->getBoundingBox().containsPoint(mapLayerClickPos)) {
+                // Clicked on NPC
+                CCLOG("Clicked NPC: %s", npc->getNpcName().c_str());
+                if (dialogueBox_) { // Ensure dialogueBox_ is initialized
+                    dialogueBox_->setNpc(npc);
+                    dialogueBox_->showDialogue();
+                }
+                return; // Consume click
+            }
+        }
+
+        // 2. Fishing Logic (Existing)
         // Check current item
         if (toolbarItems_.empty()) return;
         
@@ -2143,10 +2243,10 @@ void GameScene::onMouseDown(Event* event)
         Vec2 clickPos = e->getLocationInView();
         clickPos.y = Director::getInstance()->getWinSize().height - clickPos.y; 
         Vec3 cameraPos = this->getDefaultCamera()->getPosition3D();
-        Vec2 worldPos = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
+        Vec2 worldPos2 = clickPos + Vec2(cameraPos.x, cameraPos.y) - Director::getInstance()->getVisibleSize() / 2;
         
         if (mapLayer_) {
-            Vec2 t = mapLayer_->positionToTileCoord(worldPos);
+            Vec2 t = mapLayer_->positionToTileCoord(worldPos2);
             CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
         }
     }
@@ -2174,6 +2274,7 @@ void GameScene::updateFishingState(float delta)
 {
     if (fishingState_ == FishingState::CHARGING)
     {
+        // 钓鱼技能提高充能速度 (可选，或者影响条的大小)
         chargePower_ += delta * 1.5f; 
         if (chargePower_ > 1.0f) chargePower_ = 1.0f;
         
@@ -2286,7 +2387,7 @@ void GameScene::toggleInventory()
     }
 
     // 创建背包UI
-    inventoryUI_ = InventoryUI::create(inventory_);
+    inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (!inventoryUI_)
     {
         CCLOG("ERROR: Failed to create InventoryUI!");
@@ -2311,7 +2412,7 @@ void GameScene::toggleInventory()
         }
         
         if (nearbyChest) {
-            inventoryUI_->setPartnerInventory(nearbyChest->getInventory());
+            inventoryUI_->setPartnerInventory(nearbyChest->getInventory(), nearbyChest->isShippingBin());
         }
     }
 
@@ -2731,6 +2832,26 @@ SaveManager::SaveData GameScene::collectSaveData()
     // 树木存档功能已禁用（避免崩溃问题）
     // 注意：砍倒的树木在重新加载游戏后会恢复
 
+    // 树木存档功能已禁用（避免崩溃）
+    // 注意：砍倒的树木在重新加载游戏后会恢复
+
+    // 保存技能数据
+    if (auto skillMgr = SkillManager::getInstance())
+    {
+        for (int i = 0; i < (int)SkillManager::SkillType::Count; ++i)
+        {
+            auto type = (SkillManager::SkillType)i;
+            const auto& sd = skillMgr->getSkillData(type);
+            
+            SaveManager::SaveData::SkillData skillSave;
+            skillSave.type = (int)type;
+            skillSave.level = sd.level;
+            skillSave.actionCount = sd.actionCount;
+            data.skills.push_back(skillSave);
+        }
+        CCLOG("Saving %zu skills", data.skills.size());
+    }
+
     return data;
 }
 
@@ -2847,6 +2968,17 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
     // 注意：砍倒的树木在重新加载游戏后会恢复
     CCLOG("Tree restoration skipped (feature disabled for stability)");
     choppedTrees_.clear();
+
+    // 恢复技能数据
+    if (auto skillMgr = SkillManager::getInstance())
+    {
+        CCLOG("Restoring skills...");
+        for (const auto& skillData : data.skills)
+        {
+            skillMgr->setSkillData((SkillManager::SkillType)skillData.type, skillData.level, skillData.actionCount);
+        }
+        CCLOG("✓ Skills restored: %zu skills", data.skills.size());
+    }
 
     CCLOG("========================================");
     CCLOG("✓ Save data applied successfully!");

@@ -6,6 +6,9 @@
 #include <unordered_map>
 #include <vector>
 #include "StorageChest.h"
+#include "ShippingBin.h"
+#include <functional>
+#include "InventoryManager.h" // Needed for ItemType
 
 class MapLayer;
 
@@ -65,6 +68,17 @@ public:
     void setAllTiles(const std::vector<FarmTile>& tiles);
 
     /**
+     * @brief 市场/交易箱相关回调
+     */
+    using PriceFunction = std::function<int(ItemType)>;
+    using EarningsCallback = std::function<void(int)>;
+    
+    void setPriceFunction(const PriceFunction& func) { priceFunction_ = func; }
+    void setEarningsCallback(const EarningsCallback& cb) { earningsCallback_ = cb; }
+
+    ShippingBin* getShippingBin() const { return shippingBin_; }
+
+    /**
      * @brief 获取地图尺寸
      */
     cocos2d::Size getMapSize() const { return mapSizeTiles_; }
@@ -107,6 +121,11 @@ private:
     std::vector<FarmTile> tiles_;
     std::unordered_map<int, CropDef> crops_;
     std::vector<StorageChest*> storageChests_;
+    ShippingBin* shippingBin_{ nullptr };
+    
+    PriceFunction priceFunction_;
+    EarningsCallback earningsCallback_;
+    
     std::string getCropTextureName(int cropId, int stage) const;
 };
 
