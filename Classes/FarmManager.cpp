@@ -23,6 +23,31 @@ FarmManager* FarmManager::create(MapLayer* mapLayer)
     return nullptr;
 }
 
+std::string FarmManager::getCropTextureName(int cropId, int stage) const  //类似于之前的lambda
+{
+    std::string name;
+
+    // 根据 ID 查表 (对应你在 initCropDefs 里定义的 ID)
+    switch (cropId)
+    {
+    case 0: name = "turnip";     break; // ID 0
+    case 1: name = "potato";     break; // ID 1
+    case 2: name = "corn";       break; // ID 2
+    case 3: name = "strawberry"; break; // ★ ID 3 原番茄改为草莓
+    case 4: name = "pumpkin";    break; // ID 4
+    case 5: name = "blueberry";  break; // ID 5
+    default: name = "turnip";    break;
+    }
+
+    // 你的图片是 1,2,3,4 (turnip1.png)
+    // 程序的阶段是 0,1,2,3 (stage)
+    // 所以要 +1
+    int imgNum = stage + 1;
+
+    // 拼接路径： "crops/" + 名字 + 数字 + ".png"
+    return StringUtils::format("crops/%s%d.png", name.c_str(), imgNum);
+}
+
 bool FarmManager::init(MapLayer* mapLayer)
 {
     if (!Node::init())
@@ -43,8 +68,13 @@ bool FarmManager::init(MapLayer* mapLayer)
 
     tiles_.resize(static_cast<size_t>(mapSizeTiles_.width * mapSizeTiles_.height));
 
+    // 1. 泥土层 (overlay_)：画褐色方块，Z序为 5
     overlay_ = DrawNode::create();
-    this->addChild(overlay_, 1);
+    this->addChild(overlay_, 5);
+
+    // 2. 作物层 (cropLayer_)：放作物图片，Z序为 10 (必须比泥土高，才能盖住泥土)
+    cropLayer_ = Node::create();
+    this->addChild(cropLayer_, 10);
 
     this->scheduleUpdate();
     redrawOverlay();
@@ -61,7 +91,7 @@ void FarmManager::initCropDefs()
     // 6 种作物：简单周期与售价
     crops_[0] = {0, "Turnip", {1, 1, 1}, 60};
     crops_[1] = {1, "Potato", {1, 2, 2}, 80};
-    crops_[2] = {2, "Corn", {2, 2, 2, 2}, 120};
+    crops_[2] = { 2, "Corn", {2, 2, 4}, 120 };
     crops_[3] = {3, "Tomato", {1, 2, 2}, 90};
     crops_[4] = {4, "Pumpkin", {2, 3, 3}, 180};
     crops_[5] = {5, "Blueberry", {1, 2, 2}, 110};
@@ -341,46 +371,75 @@ void FarmManager::setAllTiles(const std::vector<FarmTile>& tiles)
 
 void FarmManager::redrawOverlay()
 {
+    // 1. 清理上一帧的画面
     overlay_->clear();
+    cropLayer_->removeAllChildren(); // ★ 把旧的作物全删了，准备根据最新数据重新贴
 
-    if (!mapLayer_)
-        return;
+    if (!mapLayer_) return;
 
     float halfW = tileSize_.width / 2.0f;
     float halfH = tileSize_.height / 2.0f;
 
+    // 遍历所有格子
     for (int y = 0; y < mapSizeTiles_.height; ++y)
     {
         for (int x = 0; x < mapSizeTiles_.width; ++x)
         {
+            // 获取格子数据
             const auto& tile = tiles_[static_cast<size_t>(y * mapSizeTiles_.width + x)];
-            if (!tile.tilled)
-                continue;
 
+            // 如果没锄地，直接跳过
+            if (!tile.tilled) continue;
+
+            // 计算屏幕坐标
             Vec2 tileCoord(static_cast<float>(x), static_cast<float>(y));
             Vec2 center = mapLayer_->tileCoordToPosition(tileCoord);
+
+            // --- A. 绘制地皮 (保持原逻辑) ---
+            // 用代码画一个褐色的矩形代表耕地
             Vec2 bl(center.x - halfW + 1.5f, center.y - halfH + 1.5f);
             Vec2 tr(center.x + halfW - 1.5f, center.y + halfH - 1.5f);
 
-            // Base tilled quad
             overlay_->drawSolidRect(bl, tr, kTilledColor);
 
-            // Water overlay
-            if (tile.watered)
-            {
-                overlay_->drawSolidRect(bl + Vec2(2, 2), tr - Vec2(2, 2), kWaterColor);
+            // 如果浇水了，叠一层蓝色
+            if (tile.watered) {
+                overlay_->drawSolidRect(bl, tr, Color4F(0.0f, 0.0f, 0.5f, 0.3f));
             }
 
-            // Crop overlay
+            // --- B. 绘制作物 (使用 PNG) ---
             if (tile.hasCrop)
             {
-                Color4F cropColor = isMature(tile) ? kMatureColor : kCropColor;
-                Vec2 cropInset(6, 6);
-                overlay_->drawSolidRect(bl + cropInset, tr - cropInset, cropColor);
+                // 1. 拿到图片名 (例如 crops/turnip1.png)
+                std::string filename = getCropTextureName(tile.cropId, tile.stage);
 
-                if (isMature(tile))
+                // 2. 创建图片精灵
+                auto sprite = Sprite::create(filename);
+                if (sprite)
                 {
-                    overlay_->drawRect(bl + Vec2(1, 1), tr - Vec2(1, 1), Color4F(1, 1, 0, 0.9f));
+                    // 【关键步骤 1】关闭抗锯齿，保证放大后像素清晰锐利，不会变模糊
+                    sprite->getTexture()->setAliasTexParameters();
+
+                    // 【关键步骤 2】获取图片原始大小
+                    Size imgSize = sprite->getContentSize();
+
+                    // 【关键步骤 3】根据尺寸判断缩放逻辑
+                    // 如果高度小于等于 16 (即 16x16 的矮作物)，放大 2 倍变成 32x32
+                    if (imgSize.height <= 16.0f)
+                    {
+                        sprite->setScale(2.0f);
+                    }
+                    // 如果高度已经是 32 (即 16x32 的高作物)，保持不变
+                    else
+                    {
+                        sprite->setScale(1.0f);
+                    }
+
+                    // 设置位置
+                    sprite->setPosition(center);
+
+                    // 添加到层级
+                    cropLayer_->addChild(sprite);
                 }
             }
         }

@@ -48,6 +48,7 @@ public:
     ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
     ActionResult waterTile(const cocos2d::Vec2& tileCoord);
     ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
+   
 
     int getDayCount() const { return dayCount_; }
     void setDayCount(int dayCount) { dayCount_ = dayCount; }
@@ -97,6 +98,7 @@ private:
     cocos2d::Size mapSizeTiles_;
     cocos2d::Size tileSize_;
     cocos2d::DrawNode* overlay_;
+    cocos2d::Node* cropLayer_;
 
     float dayTimer_;
     float secondsPerDay_;
@@ -105,6 +107,7 @@ private:
     std::vector<FarmTile> tiles_;
     std::unordered_map<int, CropDef> crops_;
     std::vector<StorageChest*> storageChests_;
+    std::string getCropTextureName(int cropId, int stage) const;
 };
 
 #endif // __FARM_MANAGER_H__
