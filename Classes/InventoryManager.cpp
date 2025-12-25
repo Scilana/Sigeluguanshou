@@ -370,6 +370,26 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     }
 }
 
+std::string InventoryManager::getItemIconPath(ItemType itemType)
+{
+    switch (itemType)
+    {
+    case ItemType::Hoe: return "tools/hoe.png";
+    case ItemType::WateringCan: return "tools/kettle.png";
+    case ItemType::Scythe: return "tools/scythe.png";
+    case ItemType::Axe: return "tools/axe.png";
+    case ItemType::Pickaxe: return "tools/pickaxe.png";
+    case ItemType::FishingRod: return "tools/fishingRod.png";
+    case ItemType::SeedTurnip: return "tools/carrotSeed.png";
+    case ItemType::SeedPotato: return "tools/dogbaneSeed.png";
+    case ItemType::SeedCorn: return "tools/cornSeed.png";
+    case ItemType::SeedTomato: return "tools/carrotSeed.png";
+    case ItemType::SeedPumpkin: return "tools/dogbaneSeed.png";
+    case ItemType::SeedBlueberry: return "tools/cornSeed.png";
+    default: return "";
+    }
+}
+
 bool InventoryManager::isStackable(ItemType itemType)
 {
     // 工具不可堆叠

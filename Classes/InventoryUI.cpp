@@ -318,23 +318,34 @@ cocos2d::Sprite* InventoryUI::createSlotBackground()
 
 cocos2d::Sprite* InventoryUI::createItemIcon(ItemType itemType)
 {
-    // 创建占位符图标（使用颜色区分不同物品）
+    std::string iconPath = InventoryManager::getItemIconPath(itemType);
+    if (!iconPath.empty() && FileUtils::getInstance()->isFileExist(iconPath))
+    {
+        auto icon = Sprite::create(iconPath);
+        if (icon)
+        {
+            auto size = icon->getContentSize();
+            float maxSize = SLOT_SIZE - 10.0f;
+            float scale = std::min(maxSize / size.width, maxSize / size.height);
+            icon->setScale(scale);
+            return icon;
+        }
+    }
+
+    // Fallback colored placeholder.
     auto icon = Sprite::create();
     icon->setTextureRect(Rect(0, 0, SLOT_SIZE - 10, SLOT_SIZE - 10));
 
     Color3B color = getItemColor(itemType);
     icon->setColor(color);
 
-    // 添加物品名称缩写
     std::string name = InventoryManager::getItemName(itemType);
     std::string abbreviation;
 
-    // 创建缩写（取首字母）
     if (!name.empty())
     {
         if (name.find(" ") != std::string::npos)
         {
-            // 多个单词，取每个单词首字母
             abbreviation += name[0];
             for (size_t i = 1; i < name.length(); ++i)
             {
@@ -344,7 +355,6 @@ cocos2d::Sprite* InventoryUI::createItemIcon(ItemType itemType)
         }
         else
         {
-            // 单个单词，取前2-3个字母
             abbreviation = name.substr(0, std::min((size_t)3, name.length()));
         }
     }

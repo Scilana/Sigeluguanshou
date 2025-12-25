@@ -416,10 +416,11 @@ void FarmManager::redrawOverlay()
 {
     // 1. 清理上一帧的画面
     overlay_->clear();
-    cropLayer_->removeAllChildren(); // ★ 把旧的作物全删了，准备根据最新数据重新贴
+    cropLayer_->removeAllChildren(); // ★ 清除所有精灵（包括泥土和作物）
 
     if (!mapLayer_) return;
 
+    // 如果 soil.png 加载失败，需要用这个 fallback 画方块，所以保留计算
     float halfW = tileSize_.width / 2.0f;
     float halfH = tileSize_.height / 2.0f;
 
@@ -438,51 +439,90 @@ void FarmManager::redrawOverlay()
             Vec2 tileCoord(static_cast<float>(x), static_cast<float>(y));
             Vec2 center = mapLayer_->tileCoordToPosition(tileCoord);
 
-            // --- A. 绘制地皮 (保持原逻辑) ---
-            // 用代码画一个褐色的矩形代表耕地
-            Vec2 bl(center.x - halfW + 1.5f, center.y - halfH + 1.5f);
-            Vec2 tr(center.x + halfW - 1.5f, center.y + halfH - 1.5f);
+            // =========================================================
+            // 【第一步】绘制地皮 (使用 soil.png 替代褐色方块)
+            // =========================================================
 
-            overlay_->drawSolidRect(bl, tr, kTilledColor);
+            // ★ 请确保 Resources 目录下有 soil.png，或者根据你的路径修改为 "crops/soil.png"
+            auto soilSprite = Sprite::create("soil.png");
 
-            // 如果浇水了，叠一层蓝色
-            if (tile.watered) {
-                overlay_->drawSolidRect(bl, tr, Color4F(0.0f, 0.0f, 0.5f, 0.3f));
+            if (soilSprite)
+            {
+                // 1. 像素画防模糊
+                soilSprite->getTexture()->setAliasTexParameters();
+
+                // 2. 智能缩放 (如果素材是 16x16 则放大，32x32 则保持)
+                if (soilSprite->getContentSize().height <= 16.0f) {
+                    soilSprite->setScale(2.0f);
+                }
+                else {
+                    soilSprite->setScale(1.0f);
+                }
+
+                // 3. 设置位置
+                soilSprite->setPosition(center);
+
+                // 4. 【关键】处理浇水效果
+                // 因为图片是不透明的，会遮住 overlay_ 的绘制，所以直接改图片颜色
+                if (tile.watered)
+                {
+                    // 湿润状态：带蓝色的灰色 (模拟湿泥土)
+                    soilSprite->setColor(Color3B(180, 180, 255));
+                }
+                else
+                {
+                    // 干燥状态：白色 (显示原图本色)
+                    soilSprite->setColor(Color3B::WHITE);
+                }
+
+                // 5. 添加到层级：Z序设为 0 (最底层)
+                cropLayer_->addChild(soilSprite, 0);
+            }
+            else
+            {
+                // 【保底方案】如果找不到 soil.png，为了防止穿帮，依然画褐色方块
+                Vec2 bl(center.x - halfW + 1.5f, center.y - halfH + 1.5f);
+                Vec2 tr(center.x + halfW - 1.5f, center.y + halfH - 1.5f);
+                overlay_->drawSolidRect(bl, tr, kTilledColor);
+
+                if (tile.watered) {
+                    overlay_->drawSolidRect(bl, tr, Color4F(0.0f, 0.0f, 0.5f, 0.3f));
+                }
             }
 
-            // --- B. 绘制作物 (使用 PNG) ---
+            // =========================================================
+            // 【第二步】绘制作物 (保持之前的逻辑，Z序更高)
+            // =========================================================
             if (tile.hasCrop)
             {
-                // 1. 拿到图片名 (例如 crops/turnip1.png)
+                // 1. 拿到图片名
                 std::string filename = getCropTextureName(tile.cropId, tile.stage);
 
                 // 2. 创建图片精灵
                 auto sprite = Sprite::create(filename);
                 if (sprite)
                 {
-                    // 【关键步骤 1】关闭抗锯齿，保证放大后像素清晰锐利，不会变模糊
+                    // 关闭抗锯齿
                     sprite->getTexture()->setAliasTexParameters();
 
-                    // 【关键步骤 2】获取图片原始大小
+                    // 获取图片原始大小
                     Size imgSize = sprite->getContentSize();
 
-                    // 【关键步骤 3】根据尺寸判断缩放逻辑
-                    // 如果高度小于等于 16 (即 16x16 的矮作物)，放大 2 倍变成 32x32
-                    if (imgSize.height <= 16.0f)
-                    {
+                    // 缩放逻辑
+                    if (imgSize.height <= 16.0f) {
                         sprite->setScale(2.0f);
                     }
-                    // 如果高度已经是 32 (即 16x32 的高作物)，保持不变
-                    else
-                    {
+                    else {
                         sprite->setScale(1.0f);
                     }
 
                     // 设置位置
                     sprite->setPosition(center);
 
-                    // 添加到层级
-                    cropLayer_->addChild(sprite);
+                    // 【关键】添加到层级：Z序设为 1 (盖在泥土上面)
+                    cropLayer_->addChild(sprite, 1);
+
+
                 }
             }
         }
