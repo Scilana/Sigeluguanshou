@@ -5,6 +5,9 @@
 #include "InventoryManager.h"
 #include <functional>
 
+class MarketState;
+class StorageChest;
+
 /**
  * @brief 背包UI层
  *
@@ -21,13 +24,13 @@ public:
      * @brief 创建背包UI
      * @param inventory 背包管理器引用
      */
-    static InventoryUI* create(InventoryManager* inventory);
+    static InventoryUI* create(InventoryManager* inventory, MarketState* marketState = nullptr);
 
     /**
      * @brief 初始化
      * @param inventory 背包管理器引用
      */
-    bool init(InventoryManager* inventory);
+    bool init(InventoryManager* inventory, MarketState* marketState);
 
     /**
      * @brief 设置关闭回调
@@ -43,7 +46,10 @@ public:
     /**
      * @brief 设置合作伙伴仓库（显示另一个窗口的数据以进行转账）
      */
-    void setPartnerInventory(InventoryManager* partner) { partnerInventory_ = partner; }
+    void setPartnerInventory(InventoryManager* partner, bool isShippingBin = false) { 
+        partnerInventory_ = partner; 
+        partnerIsShippingBin_ = isShippingBin;
+    }
 
     /**
      * @brief 显示动画
@@ -57,6 +63,7 @@ public:
 
 private:
     InventoryManager* inventory_;                    // 背包管理器引用
+    MarketState* marketState_{ nullptr };            // 市场状态，用于查询价格
     std::function<void()> closeCallback_;            // 关闭回调
 
     cocos2d::LayerColor* background_;                // 半透明背景
@@ -141,6 +148,7 @@ private:
     cocos2d::Color3B getItemColor(ItemType itemType) const;
 
     InventoryManager* partnerInventory_{ nullptr };
+    bool partnerIsShippingBin_{ false };
     void handleTransfer();
 };
 

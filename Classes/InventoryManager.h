@@ -195,6 +195,11 @@ public:
     static std::string getItemDescription(ItemType itemType);
 
     /**
+     * @brief Get item icon resource path (empty if unavailable).
+     */
+    static std::string getItemIconPath(ItemType itemType);
+
+    /**
      * @brief 获取物品是否可堆叠
      * @param itemType 物品类型
      * @return 是否可堆叠

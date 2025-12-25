@@ -14,6 +14,8 @@
 #include "MineScene.h"
 #include "SaveManager.h"
 #include "StorageChest.h"
+#include "DialogueBox.h"
+#include "Npc.h"
 
 class MarketUI;
 class WeatherManager;
@@ -101,6 +103,12 @@ private:
     cocos2d::Label* positionLabel_;  // 显示玩家位置（调试用）
     cocos2d::Label* actionLabel_;    // 显示农场操作提示
     cocos2d::Label* itemLabel_;      // 显示当前物品
+    cocos2d::LayerColor* toolbarUI_ = nullptr;
+    std::vector<cocos2d::Sprite*> toolbarSlots_;
+    std::vector<cocos2d::Sprite*> toolbarIcons_;
+    std::vector<cocos2d::Label*> toolbarCounts_;
+    std::vector<int> toolbarCountCache_;
+    int toolbarSelectedCache_ = -1;
 
     // ==========================================
     // 初始化函数
@@ -113,6 +121,9 @@ private:
     void initControls();
     void initTrees(); // 初始化调试用树木标记
     void initWeather();
+    void initNpcs();
+    void initToolbarUI();
+    void refreshToolbarUI();
 
     // ==========================================
     // 更新循环函数
@@ -198,6 +209,12 @@ private:
     cocos2d::Sprite* chargeBarBg_ = nullptr;
     cocos2d::Sprite* chargeBarFg_ = nullptr;
     cocos2d::Sprite* exclamationMark_ = nullptr;
+    
+    // ==========================================
+    // NPC System
+    // ==========================================
+    DialogueBox* dialogueBox_ = nullptr;
+    std::vector<Npc*> npcs_;
 
     // ==========================================
     // 农场与工具栏操作
