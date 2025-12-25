@@ -1411,10 +1411,12 @@ bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) c
         return false;
 
     // 只检测3个方向：左、右、脚下
-    const Vec2 offsets[3] = {
+    const Vec2 offsets[5] = {
         Vec2(0, 0),   // 玩家脚下
         Vec2(1, 0),   // 右边
-        Vec2(-1, 0)   // 左边
+        Vec2(-1, 0),
+        Vec2(0, 1),
+        Vec2(0,-1)
     };
 
     const int TREE_ROOT_GID = 43658; // 树根的实际GID (tileset id=901)
