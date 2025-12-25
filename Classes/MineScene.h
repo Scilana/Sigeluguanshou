@@ -9,7 +9,7 @@
 
 #include "InventoryManager.h"
 
-// Forward declarations
+// 前向声明
 class MineLayer;
 class Player;
 class InventoryUI;
@@ -39,14 +39,17 @@ public:
      * @brief 创建矿洞场景
      * @param inventory 背包管理器引用（从主场景传递）
      * @param currentFloor 当前矿洞层数
+     * @param dayCount 当前天数
+     * @param accumulatedSeconds 当天已经过去的秒数
      */
-    // accumulatedSeconds: 当天已经过去的秒数
     static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1, int dayCount = 1, float accumulatedSeconds = 0.0f);
 
     /**
      * @brief 初始化
      * @param inventory 背包管理器引用
      * @param currentFloor 当前矿洞层数
+     * @param dayCount 当前天数
+     * @param accumulatedSeconds 当天已过时间
      */
     virtual bool init(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds);
 
@@ -66,13 +69,13 @@ private:
     InventoryManager* inventory_;
     InventoryUI* inventoryUI_;
     MiningManager* miningManager_;
-    
+
     // 物品栏（使用 InventoryManager 中定义的 ItemType）
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
-    void initToolbar();
-    void selectItemByIndex(int idx);
-    
+    void initToolbar();              // 初始化工具栏
+    void selectItemByIndex(int idx); // 根据索引选择物品
+
     // 打开/关闭背包
     void toggleInventory();
     void onInventoryClosed();
@@ -85,30 +88,34 @@ private:
 
     int selectedSlotIndex_;                          // 当前选中的槽位索引
     void updateSelection();                          // 更新选中状态显示
+
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
-    cocos2d::Label* itemLabel_;       // current tool label
-    cocos2d::Label* actionLabel_;     // action hint label
-    cocos2d::Label* healthLabel_;     // health label
-    cocos2d::Sprite* elevatorSprite_{ nullptr }; // [New] Elevator
-    ElevatorUI* elevatorUI_{ nullptr };          // [New] UI
+    cocos2d::Label* itemLabel_;       // 当前工具名称显示
+    cocos2d::Label* actionLabel_;     // 动作/交互提示显示
+    cocos2d::Label* healthLabel_;     // 血量显示
 
-    // Elevator Methods
+    // [新增] 电梯相关
+    cocos2d::Sprite* elevatorSprite_{ nullptr }; // 电梯精灵
+    ElevatorUI* elevatorUI_{ nullptr };          // 电梯UI界面
+
+    // 电梯相关方法
     void initElevator();
     void showElevatorUI();
     void onElevatorFloorSelected(int floor);
     void onElevatorClosed();
 
-    // 当前矿洞层数
-    int currentFloor_;
-    int dayCount_;
+    // 场景状态
+    int currentFloor_;             // 当前矿洞层数
+    int dayCount_;                 // 当前天数
 
     // ========== 怪物系统 ==========
     std::vector<Monster*> monsters_;
     float monsterSpawnTimer_;
 
-    float accumulatedSeconds_; // 当天累积时间
-    float secondsPerDay_ = 120.0f; // 与 FarmManager 保持一致
+    // ========== 时间系统 ==========
+    float accumulatedSeconds_;     // 当天累积时间
+    float secondsPerDay_ = 120.0f; // 一天的总秒数（与 FarmManager 保持一致）
 
     // ========== 宝箱系统 ==========
     std::vector<TreasureChest*> chests_;
@@ -118,7 +125,7 @@ private:
     float attackCooldown_;
     float currentAttackCooldown_;
 
-    // Wishing Well
+    // ========== 许愿池 ==========
     cocos2d::Node* wishingWell_;
 
     /**
@@ -248,7 +255,7 @@ private:
     cocos2d::Vec2 getRandomWalkablePosition() const;
 
     // 静态持久化数据：记录每一层宝箱最后一次被开启的周数
-    // floor -> week
+    // key: floor, value: week
     static std::map<int, int> openedChestsPerWeek_;
 };
 
