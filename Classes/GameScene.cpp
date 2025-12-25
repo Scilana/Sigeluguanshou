@@ -8,6 +8,7 @@
 #include "WeatherManager.h"
 #include "SkillManager.h"
 #include "SkillTreeUI.h"
+#include <algorithm>
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -23,6 +24,12 @@ namespace
     const Color4B kDawnLightColor(255, 180, 120, 70);
     const Color4B kDuskLightColor(120, 100, 160, 110);
     const Color4B kNightLightColor(20, 30, 60, 160);
+    const float kToolbarSlotSize = 48.0f;
+    const float kToolbarSlotPadding = 6.0f;
+    const float kToolbarIconPadding = 6.0f;
+    const Color4B kToolbarBarColor(40, 35, 30, 220);
+    const Color3B kToolbarSlotColor(70, 60, 50);
+    const Color3B kToolbarSlotSelectedColor(170, 150, 95);
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
     {
@@ -52,6 +59,25 @@ namespace
         if (hour < 20.0f)
             return lerpColor(kDuskLightColor, kNightLightColor, (hour - 19.0f) / 1.0f);
         return kNightLightColor;
+    }
+
+    Sprite* createToolbarIcon(ItemType itemType)
+    {
+        std::string path = InventoryManager::getItemIconPath(itemType);
+        if (path.empty() || !FileUtils::getInstance()->isFileExist(path)) {
+            return nullptr;
+        }
+
+        auto icon = Sprite::create(path);
+        if (!icon) {
+            return nullptr;
+        }
+
+        auto size = icon->getContentSize();
+        float maxSize = kToolbarSlotSize - kToolbarIconPadding * 2.0f;
+        float scale = std::min(maxSize / size.width, maxSize / size.height);
+        icon->setScale(scale);
+        return icon;
     }
 }
 
@@ -443,6 +469,7 @@ void GameScene::initUI()
     uiLayer_->addChild(itemLabel_, 1);
 
     initToolbar();
+    initToolbarUI();
 
     // ===== 钓鱼 UI 初始化 (跟随玩家) =====
     if (player_)
@@ -858,6 +885,8 @@ void GameScene::updateUI()
         positionLabel_->setString(posStr);
 
     }
+
+    refreshToolbarUI();
 
 }
 
@@ -1846,6 +1875,127 @@ void GameScene::initToolbar()
 
 }
 
+void GameScene::initToolbarUI()
+{
+    if (!uiLayer_ || toolbarItems_.empty()) {
+        return;
+    }
+
+    if (toolbarUI_) {
+        toolbarUI_->removeFromParent();
+        toolbarUI_ = nullptr;
+        toolbarSlots_.clear();
+        toolbarIcons_.clear();
+        toolbarCounts_.clear();
+        toolbarCountCache_.clear();
+        toolbarSelectedCache_ = -1;
+    }
+
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    auto origin = Director::getInstance()->getVisibleOrigin();
+
+    int slotCount = static_cast<int>(toolbarItems_.size());
+    float barWidth = slotCount * kToolbarSlotSize + (slotCount + 1) * kToolbarSlotPadding;
+    float barHeight = kToolbarSlotSize + kToolbarSlotPadding * 2.0f;
+
+    toolbarUI_ = LayerColor::create(kToolbarBarColor, barWidth, barHeight);
+    toolbarUI_->setPosition(Vec2(
+        origin.x + (visibleSize.width - barWidth) * 0.5f,
+        origin.y + 8.0f));
+    uiLayer_->addChild(toolbarUI_, 2);
+
+    auto border = DrawNode::create();
+    border->drawRect(Vec2(0, 0), Vec2(barWidth, barHeight),
+        Color4F(0.5f, 0.45f, 0.4f, 1.0f));
+    border->setLineWidth(2);
+    toolbarUI_->addChild(border, 1);
+
+    toolbarSlots_.reserve(slotCount);
+    toolbarIcons_.reserve(slotCount);
+    toolbarCounts_.reserve(slotCount);
+    toolbarCountCache_.assign(slotCount, -1);
+
+    for (int i = 0; i < slotCount; ++i)
+    {
+        auto slotBg = Sprite::create();
+        slotBg->setAnchorPoint(Vec2(0, 0));
+        slotBg->setTextureRect(Rect(0, 0, kToolbarSlotSize, kToolbarSlotSize));
+        slotBg->setColor(kToolbarSlotColor);
+        slotBg->setPosition(Vec2(
+            kToolbarSlotPadding + i * (kToolbarSlotSize + kToolbarSlotPadding),
+            kToolbarSlotPadding));
+
+        auto slotBorder = DrawNode::create();
+        slotBorder->drawRect(
+            Vec2(0, 0),
+            Vec2(kToolbarSlotSize, kToolbarSlotSize),
+            Color4F(0.35f, 0.3f, 0.25f, 1.0f));
+        slotBorder->setLineWidth(2);
+        slotBg->addChild(slotBorder, 1);
+
+        toolbarUI_->addChild(slotBg, 2);
+        toolbarSlots_.push_back(slotBg);
+
+        auto icon = createToolbarIcon(toolbarItems_[i]);
+        if (icon) {
+            icon->setPosition(Vec2(kToolbarSlotSize * 0.5f, kToolbarSlotSize * 0.5f));
+            slotBg->addChild(icon, 0);
+        }
+        toolbarIcons_.push_back(icon);
+
+        auto countLabel = Label::createWithSystemFont("", "Arial", 14);
+        countLabel->setAnchorPoint(Vec2(1, 0));
+        countLabel->setPosition(Vec2(kToolbarSlotSize - 4.0f, 4.0f));
+        countLabel->setColor(Color3B::WHITE);
+        slotBg->addChild(countLabel, 2);
+        toolbarCounts_.push_back(countLabel);
+    }
+
+    refreshToolbarUI();
+}
+
+void GameScene::refreshToolbarUI()
+{
+    if (toolbarSlots_.empty()) {
+        return;
+    }
+
+    if (toolbarSelectedCache_ != selectedItemIndex_) {
+        for (int i = 0; i < static_cast<int>(toolbarSlots_.size()); ++i) {
+            bool isSelected = (i == selectedItemIndex_);
+            toolbarSlots_[i]->setColor(isSelected ? kToolbarSlotSelectedColor : kToolbarSlotColor);
+        }
+        toolbarSelectedCache_ = selectedItemIndex_;
+    }
+
+    if (toolbarCountCache_.size() != toolbarItems_.size()) {
+        toolbarCountCache_.assign(toolbarItems_.size(), -1);
+    }
+
+    for (int i = 0; i < static_cast<int>(toolbarItems_.size()); ++i)
+    {
+        if (i >= static_cast<int>(toolbarCounts_.size())) {
+            break;
+        }
+
+        int count = -1;
+        ItemType type = toolbarItems_[i];
+        if (inventory_ && InventoryManager::isStackable(type)) {
+            count = inventory_->getItemCount(type);
+        }
+
+        if (toolbarCountCache_[i] != count) {
+            toolbarCountCache_[i] = count;
+            if (count > 1) {
+                toolbarCounts_[i]->setString(StringUtils::format("%d", count));
+            }
+            else {
+                toolbarCounts_[i]->setString("");
+            }
+        }
+    }
+}
+
 void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
 {
     // 1. 基本安全检查
@@ -1877,6 +2027,7 @@ void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
     }
 
     showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
+    refreshToolbarUI();
 }
 
 
