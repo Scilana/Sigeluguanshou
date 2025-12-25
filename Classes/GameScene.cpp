@@ -426,11 +426,12 @@ void GameScene::initUI()
     if (player_)
     {
         auto energyBar = EnergyBar::create(player_);
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto origin = Director::getInstance()->getVisibleOrigin();
-        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+    if (energyBar)
+    {
+        energyBar->setName("EnergyBar");
         this->addChild(energyBar, 100);
     }
+}
 }
 
 // ========== Weather Init ==========
@@ -732,7 +733,7 @@ void GameScene::updateUI()
 
     positionLabel_->setString(posStr);
 
-    if (farmManager_)
+    if (farmManager_ && timeLabel_)
     {
         std::string timeStr = StringUtils::format("Day %d, %02d:%02d", 
             farmManager_->getDayCount(), 
@@ -740,7 +741,16 @@ void GameScene::updateUI()
             farmManager_->getMinute());
         timeLabel_->setString(timeStr);
     }
-
+    
+    // 更新能量条位置（始终在右下角，跟随摄像机）
+    auto energyBar = this->getChildByName("EnergyBar");
+    auto camera = this->getDefaultCamera();
+    if (energyBar && camera)
+    {
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        energyBar->setPosition(Vec2(camera->getPositionX() + visibleSize.width / 2 - 50, 
+                                    camera->getPositionY() - visibleSize.height / 2 + 110));
+    }
     if (moneyLabel_ && inventory_)
     {
         moneyLabel_->setString(StringUtils::format("Gold: %d", inventory_->getMoney()));
@@ -1019,12 +1029,27 @@ void GameScene::handleFarmAction(bool waterOnly)
     // 3. 动作执行策略：延迟 vs 立即
     // ======================================================================================
 
+    float energyPercent = player_->getCurrentEnergy() / player_->getMaxEnergy();
+    
+    // 红色能量 (20%)：禁止使用工具
+    if (energyPercent <= 0.2f && (current == ItemType::Hoe || current == ItemType::Pickaxe || current == ItemType::Axe || current == ItemType::WateringCan || current == ItemType::Scythe))
+    {
+        showActionMessage("Exhausted!", Color3B::RED);
+        return;
+    }
+
     // 如果是挥动类工具（锄头、镐子、斧头），我们需要配合动画的“打击点”
     // 假设动画总长约 0.45秒 (3帧 * 0.15s)，打击感通常在中间，所以延迟 0.2秒
+    // 黄色能量 (50%)：动作变慢，延迟增加
+    float delay = 0.2f;
+    if (energyPercent <= 0.5f) {
+        delay = 0.4f; // 变慢一倍
+    }
+
     if (current == ItemType::Hoe || current == ItemType::Pickaxe || current == ItemType::Axe)
     {
         auto seq = Sequence::create(
-            DelayTime::create(0.2f),
+            DelayTime::create(delay),
             CallFunc::create(executeAction),
             nullptr
         );
@@ -2013,8 +2038,9 @@ void GameScene::enterMine()
             CCLOG("✗ Auto-save failed!");
         }
 
-        // 创建矿洞场景，传入背包实例和选择的楼层
-        auto mineScene = MineScene::createScene(inventory_, floor);
+        // 创建矿洞场景，传入背包实例和选择的楼层，以及当前日期
+        int dayCount = farmManager_ ? farmManager_->getDayCount() : 1;
+        auto mineScene = MineScene::createScene(inventory_, floor, dayCount);
         if (mineScene)
         {
             auto transition = TransitionFade::create(0.5f, mineScene);

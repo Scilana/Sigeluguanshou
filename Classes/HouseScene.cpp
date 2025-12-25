@@ -228,6 +228,29 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
     }
     break;
+
+    case EventKeyboard::KeyCode::KEY_ENTER:
+    {
+        if (!background_ || !player_) break;
+        
+        // 1. 获取玩家在背景图内的坐标
+        Vec2 playerPosLocal = background_->convertToNodeSpace(player_->getPosition());
+        
+        // 2. 定义门的位置区域 (背景图底部中心)
+        // 假设门在大约中心位置 X: 150~210, Y: 0~40
+        Rect doorArea(150.0f, 0.0f, 60.0f, 40.0f);
+        
+        if (doorArea.containsPoint(playerPosLocal))
+        {
+            CCLOG("Exiting house...");
+            Director::getInstance()->popScene();
+        }
+        else
+        {
+            CCLOG("Not near the door. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
+        }
+    }
+    break;
     default:
         break;
     }

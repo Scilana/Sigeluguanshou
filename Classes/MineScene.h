@@ -4,6 +4,7 @@
 #include "cocos2d.h"
 #include <string>
 #include <vector>
+#include <map>
 
 #include "InventoryManager.h"
 
@@ -38,14 +39,14 @@ public:
      * @param inventory 背包管理器引用（从主场景传递）
      * @param currentFloor 当前矿洞层数
      */
-    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1);
+    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1, int dayCount = 1);
 
     /**
      * @brief 初始化
      * @param inventory 背包管理器引用
      * @param currentFloor 当前矿洞层数
      */
-    virtual bool init(InventoryManager* inventory, int currentFloor);
+    virtual bool init(InventoryManager* inventory, int currentFloor, int dayCount);
 
     /**
      * @brief 每帧更新
@@ -90,6 +91,7 @@ private:
 
     // 当前矿洞层数
     int currentFloor_;
+    int dayCount_;
 
     // ========== 怪物系统 ==========
     std::vector<Monster*> monsters_;
@@ -160,6 +162,7 @@ private:
      * @brief 处理挖矿动作
      */
     void handleMiningAction();
+    void executeMining(const cocos2d::Vec2& tileCoord);
 
     /**
      * @brief 处理攻击动作
@@ -230,6 +233,10 @@ private:
      * @brief 获取随机可行走位置
      */
     cocos2d::Vec2 getRandomWalkablePosition() const;
+
+    // 静态持久化数据：记录每一层宝箱最后一次被开启的周数
+    // floor -> week
+    static std::map<int, int> openedChestsPerWeek_;
 };
 
 #endif // __MINE_SCENE_H__

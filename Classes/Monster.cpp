@@ -52,11 +52,13 @@ void Monster::initStats()
     attackRange_ = 40.0f;
     attackCooldown_ = 1.5f;
 
-    // 根据楼层等级增强属性
-    float multiplier = 1.0f + (floorLevel_ - 1) * 0.5f;
+    // 根据楼层等级增强属性 (降低增长幅度)
+    float multiplier = 1.0f + (floorLevel_ - 1) * 0.2f; // 每层增加 20%，之前是 50%
     maxHp_ = static_cast<int>(maxHp_ * multiplier);
-    attackPower_ = static_cast<int>(attackPower_ * multiplier);
-    moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.1f);
+    attackPower_ = static_cast<int>(attackPower_ * 0.6f * multiplier); // 基础伤害打6折
+    moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.05f); 
+
+    if (attackPower_ < 1) attackPower_ = 1;
 
     hp_ = maxHp_;
 
@@ -235,8 +237,8 @@ void Monster::attackPlayer(Player* player)
 
     CCLOG("%s attacks player for %d damage!", name_.c_str(), attackPower_);
 
-    // TODO: 对玩家造成伤害（需要Player类支持）
-    // player->takeDamage(attackPower_);
+    // 对玩家造成伤害
+    player->takeDamage(attackPower_);
 
     // 重置攻击冷却
     currentAttackCooldown_ = attackCooldown_;

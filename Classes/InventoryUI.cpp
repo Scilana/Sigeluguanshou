@@ -156,7 +156,35 @@ void InventoryUI::initSlots()
             listener->setSwallowTouches(true);
             listener->onTouchBegan = [this, slotIndex](Touch* touch, Event* event) {
                 auto target = static_cast<Sprite*>(event->getCurrentTarget());
-                Vec2 locationInNode = target->convertToNodeSpace(touch->getLocation());
+                
+                // 获取摄像机偏移
+                Vec2 cameraDelta = Vec2::ZERO;
+                auto scene = Director::getInstance()->getRunningScene();
+                if (scene) {
+                    auto camera = scene->getDefaultCamera();
+                    auto visibleSize = Director::getInstance()->getVisibleSize();
+                    // 假设摄像机锚点在中心
+                    Vec2 cameraPos = camera->getPosition();
+                    // 只有当UI跟随摄像机移动时才需要这步补偿
+                    // 但通常InventoryUI是作为HUD存在的，如果它被加到了一个跟随摄像机的Layer上，
+                    // local坐标系也会跟着偏移。
+                    // 简单的判定：转换触摸点到世界坐标
+                    // 但这里 target->convertToNodeSpace 会减去 target 的父级位移
+                    // 如果父级位移是跟着摄像机走的，那么就需要加回摄像机偏移
+                    
+                    // 更通用的做法：直接使用 convertTouchToNodeSpaceAR 或类似，
+                    // 但 Cocos 的 convertTouchToNodeSpace 不会自动补摄像机。
+                    // 既然用户反馈 "点击判断偏下"，说明 y 值小了，说明 target 的 y 坐标变大了（跟随摄像机向上移了），
+                    // 而 touch y 还是屏幕坐标（小）。
+                    // 所以需要加上摄像机位移。
+                    
+                    cameraDelta = cameraPos - Vec2(visibleSize.width / 2, visibleSize.height / 2);
+                }
+
+                // 将屏幕点击坐标转换为世界坐标 (针对移动的 HUD Layer)
+                Vec2 worldLoc = touch->getLocation() + cameraDelta;
+                
+                Vec2 locationInNode = target->convertToNodeSpace(worldLoc);
                 Size size = target->getContentSize();
                 Rect rect = Rect(0, 0, size.width, size.height);
 
@@ -212,11 +240,13 @@ void InventoryUI::updateSelection()
     {
         if (slot.slotIndex == selectedSlotIndex_)
         {
-             slot.background->setColor(Color3B(100, 90, 80)); // 选中稍微亮一点
+             // 选中颜色改为更明显的高亮色 (黄褐色)
+             slot.background->setColor(Color3B(180, 160, 100)); 
         }
         else
         {
-             slot.background->setColor(Color3B(60, 55, 50)); // 默认颜色
+             // 默认颜色 (深灰褐色)
+             slot.background->setColor(Color3B(60, 55, 50)); 
         }
     }
 }
@@ -325,27 +355,63 @@ cocos2d::Sprite* InventoryUI::createItemIcon(ItemType itemType)
 
 void InventoryUI::onSlotClicked(int slotIndex)
 {
-    const auto& slot = inventory_->getSlot(slotIndex);
+    CCLOG("onSlotClicked: %d, current selection: %d", slotIndex, selectedSlotIndex_);
 
-    if (slot.isEmpty())
+    // 如果已经选中了一个槽位，且点击的是另一个槽位，则进行交换
+    if (selectedSlotIndex_ != -1 && selectedSlotIndex_ != slotIndex)
     {
-        infoLabel_->setString("");
+        CCLOG("Swapping slot %d with %d", selectedSlotIndex_, slotIndex);
+        inventory_->swapSlots(selectedSlotIndex_, slotIndex);
+        
+        // 更新信息显示
+        const auto& newSlot = inventory_->getSlot(slotIndex);
+        if (!newSlot.isEmpty())
+        {
+            std::string info = StringUtils::format(
+                "%s x%d - %s",
+                InventoryManager::getItemName(newSlot.type).c_str(),
+                newSlot.count,
+                InventoryManager::getItemDescription(newSlot.type).c_str()
+            );
+            infoLabel_->setString(info);
+        }
+        
+        // 交换后维持选中在目标位置，方便连续移动
+        selectedSlotIndex_ = slotIndex;
+        refresh(); // 刷新所有格子显示
     }
     else
     {
-        std::string info = StringUtils::format(
-            "%s x%d - %s",
-            InventoryManager::getItemName(slot.type).c_str(),
-            slot.count,
-            InventoryManager::getItemDescription(slot.type).c_str()
-        );
-        infoLabel_->setString(info);
-
-        CCLOG("Clicked slot %d: %s x%d", slotIndex,
-            InventoryManager::getItemName(slot.type).c_str(), slot.count);
+        // 第一次点击，或者是点击同一个（取消选中）
+        if (selectedSlotIndex_ == slotIndex)
+        {
+            CCLOG("Deselecting slot %d", slotIndex);
+            selectedSlotIndex_ = -1;
+            infoLabel_->setString("");
+        }
+        else
+        {
+            CCLOG("Selecting slot %d", slotIndex);
+            selectedSlotIndex_ = slotIndex;
+            const auto& slot = inventory_->getSlot(slotIndex);
+            if (!slot.isEmpty())
+            {
+                std::string info = StringUtils::format(
+                    "%s x%d - %s",
+                    InventoryManager::getItemName(slot.type).c_str(),
+                    slot.count,
+                    InventoryManager::getItemDescription(slot.type).c_str()
+                );
+                infoLabel_->setString(info);
+            }
+            else
+            {
+                infoLabel_->setString("Empty slot");
+            }
+        }
     }
 
-    // 可以在这里添加更多交互，比如拖拽、使用物品等
+    updateSelection(); 
 }
 
 void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)

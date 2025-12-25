@@ -16,10 +16,13 @@
 
 USING_NS_CC;
 
-MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor)
+// 定义静态成员
+std::map<int, int> MineScene::openedChestsPerWeek_;
+
+MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor, int dayCount)
 {
     MineScene* ret = new (std::nothrow) MineScene();
-    if (ret && ret->init(inventory, currentFloor))
+    if (ret && ret->init(inventory, currentFloor, dayCount))
     {
         ret->autorelease();
         return ret;
@@ -28,11 +31,14 @@ MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor)
     return nullptr;
 }
 
-bool MineScene::init(InventoryManager* inventory, int currentFloor)
+bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount)
 {
     if (!Scene::init())
         return false;
 
+    inventory_ = inventory;
+    currentFloor_ = currentFloor;
+    dayCount_ = dayCount;
     CCLOG("========================================");
     CCLOG("Initializing Mine Scene (Floor %d)", currentFloor);
     CCLOG("========================================");
@@ -392,10 +398,11 @@ void MineScene::initUI()
     if (player_)
     {
         auto energyBar = EnergyBar::create(player_);
-        auto visibleSize = Director::getInstance()->getVisibleSize();
-        auto origin = Director::getInstance()->getVisibleOrigin();
-        energyBar->setPosition(Vec2(origin.x + visibleSize.width - 50, origin.y + 50));
+    if (energyBar)
+    {
+        energyBar->setName("EnergyBar");
         this->addChild(energyBar, 100);
+    }
     }
 }
 
@@ -410,10 +417,9 @@ void MineScene::initMonsters()
 {
     monsters_.clear();
 
-    // 初始生成一些怪物
-    // 数量随楼层增加
-    int initialCount = 2 + currentFloor_;
-    if (initialCount > 10) initialCount = 10;
+    // 怪物太多？减少到每层最多只有两只
+    int initialCount = 1 + (rand() % 2); // 1 or 2
+    if (currentFloor_ > 5) initialCount = 2; // 后期固定2只
 
     for (int i = 0; i < initialCount; ++i)
     {
@@ -425,24 +431,30 @@ void MineScene::initChests()
 {
     chests_.clear();
 
-    // 初始生成宝箱
-    // 概率随楼层增加
-    int chestCount = 1;
-    if (currentFloor_ >= 3) chestCount = 2 + rand() % 2;
-    else if (currentFloor_ >= 2) chestCount = 1 + rand() % 2;
+    // 宝箱数量：至多一个，甚至不刷
+    // 设定 40% 的概率出现一个宝箱
+    int chestCount = (rand() % 100 < 40) ? 1 : 0;
     
-    // 如果运气好，多生成一个
-    if (rand() % 100 < 20) chestCount++;
-
-    for (int i = 0; i < chestCount; ++i)
+    if (chestCount > 0)
     {
-        Vec2 pos = getRandomWalkablePosition();
+        // 1. 检查这一周这一层的宝箱是否已经开过
+        int currentWeek = (dayCount_ - 1) / 7 + 1;
         
+        if (openedChestsPerWeek_.count(currentFloor_) > 0 && 
+            openedChestsPerWeek_[currentFloor_] == currentWeek)
+        {
+            // 这一周已经开过了，直接不生成，避免玩家重复进出刷宝箱或看到已开箱子
+            return;
+        }
+
+        // 2. 生成宝箱
         auto chest = TreasureChest::create(currentFloor_);
-        chest->setPosition(pos);
-        this->addChild(chest, 5); // 宝箱层级
-        
-        chests_.push_back(chest);
+        if (chest)
+        {
+            chest->setPosition(getRandomWalkablePosition());
+            this->addChild(chest, 5);
+            chests_.push_back(chest);
+        }
     }
 }
 
@@ -451,6 +463,17 @@ void MineScene::update(float delta)
     Scene::update(delta);
     updateCamera();
     updateUI();
+    // updateChopping removed as it belongs in GameScene
+
+    // 更新能量条位置（始终在右下角，跟随摄像机）
+    auto energyBar = this->getChildByName("EnergyBar");
+    auto camera = this->getDefaultCamera();
+    if (energyBar && camera)
+    {
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        energyBar->setPosition(Vec2(camera->getPositionX() + visibleSize.width / 2 - 50, 
+                                    camera->getPositionY() - visibleSize.height / 2 + 110));
+    }
     updateMonsters(delta);
 
     // 攻击冷却
@@ -717,91 +740,75 @@ void MineScene::onInventoryClosed()
     initToolbar();
 }
 
-void MineScene::handleMiningAction()
+void MineScene::executeMining(const Vec2& tileCoord)
 {
-    CCLOG(">>> MineScene::handleMiningAction entered");
-    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) {
-        CCLOG(">>> ERROR: Missing dependencies in handleMiningAction (Player: %p, MiningMgr: %p, MineLayer: %p, Inventory: %p)", 
-               player_, miningManager_, mineLayer_, inventory_);
-        return;
-    }
-
-    // 检查是否装备了镐子 (Pickaxe)
-    ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
-    CCLOG(">>> Current selectedSlotIndex_: %d, selectedItemIndex_: %d", inventory_->getSelectedSlotIndex(), selectedItemIndex_);
-    CCLOG(">>> Current tool: %s (Type ID: %d)", InventoryManager::getItemName(currentTool).c_str(), (int)currentTool);
-
-    if (currentTool != ItemType::Pickaxe)
+    MiningManager::MiningResult result = miningManager_->mineTile(tileCoord);
+    if (result.success)
     {
-        CCLOG(">>> Not holding a Pickaxe, Item: %s", InventoryManager::getItemName(currentTool).c_str());
-        showActionMessage("Need a Pickaxe!", Color3B::RED);
-        // 如果没镐子，尝试当作攻击处理
-        handleAttackAction();
-        return;
-    }
-
-    // 获取玩家位置和朝向
-    Vec2 playerPos = player_->getPosition();
-    Vec2 facingDir = player_->getFacingDirection();
-    CCLOG(">>> Player Pos: (%.1f, %.1f), Facing: (%.1f, %.1f)", playerPos.x, playerPos.y, facingDir.x, facingDir.y);
-    
-    // 归一化朝向并稍微延伸一点距离，以确定面前的格子
-    // 如果没有方向（或者是0,0），尝试默认方向
-    if (facingDir.length() < 0.1f) {
-        CCLOG(">>> WARNING: facingDir is zero, using default (0, -1)");
-        facingDir = Vec2(0, -1);
-    }
-    
-    Vec2 targetPos = playerPos + facingDir * 24.0f; // 缩短一点探测距离
-    
-    // 将位置转换为瓦片坐标
-    Vec2 tileCoord = mineLayer_->positionToTileCoord(targetPos);
-    CCLOG(">>> Target Pos: (%.1f, %.1f), Target Tile: (%.1f, %.1f)", targetPos.x, targetPos.y, tileCoord.x, tileCoord.y);
-    
-    // 尝试挖矿（精准挖掘）
-    bool mined = false;
-    
-    // 优先检测面向的格子
-    bool isMineral = mineLayer_->isMineralAt(tileCoord);
-    CCLOG(">>> mineLayer_->isMineralAt(targetTile) returns %s", isMineral ? "TRUE" : "FALSE");
-
-    if (isMineral)
-    {
-        CCLOG(">>> Mineral found at target tile, calling miningManager_->mineTile");
-        MiningManager::MiningResult result = miningManager_->mineTile(tileCoord);
-        CCLOG(">>> Mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
-        if (result.success)
-        {
-            mined = true;
-            player_->consumeEnergy(4.0f); // 挖矿消耗能量
+        player_->consumeEnergy(4.0f);
+        if (!result.message.empty()) {
             showActionMessage(result.message, Color3B::GREEN);
         }
     }
+}
+
+void MineScene::handleMiningAction()
+{
+    if (!player_ || !miningManager_ || !mineLayer_ || !inventory_) return;
+
+    float energyPercent = player_->getCurrentEnergy() / player_->getMaxEnergy();
+    if (energyPercent <= 0.2f)
+    {
+        showActionMessage("Exhausted!", Color3B::RED);
+        return;
+    }
+
+    ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
+    if (currentTool != ItemType::Pickaxe)
+    {
+        showActionMessage("Need a Pickaxe!", Color3B::RED);
+        handleAttackAction();
+        return;
+    }
+
+    Vec2 playerPos = player_->getPosition();
+    Vec2 facingDir = player_->getFacingDirection();
+    if (facingDir.length() < 0.1f) facingDir = Vec2(0, -1);
     
-    // 脚下检测
+    Vec2 targetPos = playerPos + facingDir * 24.0f;
+    Vec2 tileCoord = mineLayer_->positionToTileCoord(targetPos);
+    
+    bool mined = false;
+    float delay = 0.0f;
+    if (energyPercent <= 0.5f) delay = 0.2f; // 黄色能量增加前置延迟（模拟动作变慢）
+
+    if (mineLayer_->isMineralAt(tileCoord))
+    {
+        if (delay > 0) {
+            auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, tileCoord]() { executeMining(tileCoord); }), nullptr);
+            this->runAction(seq);
+        } else {
+            executeMining(tileCoord);
+        }
+        mined = true;
+    }
+    
     if (!mined)
     {
         Vec2 footTile = mineLayer_->positionToTileCoord(playerPos);
-        CCLOG(">>> Checking under foot at Tile: (%.1f, %.1f)", footTile.x, footTile.y);
         if (mineLayer_->isMineralAt(footTile))
         {
-            CCLOG(">>> Mineral found under foot, calling miningManager_->mineTile");
-            MiningManager::MiningResult result = miningManager_->mineTile(footTile);
-            CCLOG(">>> Foot mining result: %s (Msg: %s)", result.success ? "Success" : "Fail", result.message.c_str());
-            if (result.success)
-            {
-                mined = true;
-                showActionMessage(result.message, Color3B::GREEN);
+            if (delay > 0) {
+                auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, footTile]() { executeMining(footTile); }), nullptr);
+                this->runAction(seq);
+            } else {
+                executeMining(footTile);
             }
+            mined = true;
         }
     }
     
-    if (!mined)
-    {
-        CCLOG(">>> No mining performed, calling handleAttackAction as fallback");
-        // 即使有镐子但没挖到矿，也可以挥动一下（攻击）
-        handleAttackAction();
-    }
+    if (!mined) handleAttackAction();
 }
 
 
@@ -885,8 +892,14 @@ void MineScene::handleChestInteraction()
             auto result = chest->open();
             if (result.item != ItemType::None)
             {
-                inventory_->addItem(result.item, result.count);
-                showActionMessage(result.message, Color3B::YELLOW);
+                if (inventory_->addItem(result.item, result.count))
+                {
+                    showActionMessage(result.message, Color3B::YELLOW);
+                    
+                    // 记录开启状态（按周记录持久化）
+                    int currentWeek = (dayCount_ - 1) / 7 + 1;
+                    openedChestsPerWeek_[currentFloor_] = currentWeek;
+                }
             }
             return;
         }
@@ -956,7 +969,7 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_TAB:
-    case EventKeyboard::KeyCode::KEY_I:
+    case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
         break;
 
@@ -996,7 +1009,7 @@ void MineScene::goToPreviousFloor()
     }
 
     CCLOG("Switching to previous floor: %d -> %d", currentFloor_, prevFloor);
-    auto prevScene = MineScene::createScene(inventory_, prevFloor);
+    auto prevScene = MineScene::createScene(inventory_, prevFloor, dayCount_);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, prevScene));
 }
 
@@ -1011,7 +1024,7 @@ void MineScene::goToNextFloor()
     }
 
     CCLOG("Switching to next floor: %d -> %d", currentFloor_, nextFloor);
-    auto nextScene = MineScene::createScene(inventory_, nextFloor);
+    auto nextScene = MineScene::createScene(inventory_, nextFloor, dayCount_);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
 }
 

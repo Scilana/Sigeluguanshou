@@ -114,7 +114,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
         CCLOG("Unknown mineral GID: %d, using default", gid);
         mineLayer_->clearMineralAt(tileCoord);
         mineLayer_->clearCollisionAt(tileCoord);
-        return { true, "Mineral broken!" };
+        return { true, "" }; // 不提示通用消息
     }
 
     // 生成瓦片键
@@ -143,7 +143,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             if (!dropMsg.empty()) {
                 return { true, dropMsg };
             } else {
-                return { true, mineralDef->name + " broken!" };
+                return { true, "" };
             }
         }
         else
@@ -168,7 +168,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             if (!dropMsg.empty()) {
                 return { true, dropMsg };
             } else {
-                return { true, mineralDef->name + " broken!" };
+                return { true, "" };
             }
         }
         else

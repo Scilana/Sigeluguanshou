@@ -353,7 +353,21 @@ void Player::update(float delta)
     }
 
     // ========== 移动逻辑 ==========
-    // 计算移动方向
+    // 1. 根据能量状态计算移动速度
+    float speedMultiplier = 1.0f;
+    float energyPercent = currentEnergy_ / maxEnergy_;
+    
+    if (energyPercent <= 0.2f) {
+        // 红色：大幅减速
+        speedMultiplier = 0.4f;
+    } else if (energyPercent <= 0.5f) {
+        // 黄色：中度减速
+        speedMultiplier = 0.7f;
+    }
+    
+    moveSpeed_ = baseMoveSpeed_ * speedMultiplier;
+
+    // 2. 计算移动方向
     Vec2 dir = Vec2::ZERO;
     if (isUpPressed_) dir.y += 1;
     if (isDownPressed_) dir.y -= 1;
@@ -567,8 +581,14 @@ void Player::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         isRightPressed_ = true;
         break;
     case EventKeyboard::KeyCode::KEY_J:
+    {
+        // 红色能量 (20%)：直接锁定按键，没有任何反应
+        if (currentEnergy_ / maxEnergy_ <= 0.2f) {
+            return;
+        }
         isAttackPressed_ = true;
-        break;
+    }
+    break;
     default:
         break;
     }
