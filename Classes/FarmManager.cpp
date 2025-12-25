@@ -478,6 +478,8 @@ void FarmManager::redrawOverlay()
 
                     // 【关键】添加到层级：Z序设为 1 (盖在泥土上面)
                     cropLayer_->addChild(sprite, 1);
+
+
                 }
             }
         }
