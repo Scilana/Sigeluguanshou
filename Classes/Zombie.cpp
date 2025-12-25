@@ -61,6 +61,19 @@ void Zombie::initDisplay()
         {
             CCLOG("Zombie sprite loaded: %s", spritePath.c_str());
             spriteLoaded = true;
+
+            // Pixel art settings
+            this->getTexture()->setAliasTexParameters();
+            
+            // "Sway" animation (Idle)
+            // Rotate slightly left and right to simulate breathing/standing
+            float duration = 1.0f;
+            float angle = 5.0f;
+            auto swayRight = RotateBy::create(duration, angle);
+            auto swayLeft = RotateBy::create(duration * 2, -angle * 2);
+            auto swayReturn = RotateBy::create(duration, angle);
+            auto seq = Sequence::create(swayRight, swayLeft, swayReturn, nullptr);
+            this->runAction(RepeatForever::create(seq));
         }
     }
 
