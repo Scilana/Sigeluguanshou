@@ -79,6 +79,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount
     initControls();
     initMonsters();
     initChests();
+    initElevator(); // [New]
     initWishingWell();
     initToolbar(); // 初始化工具栏
 
@@ -428,6 +429,30 @@ void MineScene::initMonsters()
         spawnMonster();
     }
 }
+void MineScene::initElevator()
+{
+    if (!mineLayer_) return;
+
+    auto map = mineLayer_->getTMXMap();
+    if (!map) return;
+
+    Size mapSize = map->getContentSize();
+    Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
+    
+    // Create Elevator Sprite
+    elevatorSprite_ = Sprite::create("myhouse/elevator.png"); // Try house asset first
+    if (!elevatorSprite_) {
+        // Fallback: Create a visual placeholder if file missing
+        auto draw = DrawNode::create();
+        draw->drawSolidRect(Vec2(-20,-20), Vec2(20,20), Color4F(0.4f, 0.4f, 0.5f, 1.0f)); // Greyish
+        elevatorSprite_ = Sprite::create();
+        elevatorSprite_->addChild(draw);
+        elevatorSprite_->setContentSize(Size(40,40));
+    }
+    
+    elevatorSprite_->setPosition(centerPos);
+    this->addChild(elevatorSprite_, 5); 
+}
 
 void MineScene::initChests()
 {
@@ -774,6 +799,7 @@ void MineScene::executeMining(const Vec2& tileCoord)
     MiningManager::MiningResult result = miningManager_->mineTile(tileCoord);
     if (result.success)
     {
+        player_->playSwingAnimation();
         player_->consumeEnergy(4.0f);
         if (!result.message.empty()) {
             showActionMessage(result.message, Color3B::GREEN);
@@ -804,40 +830,50 @@ void MineScene::handleMiningAction()
     Vec2 facingDir = player_->getFacingDirection();
     if (facingDir.length() < 0.1f) facingDir = Vec2(0, -1);
     
-    Vec2 targetPos = playerPos + facingDir * 24.0f;
-    Vec2 tileCoord = mineLayer_->positionToTileCoord(targetPos);
-    
+    // [Optimization 1] Check multiple tiles
+    std::vector<Vec2> targets;
+    Vec2 baseTarget = playerPos + facingDir * 32.0f;
+    targets.push_back(baseTarget);
+
+    // Add side tiles
+    if (std::abs(facingDir.x) < 0.1f) { // Vertical
+        targets.push_back(baseTarget + Vec2(24, 0));
+        targets.push_back(baseTarget + Vec2(-24, 0));
+    } else { // Horizontal
+        targets.push_back(baseTarget + Vec2(0, 24));
+        targets.push_back(baseTarget + Vec2(0, -24));
+    }
+    targets.push_back(playerPos); // Feet
+
     bool mined = false;
     float delay = 0.0f;
-    if (energyPercent <= 0.5f) delay = 0.2f; // 黄色能量增加前置延迟（模拟动作变慢）
+    if (energyPercent <= 0.5f) delay = 0.2f;
 
-    if (mineLayer_->isMineralAt(tileCoord))
+    for (const auto& target : targets)
     {
-        if (delay > 0) {
-            auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, tileCoord]() { executeMining(tileCoord); }), nullptr);
-            this->runAction(seq);
-        } else {
-            executeMining(tileCoord);
+        Vec2 tileCoord = mineLayer_->positionToTileCoord(target);
+        if (mineLayer_->isMineralAt(tileCoord))
+        {
+             mined = true;
+             // Execute mining directly here?
+             // Reusing executeMining logic but adapting it to not be async/delayed for loop?
+             // Or just break and do the first one found.
+             // We can use the delay logic but applied to the *found* tile.
+             
+             if (delay > 0) {
+                auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, tileCoord]() { executeMining(tileCoord); }), nullptr);
+                this->runAction(seq);
+             } else {
+                executeMining(tileCoord);
+             }
+             break;
         }
-        mined = true;
     }
-    
+
     if (!mined)
     {
-        Vec2 footTile = mineLayer_->positionToTileCoord(playerPos);
-        if (mineLayer_->isMineralAt(footTile))
-        {
-            if (delay > 0) {
-                auto seq = Sequence::create(DelayTime::create(delay), CallFunc::create([this, footTile]() { executeMining(footTile); }), nullptr);
-                this->runAction(seq);
-            } else {
-                executeMining(footTile);
-            }
-            mined = true;
-        }
+        player_->playSwingAnimation();
     }
-    
-    if (!mined) handleAttackAction();
 }
 
 
@@ -846,7 +882,7 @@ void MineScene::handleAttackAction()
     if (currentAttackCooldown_ > 0) return;
     
     // 播放攻击动画
-    // player_->playAttackAnimation();
+    player_->playSwingAnimation();
     currentAttackCooldown_ = attackCooldown_;
     
     Vec2 playerPos = player_->getPosition();
@@ -982,20 +1018,35 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_M:
-        // 显示电梯UI（如果需要）
-        // 或者直接返回农场
-        backToFarm();
+        // [Optimization 4] 电梯交互限制：必须在电梯附近
+        if (elevatorSprite_)
+        {
+            float dist = player_->getPosition().distance(elevatorSprite_->getPosition());
+            if (dist < 60.0f) // 判定范围
+            {
+                showElevatorUI();
+            }
+            else
+            {
+                showActionMessage("Too far from elevator!", Color3B::GRAY);
+            }
+        }
+        else
+        {
+            // 如果没电梯，暂时允许直接回城 (Fallback)
+             backToFarm();
+        }
         break;
 
+    /* [Removed Shortcuts]
     case EventKeyboard::KeyCode::KEY_Q:
-        // 切换到上一个矿洞场景
         goToPreviousFloor();
         break;
 
     case EventKeyboard::KeyCode::KEY_E:
-        // 切换到下一个矿洞场景
         goToNextFloor();
         break;
+    */
 
     case EventKeyboard::KeyCode::KEY_TAB:
     case EventKeyboard::KeyCode::KEY_B:
@@ -1259,5 +1310,54 @@ void MineScene::handleWishAction()
         
         // 刷新UI
         updateUI(); 
+    }
+}
+
+// Elevator Helpers
+void MineScene::showElevatorUI()
+{
+    if (elevatorUI_) {
+        elevatorUI_->close();
+        elevatorUI_ = nullptr;
+    }
+    
+    elevatorUI_ = ElevatorUI::create();
+    if (elevatorUI_)
+    {
+        elevatorUI_->setFloorSelectCallback(CC_CALLBACK_1(MineScene::onElevatorFloorSelected, this));
+        elevatorUI_->setCloseCallback(CC_CALLBACK_0(MineScene::onElevatorClosed, this));
+        
+        // 添加到 uiLayer_ 以保证其在屏幕正中心显示
+        if (uiLayer_) {
+            uiLayer_->addChild(elevatorUI_, 2000);
+            elevatorUI_->setPosition(Vec2::ZERO);
+        } else {
+            this->addChild(elevatorUI_, 2000);
+        }
+        
+        elevatorUI_->show();
+    }
+}
+
+void MineScene::onElevatorClosed()
+{
+    elevatorUI_ = nullptr;
+}
+
+void MineScene::onElevatorFloorSelected(int floor)
+{
+    if (floor == 0)
+    {
+        backToFarm();
+    }
+    else if (floor >= 1 && floor <= 5) // Limits could be dynamic
+    {
+        CCLOG("Elevator to floor %d", floor);
+        auto nextScene = MineScene::createScene(inventory_, floor, dayCount_, accumulatedSeconds_);
+        Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
+    }
+    else
+    {
+        showActionMessage("Floor unavailable!", Color3B::RED);
     }
 }

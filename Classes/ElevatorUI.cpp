@@ -102,7 +102,7 @@ void ElevatorUI::createPanel()
     this->addChild(inputLabel_, 3);
 
     // 提示
-    auto hintLabel = Label::createWithSystemFont("Type number (0-4) then ENTER", "Arial", 16);
+    auto hintLabel = Label::createWithSystemFont("Type number (0-5) then ENTER", "Arial", 16);
     hintLabel->setPosition(Vec2(center.x, center.y - 140));
     hintLabel->setColor(Color3B::GRAY);
     this->addChild(hintLabel, 2);
@@ -119,21 +119,23 @@ void ElevatorUI::createFloorButtons()
     Vec2 center = Vec2(visibleSize.width / 2, visibleSize.height / 2);
 
     std::vector<std::string> floorNames = {
-        "[0] Farm Surface",
-        "[1] Copper Mine",
-        "[2] Silver Mine",
-        "[3] Gold Mine",
-        "[4] Deep Mine"
+        u8"[0] farm",
+        u8"[1]",
+        u8"[2]",
+        u8"[3]",
+        u8"[4]",
+        u8"[5]"
     };
 
+
     // 仅显示列表信息，不再是按钮（或者作为不可点击的列表展示）
-    for (int i = 0; i < 5; ++i)
+    for (int i = 0; i < 6; ++i)
     {
         auto label = Label::createWithSystemFont(floorNames[i], "Arial", 20);
         label->setColor(Color3B::WHITE);
         label->setAnchorPoint(Vec2(0, 0.5));
         
-        float yPos = center.y + 50 - i * 35;
+        float yPos = center.y + 70 - i * 35; // 稍微调高起始点
         label->setPosition(Vec2(center.x - 80, yPos));
 
         this->addChild(label, 3);
@@ -200,7 +202,7 @@ void ElevatorUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         try {
             int floor = std::stoi(inputText_);
             // 简单校验
-            if (floor >= 0 && floor <= 4)
+            if (floor >= 0 && floor <= 5)
             {
                 if (floorSelectCallback_)
                 {

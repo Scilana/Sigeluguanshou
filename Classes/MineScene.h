@@ -5,6 +5,7 @@
 #include <string>
 #include <vector>
 #include <map>
+#include "ElevatorUI.h"
 
 #include "InventoryManager.h"
 
@@ -89,6 +90,14 @@ private:
     cocos2d::Label* itemLabel_;       // current tool label
     cocos2d::Label* actionLabel_;     // action hint label
     cocos2d::Label* healthLabel_;     // health label
+    cocos2d::Sprite* elevatorSprite_{ nullptr }; // [New] Elevator
+    ElevatorUI* elevatorUI_{ nullptr };          // [New] UI
+
+    // Elevator Methods
+    void initElevator();
+    void showElevatorUI();
+    void onElevatorFloorSelected(int floor);
+    void onElevatorClosed();
 
     // 当前矿洞层数
     int currentFloor_;

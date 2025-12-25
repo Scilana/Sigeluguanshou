@@ -92,6 +92,32 @@ void MiningManager::initMineralDefs()
         };
     }
 
+    // [New] 铁矿石 - 假设 GID 范围 (用户需在 Tiled 中对应)
+    // 假设 750-770 为铁矿
+    for (int gid = 750; gid <= 770; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Iron Ore",
+            4,                      // 4次敲击
+            ItemType::IronOre,      // 掉落铁矿石
+            1, 2,                   // 掉落1-2个
+            8                       // 8点经验
+        };
+    }
+
+    // [New] 钻石矿 - 假设 GID 范围 
+    // 假设 800-810 为钻石矿
+    for (int gid = 800; gid <= 810; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Diamond Ore",
+            10,                     // 10次敲击 (非常硬)
+            ItemType::DiamondOre,   // 掉落钻石
+            1, 1,                   // 掉落1个
+            50                      // 50点经验
+        };
+    }
+
     CCLOG("Mineral definitions initialized: %d types", (int)mineralDefs_.size());
 }
 

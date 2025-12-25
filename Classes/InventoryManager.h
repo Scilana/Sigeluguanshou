@@ -33,8 +33,10 @@ enum class ItemType
     Fish,
     // 矿石类型
     CopperOre,      // 铜矿石
+    IronOre,        // 铁矿石 [New]
     SilverOre,      // 银矿石
     GoldOre,        // 金矿石
+    DiamondOre,     // 钻石矿石 [New]
     // 武器类型
     WoodenSword,    // 木剑
     IronSword,      // 铁剑
