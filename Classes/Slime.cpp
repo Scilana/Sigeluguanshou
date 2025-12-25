@@ -31,7 +31,7 @@ void Slime::initStats()
 {
     // 史莱姆基础属性
     name_ = "Slime";
-    maxHp_ = 30;           // 低血量
+    maxHp_ = 5;           // 低血量
     attackPower_ = 5;      // 低攻击
     moveSpeed_ = 60.0f;    // 较快移动
     attackRange_ = 35.0f;
@@ -39,7 +39,6 @@ void Slime::initStats()
 
     // 根据楼层等级增强属性
     float multiplier = 1.0f + (floorLevel_ - 1) * 0.4f;
-    maxHp_ = static_cast<int>(maxHp_ * multiplier);
     attackPower_ = static_cast<int>(attackPower_ * multiplier);
     moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.15f);
 

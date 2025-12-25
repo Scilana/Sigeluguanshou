@@ -46,7 +46,7 @@ void Monster::initStats()
 {
     // 基础属性（子类可重写）
     name_ = "Monster";
-    maxHp_ = 30;
+    maxHp_ = 5;
     attackPower_ = 5;
     moveSpeed_ = 50.0f;
     attackRange_ = 40.0f;
@@ -54,7 +54,7 @@ void Monster::initStats()
 
     // 根据楼层等级增强属性 (降低增长幅度)
     float multiplier = 1.0f + (floorLevel_ - 1) * 0.2f; // 每层增加 20%，之前是 50%
-    maxHp_ = static_cast<int>(maxHp_ * multiplier);
+    
     attackPower_ = static_cast<int>(attackPower_ * 0.6f * multiplier); // 基础伤害打6折
     moveSpeed_ *= (1.0f + (floorLevel_ - 1) * 0.05f); 
 

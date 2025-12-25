@@ -72,6 +72,8 @@ private:
     int selectedItemIndex_;
     void initToolbar();
     void selectItemByIndex(int idx);
+    void initToolbarUI();
+    void refreshToolbarUI();
     
     // 打开/关闭背包
     void toggleInventory();
@@ -88,6 +90,12 @@ private:
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
     cocos2d::Label* itemLabel_;       // current tool label
+    cocos2d::LayerColor* toolbarUI_ = nullptr;
+    std::vector<cocos2d::Sprite*> toolbarSlots_;
+    std::vector<cocos2d::Sprite*> toolbarIcons_;
+    std::vector<cocos2d::Label*> toolbarCounts_;
+    std::vector<int> toolbarCountCache_;
+    int toolbarSelectedCache_ = -1;
     cocos2d::Label* actionLabel_;     // action hint label
     cocos2d::Label* healthLabel_;     // health label
     cocos2d::Sprite* elevatorSprite_{ nullptr }; // [New] Elevator
