@@ -18,6 +18,7 @@ private:
     int maxVal_;
     std::function<void(int)> callback_;
     std::string inputText_;
+    bool isFirstInput_ = true;
     
     cocos2d::Label* inputLabel_;
     cocos2d::Label* titleLabel_;

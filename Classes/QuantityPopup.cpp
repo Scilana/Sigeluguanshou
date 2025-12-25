@@ -75,6 +75,8 @@ void QuantityPopup::createUI()
 
 void QuantityPopup::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
+    event->stopPropagation();
+
     if (keyCode == EventKeyboard::KeyCode::KEY_ESCAPE)
     {
         close();
@@ -90,6 +92,12 @@ void QuantityPopup::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
     {
         int num = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
+        
+        if (isFirstInput_) {
+            inputText_ = "";
+            isFirstInput_ = false;
+        }
+
         if (inputText_ == "0") inputText_ = "";
         inputText_ += std::to_string(num);
         
@@ -97,7 +105,10 @@ void QuantityPopup::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         try {
             int val = std::stoi(inputText_);
             if (val > maxVal_) inputText_ = std::to_string(maxVal_);
-        } catch(...) {}
+            if (val < 0) inputText_ = "0";
+        } catch(...) {
+            inputText_ = std::to_string(maxVal_);
+        }
         
         inputLabel_->setString(inputText_);
         return;

@@ -6,6 +6,7 @@
 
 // 前向声明，告诉编译器 MapLayer 类的存在
 class MapLayer;
+class FarmManager;
 
 /**
  * @brief 玩家类
@@ -34,6 +35,7 @@ public:
      * @brief 设置地图层（用于碰撞检测）
      */
     void setMapLayer(MapLayer* mapLayer);
+    void setFarmManager(FarmManager* farmManager) { farmManager_ = farmManager; }
 
     /**
      * @brief 设置移动速度
@@ -144,6 +146,7 @@ private:
 
     // 地图引用
     MapLayer* mapLayer_;
+    FarmManager* farmManager_ = nullptr;
 
     // 战斗属性
     int hp_;

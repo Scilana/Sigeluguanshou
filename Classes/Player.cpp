@@ -1,5 +1,6 @@
 #include "Player.h"
-#include "MapLayer.h" 
+#include "MapLayer.h"
+#include "FarmManager.h" 
 
 USING_NS_CC;
 
@@ -414,8 +415,34 @@ void Player::updateMovement(float delta)
 
     if (mapLayer_)
     {
+        auto checkCollision = [this](const Vec2& pos) -> bool {
+            // 1. 检查地图基础碰撞
+            if (!mapLayer_->isWalkable(pos)) return false;
+            
+            // 2. 检查储物箱碰撞
+            if (farmManager_) {
+                Vec2 tileCoord = mapLayer_->positionToTileCoord(pos);
+                tileCoord.x = std::round(tileCoord.x);
+                tileCoord.y = std::round(tileCoord.y);
+                
+                if (farmManager_->getStorageChestAt(tileCoord)) {
+                    // 【修复】如果不允许穿过，那如果自己就在箱子里（刚放置时），会被卡死
+                    // 解决方案：如果当前位置也在也就是同一个箱子里，允许移动（为了能走出来）
+                    Vec2 currentTile = mapLayer_->positionToTileCoord(this->getPosition());
+                    currentTile.x = std::round(currentTile.x);
+                    currentTile.y = std::round(currentTile.y);
+                    
+                    if (currentTile == tileCoord) {
+                        return true; // 允许在内部移动/走出
+                    }
+                    return false; // 否则（从外面撞进去）禁止
+                }
+            }
+            return true;
+        };
+
         // 1. 尝试直接移动到目标位置
-        if (mapLayer_->isWalkable(nextPos))
+        if (checkCollision(nextPos))
         {
             this->setPosition(nextPos);
         }
@@ -424,7 +451,7 @@ void Player::updateMovement(float delta)
             // 2. 滑墙逻辑 (Slide along wall)
             // 如果斜着走被挡住了，尝试只保留 X 轴移动
             Vec2 nextPosX = currentPos + Vec2(direction.x * moveSpeed_ * delta, 0);
-            if (mapLayer_->isWalkable(nextPosX) && std::abs(direction.x) > 0.1f)
+            if (checkCollision(nextPosX) && std::abs(direction.x) > 0.1f)
             {
                 this->setPosition(nextPosX);
             }
@@ -432,7 +459,7 @@ void Player::updateMovement(float delta)
             {
                 // 3. 尝试只保留 Y 轴移动
                 Vec2 nextPosY = currentPos + Vec2(0, direction.y * moveSpeed_ * delta);
-                if (mapLayer_->isWalkable(nextPosY) && std::abs(direction.y) > 0.1f)
+                if (checkCollision(nextPosY) && std::abs(direction.y) > 0.1f)
                 {
                     this->setPosition(nextPosY);
                 }

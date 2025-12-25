@@ -138,11 +138,11 @@ void GameScene::initFarm()
 
     if (farmManager_)
     {
-
         mapLayer_->addChild(farmManager_, 5);
-
-        CCLOG("FarmManager added on top of MapLayer");
-
+        if (player_) {
+            player_->setFarmManager(farmManager_);
+        }
+        CCLOG("FarmManager added on top of MapLayer and linked to Player");
     }
 
     else
@@ -226,6 +226,11 @@ void GameScene::initPlayer()
         if (mapLayer_)
         {
             player_->setMapLayer(mapLayer_);
+        }
+        
+        if (farmManager_)
+        {
+            player_->setFarmManager(farmManager_);
         }
 
         this->addChild(player_, 10);
@@ -512,16 +517,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_P:
         toggleMarket();
-        break;
-    case EventKeyboard::KeyCode::KEY_L:
-        if (isPlayerNearElevator())
-        {
-            enterMine();
-        }
-        else
-        {
-            showActionMessage("Elevator is too far!", Color3B::RED);
-        }
         break;
     case EventKeyboard::KeyCode::KEY_X:
         // 保存游戏
