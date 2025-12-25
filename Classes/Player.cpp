@@ -9,6 +9,66 @@ USING_NS_CC;
 const float FRAME_WIDTH = 70.0f;
 const float FRAME_HEIGHT = 120.0f;
 
+namespace
+{
+    const float kFishingCastFrameDelay = 0.1f;
+    const float kFishingWaitFrameDelay = 0.5f;
+    const float kFishingReelFrameDelay = 0.1f;
+
+    struct FishingFrameSpec
+    {
+        const char* dir;
+        int outCount;
+        int waitCount;
+        int inCount;
+    };
+
+    FishingFrameSpec getFishingFrameSpec(const Vec2& facing)
+    {
+        if (facing.lengthSquared() < 0.0001f) {
+            return { "down", 4, 2, 2 };
+        }
+
+        if (std::abs(facing.y) >= std::abs(facing.x)) {
+            if (facing.y >= 0.0f) {
+                return { "up", 3, 2, 3 };
+            }
+            return { "down", 4, 2, 2 };
+        }
+
+        if (facing.x >= 0.0f) {
+            return { "right", 4, 2, 5 };
+        }
+        return { "left", 4, 2, 5 };
+    }
+
+    SpriteFrame* createFullFrame(const std::string& filename)
+    {
+        auto texture = Director::getInstance()->getTextureCache()->addImage(filename);
+        if (!texture) {
+            return nullptr;
+        }
+
+        auto size = texture->getContentSize();
+        return SpriteFrame::createWithTexture(texture, Rect(0, 0, size.width, size.height));
+    }
+
+    void appendFishingFrames(Vector<SpriteFrame*>& frames, const char* dir, const char* stage, int count)
+    {
+        for (int i = 1; i <= count; ++i) {
+            std::string filename = StringUtils::format("tools/fishing/%s%s%d.png", dir, stage, i);
+            if (!FileUtils::getInstance()->isFileExist(filename)) {
+                CCLOG("Warning: Fishing frame missing: %s", filename.c_str());
+                continue;
+            }
+            auto frame = createFullFrame(filename);
+            if (frame) {
+                frames.pushBack(frame);
+            }
+        }
+    }
+}
+
 Player* Player::create()
 {
     Player* ret = new (std::nothrow) Player();
@@ -57,6 +117,8 @@ bool Player::init()
     stateBeforeAttack_ = PlayerState::IDLE;
     currentAnimAction_ = nullptr;
     isAttacking_ = false;
+    isFishingAnim_ = false;
+    fishingAnimAction_ = nullptr;
 
     // 3. 设置初始外观 (默认朝下的站立图)
     if (FileUtils::getInstance()->isFileExist("characters/standDown.png")) {
@@ -327,6 +389,121 @@ void Player::playSwingAnimation()
     CCLOG("Swing attack! Direction: (%.2f, %.2f)", facingDirection_.x, facingDirection_.y);
 }
 
+void Player::startFishingCast()
+{
+    isFishingAnim_ = true;
+    isAttacking_ = false;
+    isAttackPressed_ = false;
+
+    if (currentAnimAction_) {
+        this->stopAction(currentAnimAction_);
+        currentAnimAction_ = nullptr;
+    }
+    if (fishingAnimAction_) {
+        this->stopAction(fishingAnimAction_);
+        fishingAnimAction_ = nullptr;
+    }
+
+    auto spec = getFishingFrameSpec(facingDirection_);
+    Vector<SpriteFrame*> frames;
+    appendFishingFrames(frames, spec.dir, "Out", spec.outCount);
+
+    if (frames.empty()) {
+        startFishingWait();
+        return;
+    }
+
+    auto animation = Animation::createWithSpriteFrames(frames, kFishingCastFrameDelay);
+    auto animate = Animate::create(animation);
+    auto callback = CallFunc::create([this]() {
+        this->fishingAnimAction_ = nullptr;
+        this->startFishingWait();
+    });
+    fishingAnimAction_ = Sequence::create(animate, callback, nullptr);
+    this->runAction(fishingAnimAction_);
+}
+
+void Player::startFishingWait()
+{
+    isFishingAnim_ = true;
+    isAttacking_ = false;
+    isAttackPressed_ = false;
+
+    if (currentAnimAction_) {
+        this->stopAction(currentAnimAction_);
+        currentAnimAction_ = nullptr;
+    }
+    if (fishingAnimAction_) {
+        this->stopAction(fishingAnimAction_);
+        fishingAnimAction_ = nullptr;
+    }
+
+    auto spec = getFishingFrameSpec(facingDirection_);
+    Vector<SpriteFrame*> frames;
+    appendFishingFrames(frames, spec.dir, "Waiting", spec.waitCount);
+
+    if (frames.empty()) {
+        stopFishingAnimation();
+        return;
+    }
+
+    auto animation = Animation::createWithSpriteFrames(frames, kFishingWaitFrameDelay);
+    auto animate = Animate::create(animation);
+    fishingAnimAction_ = RepeatForever::create(animate);
+    this->runAction(fishingAnimAction_);
+}
+
+void Player::startFishingReel(const std::function<void()>& onFinished)
+{
+    isFishingAnim_ = true;
+    isAttacking_ = false;
+    isAttackPressed_ = false;
+
+    if (currentAnimAction_) {
+        this->stopAction(currentAnimAction_);
+        currentAnimAction_ = nullptr;
+    }
+    if (fishingAnimAction_) {
+        this->stopAction(fishingAnimAction_);
+        fishingAnimAction_ = nullptr;
+    }
+
+    auto spec = getFishingFrameSpec(facingDirection_);
+    Vector<SpriteFrame*> frames;
+    appendFishingFrames(frames, spec.dir, "In", spec.inCount);
+
+    if (frames.empty()) {
+        stopFishingAnimation();
+        if (onFinished) {
+            onFinished();
+        }
+        return;
+    }
+
+    auto animation = Animation::createWithSpriteFrames(frames, kFishingReelFrameDelay);
+    auto animate = Animate::create(animation);
+    auto callback = CallFunc::create([this, onFinished]() {
+        this->fishingAnimAction_ = nullptr;
+        this->stopFishingAnimation();
+        if (onFinished) {
+            onFinished();
+        }
+    });
+    fishingAnimAction_ = Sequence::create(animate, callback, nullptr);
+    this->runAction(fishingAnimAction_);
+}
+
+void Player::stopFishingAnimation()
+{
+    if (fishingAnimAction_) {
+        this->stopAction(fishingAnimAction_);
+        fishingAnimAction_ = nullptr;
+    }
+
+    isFishingAnim_ = false;
+    playAnimation(PlayerState::IDLE);
+}
+
 void Player::update(float delta)
 {
     // 更新无敌时间
@@ -343,6 +520,10 @@ void Player::update(float delta)
 
     // ========== 攻击状态优先级最高 ==========
     // 如果正在攻击，不处理移动
+    if (isFishingAnim_) {
+        return;
+    }
+
     if (isAttacking_) {
         return;
     }

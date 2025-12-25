@@ -1927,6 +1927,7 @@ void GameScene::onMouseDown(Event* event)
             if (fishingState_ == FishingState::NONE)
             {
                  if (isFishing_) return;
+                 if (player_ && player_->isFishingAnimationPlaying()) return;
                  fishingState_ = FishingState::CHARGING;
                  chargePower_ = 0.0f;
                  CCLOG("Start Charging...");
@@ -1941,6 +1942,8 @@ void GameScene::onMouseDown(Event* event)
             {
                  CCLOG("Pulled too early!");
                  fishingState_ = FishingState::NONE;
+                 if (exclamationMark_) exclamationMark_->setVisible(false);
+                 if (player_) player_->startFishingReel();
                  showActionMessage("Too early!", Color3B::RED);
             }
             return; 
@@ -1975,6 +1978,7 @@ void GameScene::onMouseUp(Event* event)
             
             // Wait 1.0 - 4.0s
             waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
+            if (player_) player_->startFishingCast();
             CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
         }
     }
@@ -2011,6 +2015,7 @@ void GameScene::updateFishingState(float delta)
         {
             fishingState_ = FishingState::NONE;
             if (exclamationMark_) exclamationMark_->setVisible(false);
+            if (player_) player_->startFishingReel();
             CCLOG("Missed...");
             showActionMessage("Missed...", Color3B::GRAY);
         }
@@ -2022,30 +2027,41 @@ void GameScene::startFishing()
     isFishing_ = true;
     fishingState_ = FishingState::REELING; 
 
-    if (player_) player_->setMoveSpeed(0); // Using new setMoveSpeed API
+    if (player_) {
+        player_->setMoveSpeed(0);
+        player_->startFishingWait();
+    }
 
     auto fishingLayer = FishingLayer::create();
     fishingLayer->setFinishCallback([this](bool success) {
-        this->isFishing_ = false;
-        this->fishingState_ = FishingState::NONE; 
-        
-        if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
-        if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
-        if (this->player_) this->player_->setMoveSpeed(150.0f); // Restore speed (was hardcoded, assumed 150)
+        auto finish = [this, success]() {
+            this->isFishing_ = false;
+            this->fishingState_ = FishingState::NONE;
 
-        if (success)
-        {
-            CCLOG("Fishing SUCCESS!");
-            showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
-            SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
-            // No inventory addItem API anymore? 
-            // We can't add item to Toolbar easily if it's full/fixed.
-            // For now just show message.
-        }
-        else
-        {
-            CCLOG("Fishing FAILED.");
-            showActionMessage("Fish got away...", Color3B::RED);
+            if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
+            if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
+            if (this->player_) this->player_->setMoveSpeed(150.0f);
+
+            if (success)
+            {
+                CCLOG("Fishing SUCCESS!");
+                showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+                SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
+                // No inventory addItem API anymore? 
+                // We can't add item to Toolbar easily if it's full/fixed.
+                // For now just show message.
+            }
+            else
+            {
+                CCLOG("Fishing FAILED.");
+                showActionMessage("Fish got away...", Color3B::RED);
+            }
+        };
+
+        if (this->player_) {
+            this->player_->startFishingReel(finish);
+        } else {
+            finish();
         }
     });
 
