@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include "InventoryManager.h"
+#include <functional>
 
 // 前向声明，告诉编译器 MapLayer 类的存在
 class MapLayer;
@@ -62,6 +63,13 @@ public:
 
     // 触发挥舞动作（对外接口）
     void playSwingAnimation();
+
+    // Fishing animation helpers
+    void startFishingCast();
+    void startFishingWait();
+    void startFishingReel(const std::function<void()>& onFinished = nullptr);
+    void stopFishingAnimation();
+    bool isFishingAnimationPlaying() const { return isFishingAnim_; }
 
     // ========== 能量系统 ==========
     float getMaxEnergy() const { return maxEnergy_; }
@@ -139,6 +147,8 @@ private:
     bool isAttackPressed_;  // 是否按下了攻击键（J键）
 
     // 按键状态标志
+    bool isFishingAnim_ = false;
+    cocos2d::Action* fishingAnimAction_ = nullptr;
     bool isUpPressed_;
     bool isDownPressed_;
     bool isLeftPressed_;
