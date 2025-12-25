@@ -6,6 +6,8 @@
 #include "ElevatorUI.h"
 #include "MarketUI.h"
 #include "WeatherManager.h"
+#include "SkillManager.h"
+#include "SkillTreeUI.h"
 #include <cmath>
 #include <queue>
 #include <unordered_set>
@@ -85,6 +87,7 @@ bool GameScene::init()
     inventory_ = nullptr;
     inventoryUI_ = nullptr;
     marketUI_ = nullptr;
+    skillUI_ = nullptr;
 
     initMap();
     initFarm();
@@ -102,6 +105,7 @@ bool GameScene::init()
         // this->addChild(inventory_, 0);
         CCLOG("InventoryManager retrieved from singleton");
     }
+    SkillManager::getInstance();
     marketState_.init();
     initWeather();
 
@@ -396,7 +400,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | P: Market | M: Mine | ESC: Menu",
+        "1-0: Switch item | J: Use | K: Water | B: Inventory | E: Skills | P: Market | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -556,6 +560,9 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
+        break;
+    case EventKeyboard::KeyCode::KEY_E:
+        toggleSkillTree();
         break;
     case EventKeyboard::KeyCode::KEY_P:
         toggleMarket();
@@ -919,7 +926,10 @@ void GameScene::handleFarmAction(bool waterOnly)
             {
                 if (current == ItemType::WateringCan) {
                     result = farmManager_->waterTile(tileCoord);
-                    if (result.success) player_->consumeEnergy(2.0f);
+                    if (result.success) {
+                        player_->consumeEnergy(2.0f);
+                        SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                    }
                 }
                 else {
                     result = { false, "Need watering can to water", -1 };
@@ -933,13 +943,19 @@ void GameScene::handleFarmAction(bool waterOnly)
                     // Case 1: 锄头 (耕地)
                 case ItemType::Hoe:
                     result = farmManager_->tillTile(tileCoord);
-                    if (result.success) player_->consumeEnergy(2.0f);
+                    if (result.success) {
+                        player_->consumeEnergy(2.0f);
+                        SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                    }
                     break;
 
                     // Case 2: 水壶 (也可以按J浇水)
                 case ItemType::WateringCan:
                     result = farmManager_->waterTile(tileCoord);
-                    if (result.success) player_->consumeEnergy(2.0f);
+                    if (result.success) {
+                        player_->consumeEnergy(2.0f);
+                        SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                    }
                     break;
 
                     // Case 3: 镰刀 (收获)
@@ -952,7 +968,23 @@ void GameScene::handleFarmAction(bool waterOnly)
                         {
                             if (inventory_->addItem(harvestItem, 1))
                             {
-                                result.message = StringUtils::format("Harvested %s (+1)", InventoryManager::getItemName(harvestItem).c_str());
+                                int extraCount = 0;
+                                float bonusChance = SkillManager::getInstance()->getAgricultureBonusChance();
+                                if (bonusChance > 0.0f && CCRANDOM_0_1() < bonusChance)
+                                {
+                                    if (inventory_->addItem(harvestItem, 1))
+                                        extraCount = 1;
+                                }
+                                if (extraCount > 0)
+                                {
+                                    result.message = StringUtils::format("Harvested %s (+%d)",
+                                        InventoryManager::getItemName(harvestItem).c_str(), 1 + extraCount);
+                                }
+                                else
+                                {
+                                    result.message = StringUtils::format("Harvested %s (+1)",
+                                        InventoryManager::getItemName(harvestItem).c_str());
+                                }
                                 if (inventoryUI_) inventoryUI_->refresh();
                             }
                             else
@@ -960,6 +992,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                                 result.message = "Inventory full!";
                             }
                         }
+                        SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
                     }
                     break;
 
@@ -1077,6 +1110,7 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                     player_->consumeEnergy(4.0f);
                     result = { true, "Rock broken!", -1 };
+                    SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
                     break;
                 }
 
@@ -1099,6 +1133,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                         player_->consumeEnergy(2.0f);
                         result.message = StringUtils::format("Planted %s (-1)", InventoryManager::getItemName(current).c_str());
                         if (inventoryUI_) inventoryUI_->refresh();
+                        SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
                     }
                     break;
                 }
@@ -2002,6 +2037,7 @@ void GameScene::startFishing()
         {
             CCLOG("Fishing SUCCESS!");
             showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+            SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
             // No inventory addItem API anymore? 
             // We can't add item to Toolbar easily if it's full/fixed.
             // For now just show message.
@@ -2092,6 +2128,34 @@ void GameScene::toggleInventory()
     }
 
     inventoryUI_->show();
+}
+
+void GameScene::toggleSkillTree()
+{
+    if (skillUI_)
+    {
+        skillUI_->close();
+        skillUI_ = nullptr;
+        return;
+    }
+
+    skillUI_ = SkillTreeUI::create();
+    if (!skillUI_)
+    {
+        CCLOG("ERROR: Failed to create SkillTreeUI!");
+        return;
+    }
+
+    if (uiLayer_)
+    {
+        uiLayer_->addChild(skillUI_, 2000);
+        skillUI_->setPosition(Vec2::ZERO);
+    }
+    else
+    {
+        this->addChild(skillUI_, 2000);
+    }
+    skillUI_->show();
 }
 
 void GameScene::onInventoryClosed()

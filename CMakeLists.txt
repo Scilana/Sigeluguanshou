@@ -55,6 +55,8 @@ list(APPEND GAME_SOURCE
      Classes/EnergyBar.cpp
      Classes/StorageChest.cpp
      Classes/QuantityPopup.cpp
+     Classes/SkillManager.cpp
+     Classes/SkillTreeUI.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -84,6 +86,8 @@ list(APPEND GAME_HEADER
      Classes/EnergyBar.h
      Classes/StorageChest.h
      Classes/QuantityPopup.h
+     Classes/SkillManager.h
+     Classes/SkillTreeUI.h
      )
 
 if(ANDROID)

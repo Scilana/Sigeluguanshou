@@ -17,6 +17,7 @@
 
 class MarketUI;
 class WeatherManager;
+class SkillTreeUI;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -88,6 +89,7 @@ private:
     InventoryUI* inventoryUI_;
     MarketState marketState_;
     MarketUI* marketUI_;
+    SkillTreeUI* skillUI_;
 
     // ==========================================
     // UI层与元素
@@ -125,6 +127,7 @@ private:
     // ==========================================
     void backToMenu();
     void toggleInventory();
+    void toggleSkillTree();
     void onInventoryClosed();
     void toggleMarket();
     void onMarketClosed();

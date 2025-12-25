@@ -1,4 +1,5 @@
 #include "FishingLayer.h"
+#include "SkillManager.h"
 
 FishingLayer* FishingLayer::create()
 {
@@ -229,14 +230,16 @@ void FishingLayer::updateProgress(float delta)
     // 稍微宽松一点判定
     bool isCatching = (fishPosition_ >= barBottom && fishPosition_ <= barTop);
 
+    float gainMult = SkillManager::getInstance()->getFishingCatchGainMultiplier();
+    float lossMult = SkillManager::getInstance()->getFishingCatchLossMultiplier();
     if (isCatching)
     {
-        catchProgress_ += 0.2f * delta; 
+        catchProgress_ += 0.2f * delta * gainMult;
         if (greenBar_) greenBar_->setOpacity(255);
     }
     else
     {
-        catchProgress_ -= 0.1f * delta;
+        catchProgress_ -= 0.1f * delta * lossMult;
         if (greenBar_) greenBar_->setOpacity(150);
     }
 

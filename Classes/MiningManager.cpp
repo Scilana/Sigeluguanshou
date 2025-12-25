@@ -1,4 +1,6 @@
 #include "MiningManager.h"
+#include "SkillManager.h"
+#include <algorithm>
 
 USING_NS_CC;
 
@@ -154,7 +156,8 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
         MineralProgress progress;
         progress.tileCoord = tileCoord;
         progress.hitCount = 1;
-        progress.requiredHits = mineralDef->hitPoints;
+        int hitReduction = SkillManager::getInstance()->getMiningHitReduction();
+        progress.requiredHits = std::max(1, mineralDef->hitPoints - hitReduction);
         activeMinings_[key] = progress;
 
         if (progress.requiredHits <= 1)
@@ -164,6 +167,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             mineLayer_->clearCollisionAt(tileCoord);
             std::string dropMsg = dropItems(tileCoord, *mineralDef);
             activeMinings_.erase(key);
+            SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
             addExp(mineralDef->expReward);
             
             if (!dropMsg.empty()) {
@@ -189,6 +193,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
             mineLayer_->clearCollisionAt(tileCoord);
             std::string dropMsg = dropItems(tileCoord, *mineralDef);
             activeMinings_.erase(it);
+            SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
             addExp(mineralDef->expReward);
             
             if (!dropMsg.empty()) {
