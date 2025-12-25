@@ -426,7 +426,7 @@ void GameScene::initUI()
     // ===== 操作提示 =====
 
     auto hint = Label::createWithSystemFont(
-        "1-0: Switch item | J: Use | K: Water | B: Inventory | E: Skills | P: Market | M: Mine | ESC: Menu",
+        "1-8: Switch item | J: Use | K: Water | B: Inventory | E: Skills | P: Market | M: Mine | ESC: Menu",
         "Arial", 18
     );
 
@@ -459,7 +459,7 @@ void GameScene::initUI()
     uiLayer_->addChild(actionLabel_, 1);
 
     // ===== 当前物品显示 =====
-    itemLabel_ = Label::createWithSystemFont("Current item: Hoe (1-0 to switch)", "Arial", 18);
+    itemLabel_ = Label::createWithSystemFont("Current item: Hoe (1-8 to switch)", "Arial", 18);
     itemLabel_->setAnchorPoint(Vec2(0, 0.5f));
     itemLabel_->setPosition(Vec2(
         origin.x + 20,
@@ -667,18 +667,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_8:
         selectItemByIndex(7);
-        break;
-    case EventKeyboard::KeyCode::KEY_9:
-        selectItemByIndex(8);
-        break;
-    case EventKeyboard::KeyCode::KEY_0:
-        selectItemByIndex(9);
-        break;
-    case EventKeyboard::KeyCode::KEY_MINUS: // Allow selecting item 10
-        selectItemByIndex(10);
-        break;
-    case EventKeyboard::KeyCode::KEY_EQUAL: // Allow selecting item 11
-        selectItemByIndex(11);
         break;
     default:
         break;
@@ -1861,13 +1849,9 @@ void GameScene::initToolbar()
         ItemType::Scythe,
         ItemType::Axe,
         ItemType::Pickaxe,
-        ItemType::FishingRod, // ID 5 (index 5)
+        ItemType::FishingRod,
         ItemType::SeedTurnip,
-        ItemType::SeedPotato,
-        ItemType::SeedCorn,
-        ItemType::SeedTomato,
-        ItemType::SeedPumpkin,
-        ItemType::SeedBlueberry
+        ItemType::SeedPotato
     };
 
     selectedItemIndex_ = 0;
@@ -1960,6 +1944,55 @@ void GameScene::refreshToolbarUI()
         return;
     }
 
+    if (inventory_)
+    {
+        int maxSlots = std::min(static_cast<int>(toolbarItems_.size()), inventory_->getSlotCount());
+        for (int i = 0; i < maxSlots; ++i)
+        {
+            const auto& slot = inventory_->getSlot(i);
+            ItemType newType = slot.isEmpty() ? ItemType::None : slot.type;
+
+            if (toolbarItems_[i] != newType)
+            {
+                toolbarItems_[i] = newType;
+
+                if (i < static_cast<int>(toolbarIcons_.size()) && toolbarIcons_[i])
+                {
+                    toolbarIcons_[i]->removeFromParent();
+                    toolbarIcons_[i] = nullptr;
+                }
+
+                auto icon = createToolbarIcon(newType);
+                if (icon && i < static_cast<int>(toolbarSlots_.size()))
+                {
+                    icon->setPosition(Vec2(kToolbarSlotSize * 0.5f, kToolbarSlotSize * 0.5f));
+                    toolbarSlots_[i]->addChild(icon, 0);
+                }
+
+                if (i < static_cast<int>(toolbarIcons_.size()))
+                {
+                    toolbarIcons_[i] = icon;
+                }
+
+                if (i < static_cast<int>(toolbarCountCache_.size()))
+                {
+                    toolbarCountCache_[i] = -1;
+                }
+
+                if (i == selectedItemIndex_)
+                {
+                    if (player_) {
+                        player_->setCurrentTool(newType);
+                    }
+                    if (itemLabel_) {
+                        std::string name = InventoryManager::getItemName(newType);
+                        itemLabel_->setString(StringUtils::format("Current item: %s (1-8 to switch)", name.c_str()));
+                    }
+                }
+            }
+        }
+    }
+
     if (toolbarSelectedCache_ != selectedItemIndex_) {
         for (int i = 0; i < static_cast<int>(toolbarSlots_.size()); ++i) {
             bool isSelected = (i == selectedItemIndex_);
@@ -1979,9 +2012,11 @@ void GameScene::refreshToolbarUI()
         }
 
         int count = -1;
-        ItemType type = toolbarItems_[i];
-        if (inventory_ && InventoryManager::isStackable(type)) {
-            count = inventory_->getItemCount(type);
+        if (inventory_ && i < inventory_->getSlotCount()) {
+            const auto& slot = inventory_->getSlot(i);
+            if (!slot.isEmpty() && InventoryManager::isStackable(slot.type)) {
+                count = slot.count;
+            }
         }
 
         if (toolbarCountCache_[i] != count) {
@@ -2023,7 +2058,7 @@ void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
 
     if (itemLabel_)
     {
-        itemLabel_->setString(StringUtils::format("Current item: %s (1-0/-/= to switch)", name.c_str()));
+        itemLabel_->setString(StringUtils::format("Current item: %s (1-8 to switch)", name.c_str()));
     }
 
     showActionMessage(StringUtils::format("Switched to %s", name.c_str()), Color3B(180, 220, 255));
