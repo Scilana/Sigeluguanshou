@@ -4,6 +4,8 @@
 #include "cocos2d.h"
 class FarmManager;
 class Player;
+class InventoryManager;
+class InventoryUI;
 
 class HouseScene : public cocos2d::Scene
 {
@@ -28,11 +30,15 @@ private:
     Player* player_{ nullptr };
     cocos2d::Sprite* background_{ nullptr };
     FarmManager* farmManager_{ nullptr };
+    InventoryManager* inventory_{ nullptr };
+    InventoryUI* inventoryUI_{ nullptr };
     cocos2d::Label* timeLabel_{ nullptr };
     bool isSleeping_{ false };
     bool isPassedOut_{ false }; // 标记是否是因为晕倒/死亡送回来的
     cocos2d::Sprite* sleepSprite_{ nullptr };
     void wakeUp();
+    void toggleInventory();
+    void onInventoryClosed();
 };
 
 #endif // __HOUSE_SCENE_H__

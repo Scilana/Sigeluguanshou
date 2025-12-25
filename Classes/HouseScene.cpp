@@ -2,6 +2,8 @@
 #include "FarmManager.h"
 #include "Player.h"
 #include "GameScene.h"
+#include "InventoryUI.h"
+#include "InventoryManager.h"
 
 USING_NS_CC;
 
@@ -36,6 +38,9 @@ bool HouseScene::init(bool isPassedOut)
     initControls();
     initUI();
     this->scheduleUpdate();
+
+    // 初始化背包引用
+    inventory_ = InventoryManager::getInstance();
 
     if (isPassedOut_)
     {
@@ -118,6 +123,30 @@ void HouseScene::wakeUp()
     }
 
     CCLOG("Player woke up! (Sprites toggled)");
+}
+
+void HouseScene::toggleInventory()
+{
+    if (inventoryUI_)
+    {
+        inventoryUI_->close();
+        return;
+    }
+
+    if (!inventory_) return;
+
+    inventoryUI_ = InventoryUI::create(inventory_);
+    if (inventoryUI_)
+    {
+        inventoryUI_->setCloseCallback(CC_CALLBACK_0(HouseScene::onInventoryClosed, this));
+        this->addChild(inventoryUI_, 100); // High Z-order
+        inventoryUI_->show();
+    }
+}
+
+void HouseScene::onInventoryClosed()
+{
+    inventoryUI_ = nullptr;
 }
 
 void HouseScene::initBackground()
@@ -321,6 +350,12 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
     }
     break;
+    case EventKeyboard::KeyCode::KEY_B:
+    case EventKeyboard::KeyCode::KEY_I:
+    case EventKeyboard::KeyCode::KEY_TAB:
+        toggleInventory();
+        break;
+        
     default:
         break;
     }
