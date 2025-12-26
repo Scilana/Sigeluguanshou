@@ -166,13 +166,71 @@ void GameScene::initMap()
     mapLayer_ = MapLayer::create("map/farm.tmx");
 
     if (mapLayer_)
-
     {
+        // 2. 添加到场景 (Z序设为-1或0，作为背景)
+        this->addChild(mapLayer_, -1);
 
-        this->addChild(mapLayer_, 0);
+        // =========================================================
+        // 【强制诊断代码】直接弹窗显示地图参数，揪出问题根源！
+        // =========================================================
+        auto internalMap = mapLayer_->getTMXMap();
+        if (internalMap)
+        {
+            // A. 尝试获取地面层 
+            // (为了保险，我写了两个名字：你修改后的 "Ground" 和原来的 "图块层 1")
+            auto layer = internalMap->getLayer("Ground");
+            if (!layer) {
+                layer = internalMap->getLayer("图块层1");
+            }
 
-        CCLOG("Map layer added to scene");
+            if (layer)
+            {
+                // B. 获取该图层使用的图片纹理
+                auto texture = layer->getTexture();
+                if (texture)
+                {
+                    float w = texture->getContentSize().width;
+                    float h = texture->getContentSize().height;
+                    std::string path = texture->getPath();
 
+                    // C. 组装诊断信息
+                    std::string msg = cocos2d::StringUtils::format(
+                        "【地图诊断报告】\n\n"
+                        "1. 实际读取的图片尺寸: %.0f x %.0f\n"
+                        "   -> 如果是 6400：说明 bin 目录里还是旧图！(必须覆盖)\n"
+                        "   -> 如果是 3200：图片没问题，是 TMX 切割参数错。\n\n"
+                        "2. 图片路径: %s\n\n"
+                        "3. 成功获取到的图层名: %s",
+                        w, h, path.c_str(), layer->getLayerName().c_str()
+                    );
+
+                    // D. 系统弹窗 (这下绝对不会错过了)
+                    cocos2d::MessageBox(msg.c_str(), "Map Debug Check");
+                }
+                else
+                {
+                    cocos2d::MessageBox("错误：找到了图层，但该图层没有加载到纹理图片！\n可能原因：png文件丢失。", "Map Error");
+                }
+            }
+            else
+            {
+                // 打印出当前所有的图层名，帮你找找看名字到底叫啥
+                std::string allLayerNames = "";
+                auto children = internalMap->getChildren();
+                for (auto child : children) {
+                    auto l = dynamic_cast<TMXLayer*>(child);
+                    if (l) allLayerNames += l->getLayerName() + "\n";
+                }
+
+                std::string errorMsg = "错误：找不到 'Ground' 图层！\n\n当前读取到的所有图层名：\n" + allLayerNames;
+                cocos2d::MessageBox(errorMsg.c_str(), "Map Error");
+            }
+        }
+        else
+        {
+            cocos2d::MessageBox("内部错误：getTMXMap() 返回空指针。", "Map Error");
+        }
+        // =========================================================
     }
 
     else

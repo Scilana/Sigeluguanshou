@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="4" nextobjectid="1">
+<map version="1.10" tiledversion="1.11.2" orientation="orthogonal" renderorder="right-down" width="40" height="30" tilewidth="32" tileheight="32" infinite="0" nextlayerid="5" nextobjectid="1">
  <tileset firstgid="1" name="farm_tiles2" tilewidth="32" tileheight="32" tilecount="256" columns="16">
   <grid orientation="orthogonal" width="51" height="51"/>
   <image source="tileset2.png" width="512" height="512"/>
@@ -28,21 +28,18 @@
  <tileset firstgid="49149" name="farmmine" tilewidth="32" tileheight="32" tilecount="1200" columns="40">
   <image source="farmmine.png" width="1280" height="960"/>
  </tileset>
- <tileset firstgid="50349" name="update" tilewidth="32" tileheight="32" tilecount="1036" columns="37">
-  <image source="minegate.png" width="1200" height="896"/>
- </tileset>
- <tileset firstgid="51385" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+ <tileset firstgid="50349" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
   <image source="tileset4.png" width="1600" height="1600"/>
  </tileset>
- <tileset firstgid="53885" name="minekuai" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
+ <tileset firstgid="52849" name="minekuai" tilewidth="16" tileheight="16" tilecount="1024" columns="32">
   <image source="ming_walls.png" width="512" height="512"/>
  </tileset>
- <tileset firstgid="54909" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
+ <tileset firstgid="53873" name="farm_tile4" tilewidth="32" tileheight="32" tilecount="2500" columns="50">
   <image source="tileset4.png" width="1600" height="1600"/>
  </tileset>
- <layer id="1" name="图块层 1" width="40" height="30">
+ <layer id="4" name="Ground" width="40" height="30">
   <data encoding="base64" compression="zlib">
-   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
+   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
   </data>
  </layer>
  <layer id="2" name="Collision" width="40" height="30" opacity="0">
