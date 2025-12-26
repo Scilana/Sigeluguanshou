@@ -386,8 +386,10 @@ std::string InventoryManager::getItemName(ItemType itemType)
     case ItemType::Fish: return "Fish";
     // 矿石
     case ItemType::CopperOre: return "Copper Ore";
+    case ItemType::IronOre: return "Iron Ore";
     case ItemType::SilverOre: return "Silver Ore";
     case ItemType::GoldOre: return "Gold Ore";
+    case ItemType::DiamondOre: return "Diamond Ore";
     // 武器
     case ItemType::ITEM_WoodenSword: return "Wooden Sword";
     case ItemType::ITEM_IronSword: return "Iron Sword";
@@ -433,8 +435,10 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     case ItemType::Fish: return "Fresh fish";
     // 矿石
     case ItemType::CopperOre: return "Common ore, worth 50 gold";
+    case ItemType::IronOre: return "Sturdy ore, worth 100 gold";
     case ItemType::SilverOre: return "Valuable ore, worth 150 gold";
     case ItemType::GoldOre: return "Precious ore, worth 500 gold";
+    case ItemType::DiamondOre: return "Rare gem, worth 1000 gold";
     // 武器
     case ItemType::ITEM_WoodenSword: return "Basic sword, 10 attack";
     case ItemType::ITEM_IronSword: return "Sturdy sword, 25 attack";
@@ -474,7 +478,11 @@ std::string InventoryManager::getItemIconPath(ItemType itemType)
     case ItemType::ITEM_Rainbow_Trout: return "鱼/Rainbow_Trout.png";
     case ItemType::ITEM_Sturgeon: return "鱼/Sturgeon.png";
     case ItemType::ITEM_Tilapia: return "鱼/Tilapia.png";
-    case ItemType::CopperOre: return "tools/copper_ore.png";
+    case ItemType::CopperOre: return "";
+    case ItemType::IronOre: return "";
+    case ItemType::SilverOre: return "";
+    case ItemType::GoldOre: return "";
+    case ItemType::DiamondOre: return "";
     case ItemType::FishingRod: return "tools/fishingRod.png";
     case ItemType::SeedTurnip: return "tools/carrotSeed.png";
     case ItemType::SeedPotato: return "tools/dogbaneSeed.png";

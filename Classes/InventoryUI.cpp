@@ -29,6 +29,9 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
     if (!Layer::init())
         return false;
 
+    auto visibleSize = Director::getInstance()->getVisibleSize();
+    this->setContentSize(visibleSize);
+    
     inventory_ = inventory;
     marketState_ = marketState;
     if (!inventory_)
@@ -178,6 +181,7 @@ void InventoryUI::initSlots()
                 Rect rect = Rect(0, 0, size.width, size.height);
                 
                 bool hit = rect.containsPoint(locationInNode);
+                CCLOG("Slot %d touched. Hit: %s, location: (%.1f, %.1f)", slotIndex, hit ? "YES" : "NO", locationInNode.x, locationInNode.y);
                 
                 if (hit)
                 {
@@ -564,7 +568,23 @@ cocos2d::Color3B InventoryUI::getItemColor(ItemType itemType) const
 
     // 鱼 - 银色
     case ItemType::Fish:
+    case ItemType::ITEM_Anchovy:
+    case ItemType::ITEM_Carp:
+    case ItemType::ITEM_Eel:
+    case ItemType::ITEM_Flounder:
+    case ItemType::ITEM_Largemouth_Bass:
+    case ItemType::ITEM_Pufferfish:
+    case ItemType::ITEM_Rainbow_Trout:
+    case ItemType::ITEM_Sturgeon:
+    case ItemType::ITEM_Tilapia:
         return Color3B(192, 192, 192);
+
+    // 矿石
+    case ItemType::CopperOre: return Color3B(210, 105, 30);  // Chocolate orange
+    case ItemType::IronOre: return Color3B(112, 128, 144);    // Slate grey
+    case ItemType::SilverOre: return Color3B(224, 224, 224);  // Bright silver
+    case ItemType::GoldOre: return Color3B(255, 215, 0);     // Gold
+    case ItemType::DiamondOre: return Color3B(0, 255, 255);  // Cyan/Aqua
 
     default:
         return Color3B(128, 128, 128);

@@ -1008,11 +1008,13 @@ void MineScene::toggleInventory()
     // 但是 uiLayer_ 跟随摄像机移动，InventoryUI 通常也是跟随摄像机的或者固定在屏幕空间
     // 这里我们把 InventoryUI 添加到 TOP
     if (uiLayer_) {
-        uiLayer_->addChild(inventoryUI_, 100); // 相对 uiLayer 的 Top
-        inventoryUI_->setPosition(Vec2::ZERO); // 覆盖整个屏幕
+        // 使用高 Local ZOrder 确保在 uiLayer 内部最顶层
+        // uiLayer 已经有 1000 的 Global ZOrder，这足够覆盖场景中大部分物体
+        uiLayer_->addChild(inventoryUI_, 9999); 
+        inventoryUI_->setPosition(Vec2::ZERO);
     }
     else {
-        this->addChild(inventoryUI_, 2000);
+        this->addChild(inventoryUI_, 9999);
     }
 
     inventoryUI_->show();

@@ -47,76 +47,107 @@ void MiningManager::initMineralDefs()
     // 注意：这里的 GID 需要根据你的 tileset 实际情况调整
     // 这里使用示例 GID，你需要在 Tiled 中查看实际的 GID 值
 
-    // 石头（普通）- GID 示例：1001
-    mineralDefs_[1001] = MineralDef{
-        1001,
-        "Stone",
-        1,                      // 1次敲击
-        ItemType::ITEM_NONE,         // 不掉落物品
-        0, 0,
-        1                       // 1点经验
-    };
+    // 石头（普通）- GID 138-141 (mine.tmx) 以及 1001 (旧定义)
+    std::vector<int> stoneGids = { 138, 139, 140, 141, 1001 };
+    for (int gid : stoneGids) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Stone",
+            1,                      // 1次敲击
+            ItemType::ITEM_NONE,         // 不掉落物品
+            0, 0,
+            1                       // 1点经验
+        };
+    }
 
-    // 铜矿石 - GID 示例：1002, 521-555 (mine_minerals.tsx 的铜矿)
-    // GID 521-555 范围内的都是铜矿
+    // 铜矿石 - 覆盖 289 偏移后的范围 (例如 local 586 -> gid 875)
+    // 同时也保留之前的 521-555 兼容老地图
+    for (int gid = 870; gid <= 880; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Copper Ore",
+            3,
+            ItemType::CopperOre,
+            1, 3,
+            5
+        };
+    }
     for (int gid = 521; gid <= 555; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
             "Copper Ore",
-            3,                      // 3次敲击
-            ItemType::CopperOre,    // 掉落铜矿石
-            1, 3,                   // 掉落1-3个
-            5                       // 5点经验
+            3,
+            ItemType::CopperOre,
+            1, 3,
+            5
         };
     }
 
-    // 银矿石 - GID 示例：574-608
-    for (int gid = 574; gid <= 608; ++gid) {
+    // 铁矿石 - 289 偏移范围
+    for (int gid = 881; gid <= 890; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
-            "Silver Ore",
-            5,                      // 5次敲击
-            ItemType::SilverOre,    // 掉落银矿石
-            1, 2,                   // 掉落1-2个
-            10                      // 10点经验
+            "Iron Ore",
+            4,
+            ItemType::IronOre,
+            1, 2,
+            8
         };
     }
-
-    // 金矿石 - GID 示例：649-723
-    for (int gid = 649; gid <= 723; ++gid) {
-        mineralDefs_[gid] = MineralDef{
-            gid,
-            "Gold Ore",
-            8,                      // 8次敲击
-            ItemType::GoldOre,      // 掉落金矿石
-            1, 1,                   // 掉落1个
-            20                      // 20点经验
-        };
-    }
-
-    // [New] 铁矿石 - 假设 GID 范围 (用户需在 Tiled 中对应)
-    // 假设 750-770 为铁矿
     for (int gid = 750; gid <= 770; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
             "Iron Ore",
-            4,                      // 4次敲击
-            ItemType::IronOre,      // 掉落铁矿石
-            1, 2,                   // 掉落1-2个
-            8                       // 8点经验
+            4,
+            ItemType::IronOre,
+            1, 2,
+            8
         };
     }
 
-    // [New] 钻石矿 - 假设 GID 范围 
-    // 假设 800-810 为钻石矿
+    // 银矿石 - 289 偏移范围 (local 620-630 -> gid 900-920 约略)
+    for (int gid = 900; gid <= 920; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Silver Ore",
+            5,
+            ItemType::SilverOre,
+            1, 2,
+            10
+        };
+    }
+    for (int gid = 574; gid <= 608; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Silver Ore",
+            5,
+            ItemType::SilverOre,
+            1, 2,
+            10
+        };
+    }
+
+    // 金矿石 - GID 649-723
+    for (int gid = 649; gid <= 723; ++gid) {
+        mineralDefs_[gid] = MineralDef{
+            gid,
+            "Gold Ore",
+            8,
+            ItemType::GoldOre,
+            1, 1,
+            20
+        };
+    }
+
+    // 钻石矿 - GID 800-810
     for (int gid = 800; gid <= 810; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
             "Diamond Ore",
-            10,                     // 10次敲击 (非常硬)
-            ItemType::DiamondOre,   // 掉落钻石
-            1, 1,                   // 掉落1个
-            50                      // 50点经验
+            10,
+            ItemType::DiamondOre,
+            1, 1,
+            50
         };
     }
 
