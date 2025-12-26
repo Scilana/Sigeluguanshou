@@ -148,30 +148,111 @@ Size MapLayer::getTileSize() const
 bool MapLayer::isWalkable(const Vec2& position) const
 {
     if (!tmxMap_)
+    {
+        CCLOG("Warning: tmxMap_ is null in isWalkable");
         return true;
+    }
 
+    // 将世界坐标转换为 tile 坐标
     Vec2 tileCoord = positionToTileCoord(position);
     Size mapSize = tmxMap_->getMapSize();
+
+    // 调试日志（可选，上线后可删除）
+    // CCLOG("Checking walkable: world(%.1f, %.1f) -> tile(%.0f, %.0f)", 
+    //       position.x, position.y, tileCoord.x, tileCoord.y);
+
+    // 边界检查
     if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
         tileCoord.y < 0 || tileCoord.y >= mapSize.height)
     {
+        CCLOG("Position out of map bounds: tile(%.0f, %.0f)", tileCoord.x, tileCoord.y);
         return false;
     }
 
-    bool blocked = false;
+    // ==========================================
+    // 方式1：检查专门的 Collision 层
+    // ==========================================
     if (collisionLayer_)
     {
         int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
-        blocked = blocked || (tileGID != 0);
+        if (tileGID != 0)
+        {
+            // 调试日志
+            // CCLOG("Blocked by Collision layer at tile(%.0f, %.0f), GID=%d", 
+            //       tileCoord.x, tileCoord.y, tileGID);
+            return false; // Collision 层有 tile = 不可行走
+        }
     }
 
+    // ==========================================
+    // 方式2：检查所有层的 tile 属性
+    // ==========================================
+    // 遍历所有可见层，检查是否有带 Collidable 属性的 tile
+    auto children = tmxMap_->getChildren();
+    for (auto child : children)
+    {
+        auto layer = dynamic_cast<TMXLayer*>(child);
+        if (layer && layer->isVisible())
+        {
+            // 跳过 Collision 层（已经在方式1中检查过了）
+            if (layer == collisionLayer_)
+                continue;
+
+            int gid = layer->getTileGIDAt(tileCoord);
+            if (gid > 0)
+            {
+                // 获取该 tile 的属性
+                auto properties = tmxMap_->getPropertiesForGID(gid);
+                if (!properties.isNull())
+                {
+                    auto propMap = properties.asValueMap();
+
+                    // 检查 Collidable 属性（注意：TMX 中是大写 C）
+                    if (propMap.find("Collidable") != propMap.end())
+                    {
+                        bool isCollidable = propMap["Collidable"].asBool();
+                        if (isCollidable)
+                        {
+                            // 调试日志
+                            CCLOG("Blocked by Collidable tile in layer '%s' at tile(%.0f, %.0f), GID=%d",
+                                layer->getLayerName().c_str(), tileCoord.x, tileCoord.y, gid);
+                            return false;
+                        }
+                    }
+
+                    // 兼容小写 collidable（可选）
+                    if (propMap.find("collidable") != propMap.end())
+                    {
+                        bool isCollidable = propMap["collidable"].asBool();
+                        if (isCollidable)
+                        {
+                            CCLOG("Blocked by collidable tile in layer '%s' at tile(%.0f, %.0f), GID=%d",
+                                layer->getLayerName().c_str(), tileCoord.x, tileCoord.y, gid);
+                            return false;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // ==========================================
+    // 方式3：检查 Water 层（水域）
+    // ==========================================
     if (waterLayer_)
     {
         int waterGID = waterLayer_->getTileGIDAt(tileCoord);
-        blocked = blocked || (waterGID != 0);
+        if (waterGID != 0)
+        {
+            // 调试日志
+            // CCLOG("Blocked by Water layer at tile(%.0f, %.0f), GID=%d", 
+            //       tileCoord.x, tileCoord.y, waterGID);
+            return false;
+        }
     }
 
-    return !blocked;
+    // 所有检查都通过，可以行走
+    return true;
 }
 
 
