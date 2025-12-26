@@ -45,7 +45,7 @@ public:
 
     int getHour() const;
     int getMinute() const;
-    float getDayProgress() const { return dayTimer_ / secondsPerDay_; }
+    float getDayProgress() const;
 
     ActionResult tillTile(const cocos2d::Vec2& tileCoord);
     ActionResult plantSeed(const cocos2d::Vec2& tileCoord, int cropId = 0);
@@ -53,8 +53,8 @@ public:
     ActionResult harvestTile(const cocos2d::Vec2& tileCoord);
    
 
-    int getDayCount() const { return dayCount_; }
-    void setDayCount(int dayCount) { dayCount_ = dayCount; }
+    int getDayCount() const;
+    void setDayCount(int dayCount);
     void forceRedraw();
 
     /**
@@ -114,9 +114,10 @@ private:
     cocos2d::DrawNode* overlay_;
     cocos2d::Node* cropLayer_;
 
-    float dayTimer_;
-    float secondsPerDay_;
-    int dayCount_;
+    // float dayTimer_; // Removed
+    // float secondsPerDay_; // Removed
+    // int dayCount_; // Removed, use TimeManager
+
 
     std::vector<FarmTile> tiles_;
     std::unordered_map<int, CropDef> crops_;

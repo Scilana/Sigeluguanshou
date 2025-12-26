@@ -42,7 +42,7 @@ public:
      * @param dayCount 当前天数
      * @param accumulatedSeconds 当天已经过去的秒数
      */
-    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1, int dayCount = 1, float accumulatedSeconds = 0.0f);
+    static MineScene* createScene(InventoryManager* inventory, int currentFloor = 1);
 
     /**
      * @brief 初始化
@@ -51,7 +51,7 @@ public:
      * @param dayCount 当前天数
      * @param accumulatedSeconds 当天已过时间
      */
-    virtual bool init(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds);
+    virtual bool init(InventoryManager* inventory, int currentFloor);
 
     /**
      * @brief 每帧更新
@@ -113,15 +113,16 @@ private:
 
     // 场景状态
     int currentFloor_;             // 当前矿洞层数
-    int dayCount_;                 // 当前天数
+    // int dayCount_;                 // Removed, use TimeManager
 
     // ========== 怪物系统 ==========
     std::vector<Monster*> monsters_;
     float monsterSpawnTimer_;
 
     // ========== 时间系统 ==========
-    float accumulatedSeconds_;     // 当天累积时间
-    float secondsPerDay_ = 120.0f; // 一天的总秒数（与 FarmManager 保持一致）
+    // ========== 时间系统 ==========
+    // float accumulatedSeconds_;     // Removed
+    // float secondsPerDay_ = 120.0f; // Removed
 
     // ========== 宝箱系统 ==========
     std::vector<TreasureChest*> chests_;

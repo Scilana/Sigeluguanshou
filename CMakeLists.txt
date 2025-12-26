@@ -61,6 +61,7 @@ list(APPEND GAME_SOURCE
      Classes/SkillTreeUI.cpp
      Classes/DialogueBox.cpp
      Classes/Npc.cpp
+     Classes/TimeManager.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -96,6 +97,7 @@ list(APPEND GAME_HEADER
      Classes/SkillTreeUI.h
      Classes/DialogueBox.h
      Classes/Npc.h
+     Classes/TimeManager.h
      )
 
 if(ANDROID)

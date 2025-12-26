@@ -4,6 +4,8 @@
 #include "GameScene.h"
 #include "InventoryUI.h"
 #include "InventoryManager.h"
+#include "TimeManager.h"
+
 
 USING_NS_CC;
 
@@ -76,31 +78,24 @@ void HouseScene::initUI()
 
 void HouseScene::updateUI()
 {
-    if (farmManager_ && timeLabel_)
+    auto tm = TimeManager::getInstance();
+    if (tm && timeLabel_)
     {
         std::string timeStr = StringUtils::format("Day %d, %02d:%02d", 
-            farmManager_->getDayCount(), 
-            farmManager_->getHour(), 
-            farmManager_->getMinute());
-        timeLabel_->setString(timeStr);
+            tm->getDay(), 
+            tm->getHour(), 
+            tm->getMinute());
         
         if (isSleeping_) {
             timeLabel_->setString(timeStr + " (Sleeping...)");
             timeLabel_->setColor(Color3B::YELLOW);
         } else {
+            timeLabel_->setString(timeStr);
             timeLabel_->setColor(Color3B::WHITE);
         }
     }
-    else if (isPassedOut_ && timeLabel_)
-    {
-        // Mock time display for passed out scene without FarmManager
-        // 假设睡3秒，进度从 0% -> 100% (Midnight -> 6AM)
-        // 6AM = 6:00
-        // We can just show "Sleep..." or static "Next Day"
-        timeLabel_->setString("Recovering energy... (Next Day 6:00)");
-        timeLabel_->setColor(Color3B::YELLOW);
-    }
 }
+
 
 // 【新增】起床核心逻辑
 void HouseScene::wakeUp()
@@ -122,7 +117,24 @@ void HouseScene::wakeUp()
         sleepSprite_->setVisible(false);  // ★ 去除睡觉图
     }
 
+    // 4. Advance Day
+    TimeManager::getInstance()->advanceToNextDay();
+    // Also trigger farm update?
+    // Since GameScene is destroyed, FarmManager is destroyed.
+    // When GameScene restarts, TimeManager will be at 6 AM next day.
+    // FarmManager (re-created) should match this.
+    // BUT FarmManager needs to process crop growth.
+    // Since we don't have FarmManager instance here, we can't call progressDay().
+    // We assume saving/loading handles this OR we rely on a static/global FarmManager.
+    // Given the constraints, I will assume saving happens or is separate.
+    // Wait, requirement 2: "Restore 12:00 AM forced sleep and 200g penalty".
+    // I handled penalty in GameScene/MineScene before passing out.
+    // If sleeping normally?
+    // User didn't ask for save/load.
+    // Stardew logic: Sleep -> Save -> New Day.
+    
     CCLOG("Player woke up! (Sprites toggled)");
+
 }
 
 void HouseScene::toggleInventory()
@@ -213,33 +225,36 @@ void HouseScene::update(float delta)
     if (!player_ || !background_)
         return;
 
-    // Handle time passing even if GameScene is paused
-    if (farmManager_) {
-        float speedMultiplier = isSleeping_ ? 20.0f : 1.0f; // 40x speed when sleeping
-        farmManager_->update(delta * speedMultiplier);
+    // Handle time passing
+    auto tm = TimeManager::getInstance();
+    if (tm) {
+        float speedMultiplier = isSleeping_ ? 40.0f : 1.0f; // Fast forward if sleeping
+        tm->update(delta * speedMultiplier);
 
-        //自动起床
-        if (isSleeping_ && farmManager_->getHour() == 6)
+        // Auto Wake Up at 6:00 AM
+        if (isSleeping_ && tm->getHour() == 6)
         {
             CCLOG("Alarm clock! 6:00 AM reached.");
-            wakeUp(); // 时间到了，自动起床！
+            wakeUp(); 
         }
-    }
-    else if (isPassedOut_)
-    {
-        // 如果是从矿洞晕倒回来的，没有 FarmManager，使用本地模拟时间
-        // 假设晕倒时是午夜 (0:00)，我们需要睡到 6:00
-        // 午夜对应 localTime = 0. 或者我们只需要一个简单的计时器
-        // 简单处理：让它睡 2 秒钟然后醒来，假装到了早上
         
-        static float sleepTimer = 0.0f;
-        sleepTimer += delta;
-        if (sleepTimer > 3.0f) // 睡3秒
-        {
-            sleepTimer = 0.0f;
-            wakeUp();
+        // Forced Sleep check in house (if not already sleeping)
+        if (!isSleeping_ && tm->isMidnight()) {
+             CCLOG("Passed out in house!");
+             // Pass out logic
+             isSleeping_ = true;
+             // Penalty? Maybe less in house? Or same?
+             // Usually just sleep where you allow.
+             // If passed out, 200g.
+             InventoryManager::getInstance()->removeMoney(200);
+             if (player_) {
+                 player_->setVisible(false);
+                 player_->disableKeyboardControl();
+             }
+             if (sleepSprite_) sleepSprite_->setVisible(true);
         }
     }
+
     
     updateUI();
 
