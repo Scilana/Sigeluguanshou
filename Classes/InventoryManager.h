@@ -63,9 +63,12 @@ public:
     {
         ItemType type = ItemType::None;
         int count = 0;
+        int durability = -1;    // -1 means no durability (e.g. materials/crops)
+        int maxDurability = -1;
 
         bool isEmpty() const { return type == ItemType::None || count <= 0; }
-        void clear() { type = ItemType::None; count = 0; }
+        void clear() { type = ItemType::None; count = 0; durability = -1; maxDurability = -1; }
+        bool isTool() const { return durability != -1; }
     };
 
     /**
@@ -217,6 +220,24 @@ public:
      * @brief 清空背包
      */
     void clear();
+
+    /**
+     * @brief 减少指定槽位的耐久度
+     * @param slotIndex 槽位索引
+     * @param amount 减少量
+     * @return 如果工具损坏归零并移除，返回 true
+     */
+    bool decreaseDurability(int slotIndex, int amount = 1);
+
+    /**
+     * @brief 获取指定类型的默认最大耐久度
+     */
+    static int getDefaultMaxDurability(ItemType type);
+
+    /**
+     * @brief 检查物品是否是工具
+     */
+    static bool isTool(ItemType type);
 
 
 

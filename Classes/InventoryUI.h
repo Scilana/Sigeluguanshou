@@ -61,8 +61,24 @@ public:
      */
     void close();
 
+    void setInventoryManager(InventoryManager* inventoryManager);
+    void updateSlot(int index);
+    
+    // Selection Mode
+    typedef std::function<void(int slotIndex, ItemType type, int count)> ItemSelectCallback;
+    void setSelectionMode(bool enabled);
+    void setOnItemSelectedCallback(const ItemSelectCallback& callback);
+    bool isSelectionMode() const { return _selectionMode; }
+    
 private:
-    InventoryManager* inventory_;                    // 背包管理器引用
+    InventoryManager* inventory_;
+    std::vector<cocos2d::Sprite*> _slotSprites;
+    std::vector<cocos2d::Label*> _countLabels;
+    std::vector<cocos2d::Sprite*> _iconSprites;
+    
+    // Selection
+    bool _selectionMode;
+    ItemSelectCallback _onItemSelected;
     MarketState* marketState_{ nullptr };            // 市场状态，用于查询价格
     std::function<void()> closeCallback_;            // 关闭回调
 
@@ -71,6 +87,7 @@ private:
     cocos2d::Label* titleLabel_;                     // 标题
     cocos2d::Label* moneyLabel_;                     // 金币显示
     cocos2d::Label* infoLabel_;                      // 物品信息显示
+
 
     int selectedSlotIndex_;                          // 当前选中的槽位索引
     void updateSelection();                          // 更新选中状态显示
@@ -114,7 +131,8 @@ private:
      * @brief 更新格子显示
      * @param slotIndex 槽位索引
      */
-    void updateSlot(int slotIndex);
+
+    // Removed duplicate updateSlot declaration
 
     /**
      * @brief 创建格子背景

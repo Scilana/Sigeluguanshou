@@ -5,21 +5,31 @@
 #include <string>
 #include <vector>
 
+class GameScene; // Forward declaration
+
 class Npc : public cocos2d::Sprite {
 public:
-    static Npc* create(const std::string& name, const std::string& spriteFile);
-    virtual bool init(const std::string& name, const std::string& spriteFile);
+    enum class NpcType {
+        Villager,
+        Merchant
+    };
+
+    static Npc* create(const std::string& name, const std::string& spriteFile, NpcType type = NpcType::Villager);
+    virtual bool init(const std::string& name, const std::string& spriteFile, NpcType type);
 
     std::string getNpcName() const { return _name; }
     std::string getDialogue() const;
-    std::vector<std::string> getDialogues() const { return _dialogues; }
+    const std::vector<std::string>& getDialogues() const { return _dialogues; }
     std::string getPortraitFile() const;
 
-    void interact();
+    void interact(); 
+    
+    bool isMerchant() const { return _type == NpcType::Merchant; }
 
 private:
     std::string _name;
     std::vector<std::string> _dialogues;
+    NpcType _type;
 };
 
 #endif // __NPC_H__

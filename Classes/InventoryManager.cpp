@@ -73,13 +73,19 @@ bool InventoryManager::init(int slotCount)
 
 void InventoryManager::initDefaultItems()
 {
-    // 初始工具（前5个槽位）
+    // 初始工具（前5个槽位），设置满耐久
     setSlot(0, ItemType::Hoe, 1);
     setSlot(1, ItemType::WateringCan, 1);
     setSlot(2, ItemType::Scythe, 1);
     setSlot(3, ItemType::Axe, 1);
     setSlot(4, ItemType::Pickaxe, 1);
     setSlot(5, ItemType::FishingRod, 1);
+
+    // 为工具设置初始满耐久
+    for (int i = 0; i <= 5; ++i) {
+        slots_[i].maxDurability = getDefaultMaxDurability(slots_[i].type);
+        slots_[i].durability = slots_[i].maxDurability;
+    }
 
     // 初始种子
     setSlot(6, ItemType::SeedTurnip, 10);
@@ -230,6 +236,15 @@ void InventoryManager::setSlot(int slotIndex, ItemType itemType, int count)
 
     slots_[slotIndex].type = itemType;
     slots_[slotIndex].count = count;
+    
+    // 如果是工具，初始化耐久度
+    if (isTool(itemType)) {
+        slots_[slotIndex].maxDurability = getDefaultMaxDurability(itemType);
+        slots_[slotIndex].durability = slots_[slotIndex].maxDurability;
+    } else {
+        slots_[slotIndex].maxDurability = -1;
+        slots_[slotIndex].durability = -1;
+    }
 }
 
 void InventoryManager::swapSlots(int index1, int index2)
@@ -271,6 +286,56 @@ void InventoryManager::clear()
     }
     money_ = 0;
     CCLOG("Inventory cleared");
+}
+
+bool InventoryManager::decreaseDurability(int slotIndex, int amount)
+{
+    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+        return false;
+
+    auto& slot = slots_[slotIndex];
+    if (slot.isEmpty() || !slot.isTool())
+        return false;
+
+    slot.durability -= amount;
+    CCLOG("Tool %s durability: %d/%d", getItemName(slot.type).c_str(), slot.durability, slot.maxDurability);
+
+    if (slot.durability <= 0)
+    {
+        CCLOG("Tool %s broke!", getItemName(slot.type).c_str());
+        slot.clear();
+        return true; // Broke
+    }
+    return false;
+}
+
+int InventoryManager::getDefaultMaxDurability(ItemType type)
+{
+    switch (type)
+    {
+    case ItemType::Hoe:
+    case ItemType::WateringCan:
+    case ItemType::Scythe:
+    case ItemType::Axe:
+    case ItemType::Pickaxe:
+    case ItemType::FishingRod:
+        return 50; // 初始工具 50 次耐久
+    case ItemType::WoodenSword:
+        return 100;
+    case ItemType::IronSword:
+        return 200;
+    case ItemType::GoldSword:
+        return 300;
+    case ItemType::DiamondSword:
+        return 1000;
+    default:
+        return -1;
+    }
+}
+
+bool InventoryManager::isTool(ItemType type)
+{
+    return getDefaultMaxDurability(type) != -1;
 }
 
 int InventoryManager::findEmptySlot() const

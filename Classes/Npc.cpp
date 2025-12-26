@@ -2,9 +2,9 @@
 
 USING_NS_CC;
 
-Npc* Npc::create(const std::string& name, const std::string& spriteFile) {
+Npc* Npc::create(const std::string& name, const std::string& spriteFile, NpcType type) {
     Npc* npc = new (std::nothrow) Npc();
-    if (npc && npc->init(name, spriteFile)) {
+    if (npc && npc->init(name, spriteFile, type)) {
         npc->autorelease();
         return npc;
     }
@@ -12,11 +12,12 @@ Npc* Npc::create(const std::string& name, const std::string& spriteFile) {
     return nullptr;
 }
 
-bool Npc::init(const std::string& name, const std::string& spriteFile) {
+bool Npc::init(const std::string& name, const std::string& spriteFile, NpcType type) {
     if (!Sprite::initWithFile(spriteFile)) {
         return false;
     }
     _name = name;
+    _type = type;
     
     // Basic Dialogues
     _dialogues.push_back("Hello there, traveler!");

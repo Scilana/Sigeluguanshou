@@ -5,6 +5,8 @@
 #include "InventoryUI.h"
 #include "InventoryManager.h"
 #include "TimeManager.h"
+#include "DialogueBox.h"
+#include "MarketState.h"
 
 
 USING_NS_CC;
@@ -74,6 +76,13 @@ void HouseScene::initUI()
     timeLabel_->setPosition(Vec2(origin.x + visibleSize.width * 0.5f, origin.y + visibleSize.height - 30));
     timeLabel_->setColor(Color3B::WHITE);
     this->addChild(timeLabel_, 10);
+
+    // 初始化对话框
+    dialogueBox_ = DialogueBox::create(nullptr);
+    if (dialogueBox_) {
+        this->addChild(dialogueBox_, 100);
+        dialogueBox_->setVisible(false);
+    }
 }
 
 void HouseScene::updateUI()
@@ -159,6 +168,36 @@ void HouseScene::toggleInventory()
 void HouseScene::onInventoryClosed()
 {
     inventoryUI_ = nullptr;
+}
+
+void HouseScene::showWeatherForecast()
+{
+    if (!dialogueBox_) return;
+
+    auto tm = TimeManager::getInstance();
+    int currentDay = tm->getDay();
+
+    std::string forecast = "未来一周天气预报：\n";
+    for (int i = 1; i <= 7; ++i) {
+        int targetDay = currentDay + i;
+        MarketState::Weather w = MarketState::predictWeather(targetDay);
+        std::string wName = MarketState::getWeatherName(w);
+        
+        // 翻译
+        std::string cnName;
+        if (wName == "Sunny") cnName = "晴天";
+        else if (wName == "Light Rain") cnName = "小雨";
+        else if (wName == "Heavy Rain") cnName = "大雨";
+        else if (wName == "Snowy") cnName = "下雪";
+        else cnName = wName;
+
+        forecast += StringUtils::format("Day %d: %s\n", targetDay, cnName.c_str());
+    }
+
+    dialogueBox_->showDialogue(forecast);
+    dialogueBox_->setOnClickCallback([this]() {
+        dialogueBox_->closeDialogue();
+    });
 }
 
 void HouseScene::initBackground()
@@ -328,7 +367,21 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         else
         {
-            CCLOG("Not in sleep area. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
+            // 2. 定义电视机触发区域
+            // 用户输入坐标（Top-Left）: (160, 64) 到 (196, 79)
+            // 转换后（Cocos Bottom-Left）:
+            // X: 160 ~ 196
+            // Y: 192 - 79 = 113 到 192 - 64 = 128
+            Rect tvArea(160.0f, 113.0f, 36.0f, 15.0f);
+
+            if (tvArea.containsPoint(playerPosLocal))
+            {
+                showWeatherForecast();
+            }
+            else
+            {
+                CCLOG("Not in sleep or TV area. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
+            }
         }
     }
     break;
