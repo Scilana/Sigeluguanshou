@@ -75,6 +75,70 @@ namespace
         return Vec2(static_cast<float>(startX), static_cast<float>(startY));
     }
 
+    Vec2 findBeachSpawnTile(MapLayer* mapLayer, const Vec2& preferredTile)
+    {
+        if (!mapLayer)
+            return preferredTile;
+
+        auto tmxMap = mapLayer->getTMXMap();
+        if (!tmxMap)
+            return preferredTile;
+
+        auto waterLayer = tmxMap->getLayer("Water");
+        if (!waterLayer)
+            return preferredTile;
+
+        Size mapSize = tmxMap->getMapSize();
+        int maxX = static_cast<int>(mapSize.width) - 1;
+        int maxY = static_cast<int>(mapSize.height) - 1;
+        if (maxX < 0 || maxY < 0)
+            return preferredTile;
+
+        int startY = std::min(std::max(static_cast<int>(preferredTile.y), 0), maxY);
+
+        auto findLandToRightOfWater = [&](int row, Vec2& outTile) -> bool {
+            int leftmostWater = -1;
+            for (int x = 0; x <= maxX; ++x)
+            {
+                if (waterLayer->getTileGIDAt(Vec2(static_cast<float>(x), static_cast<float>(row))) != 0)
+                {
+                    leftmostWater = x;
+                    break;
+                }
+            }
+
+            if (leftmostWater < 0)
+                return false;
+
+            int candidateX = leftmostWater;
+            while (candidateX <= maxX &&
+                waterLayer->getTileGIDAt(Vec2(static_cast<float>(candidateX), static_cast<float>(row))) != 0)
+            {
+                ++candidateX;
+            }
+
+            if (candidateX > maxX)
+                return false;
+
+            outTile = Vec2(static_cast<float>(candidateX), static_cast<float>(row));
+            return true;
+        };
+
+        Vec2 candidate;
+        for (int offset = 0; offset <= maxY; ++offset)
+        {
+            int rowUp = startY + offset;
+            if (rowUp <= maxY && findLandToRightOfWater(rowUp, candidate))
+                return candidate;
+
+            int rowDown = startY - offset;
+            if (offset > 0 && rowDown >= 0 && findLandToRightOfWater(rowDown, candidate))
+                return candidate;
+        }
+
+        return preferredTile;
+    }
+
     Sprite* createToolbarIcon(ItemType itemType)
     {
         std::string path = InventoryManager::getItemIconPath(itemType);
@@ -150,7 +214,8 @@ void BeachScene::initPlayer()
 
     if (mapLayer_)
     {
-        Vec2 spawnTile = findNearestWalkableTile(mapLayer_, kBeachSpawnTile);
+        Vec2 spawnTile = findBeachSpawnTile(mapLayer_, kBeachSpawnTile);
+        spawnTile = findNearestWalkableTile(mapLayer_, spawnTile);
         Vec2 spawnPos = mapLayer_->tileCoordToPosition(spawnTile);
         player_->setPosition(spawnPos);
         mapLayer_->addChild(player_, 10);
