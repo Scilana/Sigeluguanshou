@@ -8,6 +8,7 @@
 #include "WeatherManager.h"
 #include "SkillManager.h"
 #include "SkillTreeUI.h"
+#include "BeachScene.h"
 #include <algorithm>
 #include <cmath>
 #include <queue>
@@ -114,6 +115,7 @@ bool GameScene::init()
     inventoryUI_ = nullptr;
     marketUI_ = nullptr;
     skillUI_ = nullptr;
+    enteringBeach_ = false;
 
     initMap();
     initFarm();
@@ -758,6 +760,8 @@ void GameScene::update(float delta)
 
     // 更新钓鱼状态
     updateFishingState(delta);
+
+    checkBeachEntrance();
 
     // [New] Time / Fatigue Check
     if (farmManager_)
@@ -2539,6 +2543,72 @@ void GameScene::enterHouse()
 
     auto transition = TransitionFade::create(0.4f, houseScene);
     Director::getInstance()->pushScene(transition);
+}
+
+void GameScene::enterBeach()
+{
+    if (enteringBeach_)
+        return;
+
+    enteringBeach_ = true;
+
+    CCLOG("Entering beach...");
+    SaveManager::SaveData data = collectSaveData();
+    if (SaveManager::getInstance()->saveGame(data))
+    {
+        CCLOG("Auto-save before beach: OK");
+    }
+    else
+    {
+        CCLOG("Auto-save before beach: FAILED");
+    }
+
+    int dayCount = farmManager_ ? farmManager_->getDayCount() : 1;
+    float accumulatedSeconds = 0.0f;
+    if (farmManager_)
+    {
+        accumulatedSeconds = farmManager_->getDayProgress() * 120.0f;
+    }
+
+    auto beachScene = BeachScene::createScene(inventory_, dayCount, accumulatedSeconds);
+    if (beachScene)
+    {
+        auto transition = TransitionFade::create(0.5f, beachScene);
+        Director::getInstance()->replaceScene(transition);
+    }
+    else
+    {
+        enteringBeach_ = false;
+        CCLOG("ERROR: Failed to create BeachScene");
+    }
+}
+
+void GameScene::checkBeachEntrance()
+{
+    if (enteringBeach_ || !player_ || !mapLayer_)
+        return;
+
+    if (inventoryUI_ || marketUI_ || skillUI_)
+        return;
+
+    if (isPlayerAtBeachEntrance())
+    {
+        enterBeach();
+    }
+}
+
+bool GameScene::isPlayerAtBeachEntrance() const
+{
+    if (!player_ || !mapLayer_)
+        return false;
+
+    Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
+    Size mapSize = mapLayer_->getMapSizeInTiles();
+
+    const float entranceWidth = 4.0f;
+    const float entranceHeight = 6.0f;
+
+    return tileCoord.x >= mapSize.width - entranceWidth && tileCoord.y <= entranceHeight;
 }
 
 void GameScene::enterMine()

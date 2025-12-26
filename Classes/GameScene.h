@@ -20,6 +20,7 @@
 class MarketUI;
 class WeatherManager;
 class SkillTreeUI;
+class BeachScene;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -144,12 +145,17 @@ private:
     void onMarketClosed();
     void enterMine();
     void enterHouse();
+    void enterBeach();
+    void checkBeachEntrance();
 
     /**
      * @brief 检查玩家是否在电梯附近
      */
     bool isPlayerNearElevator() const;
     bool isPlayerNearHouseDoor() const;
+    bool isPlayerAtBeachEntrance() const;
+
+    bool enteringBeach_ = false;
 
     // 矿井入口位置（右下角的房子）
     const cocos2d::Vec2 ELEVATOR_POS = cocos2d::Vec2(1202, 226);
