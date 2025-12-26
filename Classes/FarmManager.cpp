@@ -83,6 +83,11 @@ bool FarmManager::init(MapLayer* mapLayer)
                tile.cropId = tileData.cropId;
                tile.stage = tileData.stage;
                tile.progressDays = tileData.progressDays;
+               
+               if (tile.hasCrop && tile.watered) {
+                   CCLOG("Loaded WATERED crop at (%d, %d), Stage: %d, Progress: %d", 
+                       tileData.x, tileData.y, tile.stage, tile.progressDays);
+               }
             }
         }
     }
@@ -186,16 +191,22 @@ void FarmManager::update(float delta)
                 {
                     if (tile.hasCrop && tile.watered)
                     {
+                        CCLOG("Catch-up: Processing WATERED crop at (%d, %d) for day skip", tile.x, tile.y);
                         auto def = getCropDef(tile.cropId);
                         if (tile.stage < (int)def.stageDays.size())
                         {
                             tile.progressDays++;
+                            CCLOG("  Grew! Progress: %d -> %d", tile.progressDays-1, tile.progressDays);
                             if (tile.progressDays >= def.stageDays[tile.stage])
                             {
                                 tile.stage++;
                                 tile.progressDays = 0;
+                                CCLOG("  Stage UP! New Stage: %d", tile.stage);
                             }
                         }
+                    }
+                    else if (tile.hasCrop) {
+                         // CCLOG("Catch-up: Crop at (%d, %d) is NOT watered. Skipping growth.", tile.x, tile.y);
                     }
                     tile.watered = false; // Reset water daily
                 }
