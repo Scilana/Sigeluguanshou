@@ -37,6 +37,15 @@ void MarketState::buildDefaultGoods()
 
     // Fish
     sellGoods_.push_back({ItemType::Fish, 50, 50});
+    sellGoods_.push_back({ItemType::ITEM_Anchovy, 30, 30});
+    sellGoods_.push_back({ItemType::ITEM_Carp, 30, 30});
+    sellGoods_.push_back({ItemType::ITEM_Eel, 85, 85});
+    sellGoods_.push_back({ItemType::ITEM_Flounder, 50, 50});
+    sellGoods_.push_back({ItemType::ITEM_Largemouth_Bass, 100, 100});
+    sellGoods_.push_back({ItemType::ITEM_Pufferfish, 200, 200});
+    sellGoods_.push_back({ItemType::ITEM_Rainbow_Trout, 65, 65});
+    sellGoods_.push_back({ItemType::ITEM_Sturgeon, 200, 200});
+    sellGoods_.push_back({ItemType::ITEM_Tilapia, 75, 75});
 
     // Ores (Fixed Prices)
     sellGoods_.push_back({ItemType::CopperOre, 20, 20});

@@ -114,7 +114,7 @@ private:
     cocos2d::Animation* useAxeLeftAnimation_;
     cocos2d::Animation* useAxeRightAnimation_;
 
-    ItemType currentToolType_ = ItemType::None;
+    ItemType currentToolType_ = ItemType::ITEM_NONE;
 
     // 【新增】锄头动画缓存
     cocos2d::Animation* useHoeUpAnimation_;

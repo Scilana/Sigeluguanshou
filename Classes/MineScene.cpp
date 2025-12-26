@@ -83,7 +83,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     miningManager_ = nullptr;
     currentFloor_ = currentFloor;
     monsterSpawnTimer_ = 0.0f;
-    currentWeapon_ = ItemType::None;
+    currentWeapon_ = ItemType::ITEM_NONE;
     attackCooldown_ = 0.5f;
     currentAttackCooldown_ = 0.0f;
 
@@ -657,7 +657,7 @@ void MineScene::updateUI()
     {
         ItemType type = inventory_->getSlot(selectedItemIndex_).type;
         std::string name = InventoryManager::getItemName(type);
-        if (type == ItemType::None) name = "Empty";
+        if (type == ItemType::ITEM_NONE) name = "Empty";
 
         // 显示选中状态 [1] Pickaxe
         int num = (selectedItemIndex_ + 1) % 10;
@@ -757,13 +757,13 @@ void MineScene::initToolbar()
         bool hasPickaxe = false;
         for (int i=0; i<8; ++i) {
             ItemType t = inventory_->getSlot(i).type;
-            if (t == ItemType::WoodenSword || t == ItemType::IronSword ||
-                t == ItemType::GoldSword || t == ItemType::DiamondSword) hasSword = true;
+            if (t == ItemType::ITEM_WoodenSword || t == ItemType::ITEM_IronSword ||
+                t == ItemType::ITEM_GoldSword || t == ItemType::ITEM_DiamondSword) hasSword = true;
             if (t == ItemType::Pickaxe) hasPickaxe = true;
         }
 
         if (!hasSword) {
-            inventory_->addItem(ItemType::WoodenSword, 1);
+            inventory_->addItem(ItemType::ITEM_WoodenSword, 1);
             CCLOG("Starter Kit: Added Sword");
         }
         if (!hasPickaxe) {
@@ -780,7 +780,7 @@ void MineScene::initToolbar()
     else
     {
         // Fallback if no inventory
-        for (int i = 0; i < 8; ++i) toolbarItems_.push_back(ItemType::None);
+        for (int i = 0; i < 8; ++i) toolbarItems_.push_back(ItemType::ITEM_NONE);
     }
 
     // 恢复选中的物品
@@ -892,7 +892,7 @@ void MineScene::refreshToolbarUI()
         for (int i = 0; i < maxSlots; ++i)
         {
             const auto& slot = inventory_->getSlot(i);
-            ItemType newType = slot.isEmpty() ? ItemType::None : slot.type;
+            ItemType newType = slot.isEmpty() ? ItemType::ITEM_NONE : slot.type;
 
             if (toolbarItems_[i] != newType)
             {
@@ -975,7 +975,7 @@ void MineScene::selectItemByIndex(int idx)
     }
 
     if (player_) {
-        ItemType currentItem = ItemType::None;
+        ItemType currentItem = ItemType::ITEM_NONE;
         if (inventory_ && idx >= 0 && idx < inventory_->getSlotCount()) {
             currentItem = inventory_->getSlot(idx).type;
         }
@@ -1144,8 +1144,8 @@ void MineScene::handleAttackAction()
         ItemType item = inventory_->getSlot(selectedItemIndex_).type;
         // 检查是否是武器 (简单的列表检查，或者在 ItemType 中有分类)
         // 假设 Sword 相关的都是
-        if (item == ItemType::WoodenSword || item == ItemType::IronSword ||
-            item == ItemType::GoldSword || item == ItemType::DiamondSword)
+        if (item == ItemType::ITEM_WoodenSword || item == ItemType::ITEM_IronSword ||
+            item == ItemType::ITEM_GoldSword || item == ItemType::ITEM_DiamondSword)
         {
             // 使用 Weapon 类获取伤害
             attackDamage = Weapon::getWeaponAttackPower(item);
@@ -1204,7 +1204,7 @@ void MineScene::handleChestInteraction()
         if (dist < 40.0f)
         {
             auto result = chest->open();
-            if (result.item != ItemType::None)
+            if (result.item != ItemType::ITEM_NONE)
             {
                 if (inventory_->addItem(result.item, result.count))
                 {
@@ -1503,7 +1503,7 @@ void MineScene::handleWishAction()
 
     // 检查当前手持物品
     ItemType currentItem = inventory_->getSlot(selectedItemIndex_).type;
-    if (currentItem == ItemType::None)
+    if (currentItem == ItemType::ITEM_NONE)
     {
         showActionMessage("Hold an item to wish!", Color3B::YELLOW);
         return;
@@ -1543,11 +1543,11 @@ void MineScene::handleWishAction()
         else // 30% 好东西
         {
             // 随机给个矿石或更稀有的
-            ItemType rewards[] = { ItemType::GoldOre, ItemType::DiamondSword, ItemType::GoldSword };
+            ItemType rewards[] = { ItemType::GoldOre, ItemType::ITEM_DiamondSword, ItemType::ITEM_GoldSword };
             ItemType reward = rewards[rand() % 3];
 
             // 如果是武器且已有，折算成钱
-            if ((reward == ItemType::DiamondSword || reward == ItemType::GoldSword) && inventory_->hasItem(reward, 1))
+            if ((reward == ItemType::ITEM_DiamondSword || reward == ItemType::ITEM_GoldSword) && inventory_->hasItem(reward, 1))
             {
                 int gold = 500;
                 inventory_->addMoney(gold);

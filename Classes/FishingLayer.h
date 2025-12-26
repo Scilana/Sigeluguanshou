@@ -6,11 +6,13 @@
 
 USING_NS_CC;
 
+class Fish;
+
 class FishingLayer : public Layer
 {
 public:
-    static FishingLayer* create();
-    virtual bool init();
+    static FishingLayer* create(Fish* fish);
+    virtual bool init(Fish* fish);
     void update(float delta);
 
     // 设置回调
@@ -52,6 +54,7 @@ private:
     bool isHolding_;
     bool isGameOver_;
 
+    Fish* currentFish_{ nullptr };
     std::function<void(bool)> finishCallback_;
 };
 

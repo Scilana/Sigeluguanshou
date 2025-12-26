@@ -8,6 +8,7 @@
 #include "FishingLayer.h"
 #include "SkillManager.h"
 #include "EnergyBar.h"
+#include "Fish.h"
 #include <algorithm>
 
 USING_NS_CC;
@@ -345,7 +346,7 @@ void BeachScene::initToolbar()
     {
         for (int i = 0; i < 8; ++i)
         {
-            toolbarItems_.push_back(ItemType::None);
+            toolbarItems_.push_back(ItemType::ITEM_NONE);
         }
         selectedItemIndex_ = 0;
     }
@@ -443,7 +444,7 @@ void BeachScene::refreshToolbarUI()
         for (int i = 0; i < maxSlots; ++i)
         {
             const auto& slot = inventory_->getSlot(i);
-            ItemType newType = slot.isEmpty() ? ItemType::None : slot.type;
+            ItemType newType = slot.isEmpty() ? ItemType::ITEM_NONE : slot.type;
 
             if (toolbarItems_[i] != newType)
             {
@@ -842,9 +843,23 @@ void BeachScene::startFishing()
         player_->startFishingWait();
     }
 
-    auto fishingLayer = FishingLayer::create();
-    fishingLayer->setFinishCallback([this](bool success) {
-        auto finish = [this, success]() {
+    // 1. 根据环境随机生成一条鱼
+    ItemType fishToCatch = ItemType::ITEM_Anchovy; // 默认
+    std::vector<ItemType> seaFish = {
+        ItemType::ITEM_Anchovy, ItemType::ITEM_Flounder, ItemType::ITEM_Tilapia, 
+        ItemType::ITEM_Pufferfish, ItemType::ITEM_Sturgeon, ItemType::ITEM_Eel
+    };
+    
+    // 简单随机逻辑（后续可根据天气时间细化）
+    int idx = cocos2d::random(0, (int)seaFish.size() - 1);
+    fishToCatch = seaFish[idx];
+    
+    Fish* fishObj = Fish::createByType(fishToCatch);
+
+    // 2. 创建钓鱼图层
+    auto fishingLayer = FishingLayer::create(fishObj);
+    fishingLayer->setFinishCallback([this, fishObj](bool success) {
+        auto finish = [this, success, fishObj]() {
             this->isFishing_ = false;
             this->fishingState_ = FishingState::NONE;
 
@@ -854,8 +869,17 @@ void BeachScene::startFishing()
 
             if (success)
             {
-                CCLOG("Fishing SUCCESS!");
-                showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+                ItemType type = fishObj ? fishObj->getType() : ItemType::Fish;
+                std::string name = fishObj ? fishObj->getName() : "Fish";
+                
+                CCLOG("Fishing SUCCESS! Caught: %s", name.c_str());
+                showActionMessage("Caught a " + name + "!", Color3B(255, 215, 0));
+                
+                // 【修复】加入背包
+                if (this->inventory_) {
+                    this->inventory_->addItem(type, 1);
+                }
+                
                 SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
             }
             else
@@ -863,6 +887,9 @@ void BeachScene::startFishing()
                 CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
             }
+            
+            // 释放鱼对象
+            if (fishObj) delete fishObj;
         };
 
         if (this->player_)

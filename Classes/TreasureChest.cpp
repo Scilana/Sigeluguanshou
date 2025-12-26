@@ -85,7 +85,7 @@ TreasureChest::LootResult TreasureChest::open()
 {
     if (isOpened_)
     {
-        return { ItemType::None, 0, "Already opened!" };
+        return { ItemType::ITEM_NONE, 0, "Already opened!" };
     }
 
     isOpened_ = true;
@@ -96,7 +96,7 @@ TreasureChest::LootResult TreasureChest::open()
 
 TreasureChest::LootResult TreasureChest::generateLoot()
 {
-    LootResult result = { ItemType::None, 0, "" };
+    LootResult result = { ItemType::ITEM_NONE, 0, "" };
 
     // 根据楼层生成掉落物品
     // 楼层越深，掉落越好
@@ -112,22 +112,22 @@ TreasureChest::LootResult TreasureChest::generateLoot()
 
         if (floorLevel_ >= 4 && weaponRoll < 20)
         {
-            result.item = ItemType::DiamondSword;
+            result.item = ItemType::ITEM_DiamondSword;
             result.message = "Amazing! Diamond Sword!";
         }
         else if (floorLevel_ >= 3 && weaponRoll < 40)
         {
-            result.item = ItemType::GoldSword;
+            result.item = ItemType::ITEM_GoldSword;
             result.message = "Wow! Gold Sword!";
         }
         else if (floorLevel_ >= 2 && weaponRoll < 60)
         {
-            result.item = ItemType::IronSword;
+            result.item = ItemType::ITEM_IronSword;
             result.message = "Nice! Iron Sword!";
         }
         else
         {
-            result.item = ItemType::WoodenSword;
+            result.item = ItemType::ITEM_WoodenSword;
             result.message = "Found a Wooden Sword!";
         }
         result.count = 1;

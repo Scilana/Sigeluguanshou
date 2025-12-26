@@ -52,7 +52,7 @@ void MiningManager::initMineralDefs()
         1001,
         "Stone",
         1,                      // 1次敲击
-        ItemType::None,         // 不掉落物品
+        ItemType::ITEM_NONE,         // 不掉落物品
         0, 0,
         1                       // 1点经验
     };
@@ -235,7 +235,7 @@ long long MiningManager::getTileKey(const Vec2& tileCoord) const
 
 std::string MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mineralDef)
 {
-    if (mineralDef.dropItem == ItemType::None)
+    if (mineralDef.dropItem == ItemType::ITEM_NONE)
         return "";
 
     // 计算掉落数量

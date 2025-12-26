@@ -3,6 +3,7 @@
 
 #include "cocos2d.h"
 #include <array>
+#include <vector>
 #include <string>
 
 /**
@@ -10,7 +11,7 @@
  */
 enum class ItemType
 {
-    None = -1,
+    ITEM_NONE = -1,
     Hoe = 0,
     WateringCan,
     Scythe,
@@ -33,15 +34,25 @@ enum class ItemType
     Fish,
     // 矿石类型
     CopperOre,      // 铜矿石
-    IronOre,        // 铁矿石 [New]
+    IronOre,        // 铁矿石
     SilverOre,      // 银矿石
     GoldOre,        // 金矿石
-    DiamondOre,     // 钻石矿石 [New]
+    DiamondOre,     // 钻石矿石
     // 武器类型
-    WoodenSword,    // 木剑
-    IronSword,      // 铁剑
-    GoldSword,      // 金剑
-    DiamondSword    // 钻石剑
+    ITEM_WoodenSword,    // 木剑
+    ITEM_IronSword,      // 铁剑
+    ITEM_GoldSword,      // 金剑
+    ITEM_DiamondSword,   // 钻石剑
+    // 鱼类 [New]
+    ITEM_Anchovy,        // 鳀鱼
+    ITEM_Carp,           // 鲤鱼
+    ITEM_Eel,            // 鳗鱼
+    ITEM_Flounder,       // 比目鱼
+    ITEM_Largemouth_Bass,// 大口黑鲈
+    ITEM_Pufferfish,     // 河豚
+    ITEM_Rainbow_Trout,  // 虹鳟鱼
+    ITEM_Sturgeon,       // 鲟鱼
+    ITEM_Tilapia         // 罗非鱼
 };
 
 /**
@@ -61,13 +72,13 @@ public:
      */
     struct ItemSlot
     {
-        ItemType type = ItemType::None;
+        ItemType type = ItemType::ITEM_NONE;
         int count = 0;
         int durability = -1;    // -1 means no durability (e.g. materials/crops)
         int maxDurability = -1;
 
-        bool isEmpty() const { return type == ItemType::None || count <= 0; }
-        void clear() { type = ItemType::None; count = 0; durability = -1; maxDurability = -1; }
+        bool isEmpty() const { return type == ItemType::ITEM_NONE || count <= 0; }
+        void clear() { type = ItemType::ITEM_NONE; count = 0; durability = -1; maxDurability = -1; }
         bool isTool() const { return durability != -1; }
     };
 

@@ -62,6 +62,7 @@ list(APPEND GAME_SOURCE
      Classes/DialogueBox.cpp
      Classes/Npc.cpp
      Classes/TimeManager.cpp
+     Classes/Fish.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -98,6 +99,7 @@ list(APPEND GAME_HEADER
      Classes/DialogueBox.h
      Classes/Npc.h
      Classes/TimeManager.h
+     Classes/Fish.h
      )
 
 if(ANDROID)

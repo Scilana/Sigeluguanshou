@@ -56,7 +56,7 @@ public:
     float getAttackRange() const override { return 50.0f; }
     float getAttackSpeed() const override { return 1.0f; }
     int getPrice() const override { return 50; }
-    ItemType getItemType() const override { return ItemType::WoodenSword; }
+    ItemType getItemType() const override { return ItemType::ITEM_WoodenSword; }
     std::string getSpritePath() const override { return "weapons/wooden_sword.png"; }
 };
 
@@ -71,7 +71,7 @@ public:
     float getAttackRange() const override { return 55.0f; }
     float getAttackSpeed() const override { return 0.9f; }
     int getPrice() const override { return 150; }
-    ItemType getItemType() const override { return ItemType::IronSword; }
+    ItemType getItemType() const override { return ItemType::ITEM_IronSword; }
     std::string getSpritePath() const override { return "weapons/iron_sword.png"; }
 };
 
@@ -86,7 +86,7 @@ public:
     float getAttackRange() const override { return 60.0f; }
     float getAttackSpeed() const override { return 0.8f; }
     int getPrice() const override { return 400; }
-    ItemType getItemType() const override { return ItemType::GoldSword; }
+    ItemType getItemType() const override { return ItemType::ITEM_GoldSword; }
     std::string getSpritePath() const override { return "weapons/gold_sword.png"; }
 };
 
@@ -101,7 +101,7 @@ public:
     float getAttackRange() const override { return 65.0f; }
     float getAttackSpeed() const override { return 0.7f; }
     int getPrice() const override { return 1000; }
-    ItemType getItemType() const override { return ItemType::DiamondSword; }
+    ItemType getItemType() const override { return ItemType::ITEM_DiamondSword; }
     std::string getSpritePath() const override { return "weapons/diamond_sword.png"; }
 };
 

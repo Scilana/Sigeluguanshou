@@ -80,28 +80,29 @@ void InventoryManager::initDefaultItems()
     setSlot(3, ItemType::Axe, 1);
     setSlot(4, ItemType::Pickaxe, 1);
     setSlot(5, ItemType::FishingRod, 1);
+    setSlot(6, ItemType::ITEM_WoodenSword, 1); // Added Wooden Sword
 
     // 为工具设置初始满耐久
-    for (int i = 0; i <= 5; ++i) {
+    for (int i = 0; i <= 6; ++i) { // Adjusted loop to include the new sword
         slots_[i].maxDurability = getDefaultMaxDurability(slots_[i].type);
         slots_[i].durability = slots_[i].maxDurability;
     }
 
     // 初始种子
-    setSlot(6, ItemType::SeedTurnip, 10);
-    setSlot(7, ItemType::SeedPotato, 10);
-    setSlot(8, ItemType::SeedCorn, 5);
-    setSlot(9, ItemType::SeedTomato, 5);
-    setSlot(10, ItemType::SeedPumpkin, 3);
-    setSlot(11, ItemType::SeedBlueberry, 3);
+    setSlot(7, ItemType::SeedTurnip, 10);
+    setSlot(8, ItemType::SeedPotato, 10);
+    setSlot(9, ItemType::SeedCorn, 5);
+    setSlot(10, ItemType::SeedTomato, 5);
+    setSlot(11, ItemType::SeedPumpkin, 3);
+    setSlot(12, ItemType::SeedBlueberry, 3);
 
     // 初始木材
-    setSlot(12, ItemType::Wood, 20);
+    setSlot(13, ItemType::Wood, 20);
 }
 
 bool InventoryManager::addItem(ItemType itemType, int count)
 {
-    if (itemType == ItemType::None || count <= 0)
+    if (itemType == ItemType::ITEM_NONE || count <= 0)
         return false;
 
     // 如果物品可堆叠，先尝试堆叠到现有槽位
@@ -152,7 +153,7 @@ bool InventoryManager::addItem(ItemType itemType, int count)
 
 bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
 {
-    if (itemType == ItemType::None || count <= 0)
+    if (itemType == ItemType::ITEM_NONE || count <= 0)
         return false;
 
     // 先检查是否有足够的物品
@@ -214,9 +215,7 @@ int InventoryManager::getItemCount(ItemType itemType) const
     for (const auto& slot : slots_)
     {
         if (slot.type == itemType)
-        {
             total += slot.count;
-        }
     }
     return total;
 }
@@ -320,13 +319,13 @@ int InventoryManager::getDefaultMaxDurability(ItemType type)
     case ItemType::Pickaxe:
     case ItemType::FishingRod:
         return 50; // 初始工具 50 次耐久
-    case ItemType::WoodenSword:
+    case ItemType::ITEM_WoodenSword:
         return 100;
-    case ItemType::IronSword:
+    case ItemType::ITEM_IronSword:
         return 200;
-    case ItemType::GoldSword:
+    case ItemType::ITEM_GoldSword:
         return 300;
-    case ItemType::DiamondSword:
+    case ItemType::ITEM_DiamondSword:
         return 1000;
     default:
         return -1;
@@ -364,7 +363,7 @@ std::string InventoryManager::getItemName(ItemType itemType)
 {
     switch (itemType)
     {
-    case ItemType::None: return "Empty";
+    case ItemType::ITEM_NONE: return "Empty";
     case ItemType::Hoe: return "Hoe";
     case ItemType::WateringCan: return "Watering Can";
     case ItemType::Scythe: return "Scythe";
@@ -390,10 +389,20 @@ std::string InventoryManager::getItemName(ItemType itemType)
     case ItemType::SilverOre: return "Silver Ore";
     case ItemType::GoldOre: return "Gold Ore";
     // 武器
-    case ItemType::WoodenSword: return "Wooden Sword";
-    case ItemType::IronSword: return "Iron Sword";
-    case ItemType::GoldSword: return "Gold Sword";
-    case ItemType::DiamondSword: return "Diamond Sword";
+    case ItemType::ITEM_WoodenSword: return "Wooden Sword";
+    case ItemType::ITEM_IronSword: return "Iron Sword";
+    case ItemType::ITEM_GoldSword: return "Gold Sword";
+    case ItemType::ITEM_DiamondSword: return "Diamond Sword";
+    // 鱼类
+    case ItemType::ITEM_Anchovy: return "Anchovy";
+    case ItemType::ITEM_Carp: return "Carp";
+    case ItemType::ITEM_Eel: return "Eel";
+    case ItemType::ITEM_Flounder: return "Flounder";
+    case ItemType::ITEM_Largemouth_Bass: return "Largemouth Bass";
+    case ItemType::ITEM_Pufferfish: return "Pufferfish";
+    case ItemType::ITEM_Rainbow_Trout: return "Rainbow Trout";
+    case ItemType::ITEM_Sturgeon: return "Sturgeon";
+    case ItemType::ITEM_Tilapia: return "Tilapia";
     default: return "Unknown";
     }
 }
@@ -427,10 +436,20 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     case ItemType::SilverOre: return "Valuable ore, worth 150 gold";
     case ItemType::GoldOre: return "Precious ore, worth 500 gold";
     // 武器
-    case ItemType::WoodenSword: return "Basic sword, 10 attack";
-    case ItemType::IronSword: return "Sturdy sword, 25 attack";
-    case ItemType::GoldSword: return "Elegant sword, 40 attack";
-    case ItemType::DiamondSword: return "Legendary sword, 60 attack";
+    case ItemType::ITEM_WoodenSword: return "Basic sword, 10 attack";
+    case ItemType::ITEM_IronSword: return "Sturdy sword, 25 attack";
+    case ItemType::ITEM_GoldSword: return "Elegant sword, 40 attack";
+    case ItemType::ITEM_DiamondSword: return "Legendary sword, 60 attack";
+    // 鱼类
+    case ItemType::ITEM_Anchovy: return "A small saltwater fish.";
+    case ItemType::ITEM_Carp: return "A common pond fish.";
+    case ItemType::ITEM_Eel: return "A long, slippery fish.";
+    case ItemType::ITEM_Flounder: return "A flat sea fish.";
+    case ItemType::ITEM_Largemouth_Bass: return "A popular freshwater game fish.";
+    case ItemType::ITEM_Pufferfish: return "Can inflate itself when threatened.";
+    case ItemType::ITEM_Rainbow_Trout: return "A colorful freshwater fish.";
+    case ItemType::ITEM_Sturgeon: return "An ancient, valuable fish.";
+    case ItemType::ITEM_Tilapia: return "A common tropical fish.";
     default: return "";
     }
 }
@@ -444,6 +463,18 @@ std::string InventoryManager::getItemIconPath(ItemType itemType)
     case ItemType::Scythe: return "tools/scythe.png";
     case ItemType::Axe: return "tools/axe.png";
     case ItemType::Pickaxe: return "tools/pickaxe.png";
+    case ItemType::Fish: return "tools/fish.png";
+    // 鱼类
+    case ItemType::ITEM_Anchovy: return "鱼/Anchovy.png";
+    case ItemType::ITEM_Carp: return "鱼/Carp.png";
+    case ItemType::ITEM_Eel: return "鱼/Eel.png";
+    case ItemType::ITEM_Flounder: return "鱼/Flounder.png";
+    case ItemType::ITEM_Largemouth_Bass: return "鱼/Largemouth_Bass.png";
+    case ItemType::ITEM_Pufferfish: return "鱼/Pufferfish.png";
+    case ItemType::ITEM_Rainbow_Trout: return "鱼/Rainbow_Trout.png";
+    case ItemType::ITEM_Sturgeon: return "鱼/Sturgeon.png";
+    case ItemType::ITEM_Tilapia: return "鱼/Tilapia.png";
+    case ItemType::CopperOre: return "tools/copper_ore.png";
     case ItemType::FishingRod: return "tools/fishingRod.png";
     case ItemType::SeedTurnip: return "tools/carrotSeed.png";
     case ItemType::SeedPotato: return "tools/dogbaneSeed.png";
@@ -466,8 +497,8 @@ bool InventoryManager::isStackable(ItemType itemType)
     }
 
     // 武器不可堆叠
-    if (itemType == ItemType::WoodenSword || itemType == ItemType::IronSword ||
-        itemType == ItemType::GoldSword || itemType == ItemType::DiamondSword)
+    if (itemType == ItemType::ITEM_WoodenSword || itemType == ItemType::ITEM_IronSword ||
+        itemType == ItemType::ITEM_GoldSword || itemType == ItemType::ITEM_DiamondSword)
     {
         return false;
     }

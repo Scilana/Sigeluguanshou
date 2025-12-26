@@ -4,6 +4,7 @@
 #include "HouseScene.h"
 #include "FarmManager.h"
 #include "TimeManager.h"
+#include "Fish.h" // Added as per instruction
 
 #include "MarketUI.h"
 #include "ElevatorUI.h"
@@ -1129,7 +1130,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     if (result.success && inventory_)
                     {
                         ItemType harvestItem = getItemTypeForCropId(result.cropId);
-                        if (harvestItem != ItemType::None)
+                        if (harvestItem != ItemType::ITEM_NONE)
                         {
                             if (inventory_->addItem(harvestItem, 1))
                             {
@@ -2152,7 +2153,7 @@ void GameScene::refreshToolbarUI()
         for (int i = 0; i < maxSlots; ++i)
         {
             const auto& slot = inventory_->getSlot(i);
-            ItemType newType = slot.isEmpty() ? ItemType::None : slot.type;
+            ItemType newType = slot.isEmpty() ? ItemType::ITEM_NONE : slot.type;
 
             if (toolbarItems_[i] != newType)
             {
@@ -2292,7 +2293,7 @@ ItemType GameScene::getItemTypeForCropId(int cropId) const
     case 3: return ItemType::Tomato;
     case 4: return ItemType::Pumpkin;
     case 5: return ItemType::Blueberry;
-    default: return ItemType::None;
+    default: return ItemType::ITEM_NONE;
     }
 }
 
@@ -2463,9 +2464,19 @@ void GameScene::startFishing()
         player_->startFishingWait();
     }
 
-    auto fishingLayer = FishingLayer::create();
-    fishingLayer->setFinishCallback([this](bool success) {
-        auto finish = [this, success]() {
+    // 1. 根据环境随机生成一条鱼（淡水鱼）
+    std::vector<ItemType> freshFish = {
+        ItemType::ITEM_Carp, ItemType::ITEM_Largemouth_Bass, ItemType::ITEM_Rainbow_Trout, ItemType::ITEM_Eel
+    };
+    
+    int idx = cocos2d::random(0, (int)freshFish.size() - 1);
+    ItemType typeToCatch = freshFish[idx];
+    Fish* fishObj = Fish::createByType(typeToCatch);
+
+    // 2. 创建钓鱼图层
+    auto fishingLayer = FishingLayer::create(fishObj);
+    fishingLayer->setFinishCallback([this, fishObj](bool success) {
+        auto finish = [this, success, fishObj]() {
             this->isFishing_ = false;
             this->fishingState_ = FishingState::NONE;
 
@@ -2475,18 +2486,27 @@ void GameScene::startFishing()
 
             if (success)
             {
-                CCLOG("Fishing SUCCESS!");
-                showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+                ItemType type = fishObj ? fishObj->getType() : ItemType::Fish;
+                std::string name = fishObj ? fishObj->getName() : "Fish";
+
+                CCLOG("Fishing SUCCESS! Caught: %s", name.c_str());
+                showActionMessage("Caught a " + name + "!", Color3B(255, 215, 0));
+                
+                // 加入背包
+                auto inv = InventoryManager::getInstance();
+                if (inv) {
+                    inv->addItem(type, 1);
+                }
+
                 SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
-                // No inventory addItem API anymore? 
-                // We can't add item to Toolbar easily if it's full/fixed.
-                // For now just show message.
             }
             else
             {
                 CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
             }
+
+            if (fishObj) delete fishObj;
         };
 
         if (this->player_) {
@@ -2964,7 +2984,7 @@ SaveManager::SaveData GameScene::collectSaveData()
             {
                 // 空槽位也要保存，保持索引一致
                 SaveManager::SaveData::InventoryData::ItemSlotData slotData;
-                slotData.type = static_cast<int>(ItemType::None);
+                slotData.type = static_cast<int>(ItemType::ITEM_NONE);
                 slotData.count = 0;
                 data.inventory.slots.push_back(slotData);
             }
@@ -3097,7 +3117,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
         for (size_t i = 0; i < data.inventory.slots.size() && i < inventory_->getSlotCount(); i++)
         {
             const auto& slotData = data.inventory.slots[i];
-            if (slotData.type != static_cast<int>(ItemType::None) && slotData.count > 0)
+            if (slotData.type != static_cast<int>(ItemType::ITEM_NONE) && slotData.count > 0)
             {
                 ItemType type = static_cast<ItemType>(slotData.type);
                 inventory_->setSlot(i, type, slotData.count);
@@ -3158,7 +3178,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
                 // 恢复箱子里的物品
                 for (size_t i = 0; i < chestData.slots.size() && i < chest->getInventory()->getSlotCount(); ++i) {
                     const auto& slot = chestData.slots[i];
-                    if (slot.type != (int)ItemType::None && slot.count > 0) {
+                    if (slot.type != (int)ItemType::ITEM_NONE && slot.count > 0) {
                         chest->getInventory()->setSlot(i, (ItemType)slot.type, slot.count);
                     }
                 }

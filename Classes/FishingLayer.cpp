@@ -1,10 +1,12 @@
 #include "FishingLayer.h"
 #include "SkillManager.h"
+#include "Fish.h"
+#include "InventoryManager.h"
 
-FishingLayer* FishingLayer::create()
+FishingLayer* FishingLayer::create(Fish* fish)
 {
     FishingLayer* ret = new (std::nothrow) FishingLayer();
-    if (ret && ret->init())
+    if (ret && ret->init(fish))
     {
         ret->autorelease();
         return ret;
@@ -13,12 +15,13 @@ FishingLayer* FishingLayer::create()
     return nullptr;
 }
 
-bool FishingLayer::init()
+bool FishingLayer::init(Fish* fish)
 {
     if (!Layer::init())
         return false;
 
-    CCLOG("Initializing Fishing Layer...");
+    currentFish_ = fish;
+    CCLOG("Initializing Fishing Layer for %s...", fish ? fish->getName().c_str() : "Unknown");
 
     // 灰色半透明背景，阻挡下层点击
     auto visibleSize = Director::getInstance()->getVisibleSize();
@@ -33,7 +36,7 @@ bool FishingLayer::init()
 
     // 初始化参数
     barHeight_ = 400.0f; // 背景条像素高度
-    greenBarHeight_ = 80.0f; // 绿条像素高度 (约为背景的1/5)
+    greenBarHeight_ = 160.0f; // 绿条像素高度 (翻倍，使游戏更容易)
     
     fishPosition_ = 0.2f;
     barPosition_ = 0.1f;
@@ -86,12 +89,29 @@ void FishingLayer::initUI()
     greenBar_ = (Sprite*)green;
 
     // 3. 鱼 (Target)
-    auto fish = LayerColor::create(Color4B(255, 100, 100, 255));
-    fish->setContentSize(Size(20, 20));
-    fish->ignoreAnchorPointForPosition(false);
-    fish->setAnchorPoint(Vec2(0.5, 0.5));
-    barBg->addChild(fish, 3);
-    fishSprite_ = (Sprite*)fish;
+    std::string fishIcon = "鱼/Carp.png"; // Default
+    if (currentFish_) {
+        fishIcon = InventoryManager::getItemIconPath(currentFish_->getType());
+    }
+
+    auto fish = Sprite::create(fishIcon);
+    if (!fish) {
+        // Fallback to red box if icon missing
+        auto fallbackFish = LayerColor::create(Color4B(255, 100, 100, 255));
+        fallbackFish->setContentSize(Size(20, 20));
+        fallbackFish->ignoreAnchorPointForPosition(false);
+        fallbackFish->setAnchorPoint(Vec2(0.5, 0.5));
+        barBg->addChild(fallbackFish, 3);
+        fishSprite_ = (Sprite*)fallbackFish;
+    } else {
+        // Adjust fish icon size
+        float targetSize = 24.0f;
+        float scale = std::min(targetSize / fish->getContentSize().width, targetSize / fish->getContentSize().height);
+        fish->setScale(scale);
+        fish->setAnchorPoint(Vec2(0.5, 0.5));
+        barBg->addChild(fish, 3);
+        fishSprite_ = fish;
+    }
 
     // 4. 右侧进度条 (Catch progress)
     auto progressBg = LayerColor::create(Color4B(0, 0, 0, 255));
@@ -198,11 +218,23 @@ void FishingLayer::updateFishMovement(float delta)
     moveTimer_ -= delta;
     if (moveTimer_ <= 0)
     {
-        fishTargetPos_ = CCRANDOM_0_1() * 0.8f + 0.1f;
-        moveTimer_ = CCRANDOM_0_1() * 2.0f + 0.5f;
+        // 难度越高，移动范围越广
+        float range = 0.5f + (currentFish_ ? currentFish_->getDifficulty() * 0.4f : 0.2f);
+        float offset = (1.0f - range) / 2.0f;
+        fishTargetPos_ = CCRANDOM_0_1() * range + offset;
+
+        // 难度越高，停留时间越短
+        float baseFreq = currentFish_ ? currentFish_->getMovementFrequency() : 1.5f;
+        moveTimer_ = (CCRANDOM_0_1() * 1.5f + 0.5f) / baseFreq;
     }
 
-    float smooth = 2.0f * delta;
+    // 难度越高，移动速度越快
+    float speedBase = 2.0f;
+    if (currentFish_) {
+        speedBase += currentFish_->getDifficulty() * 4.0f;
+    }
+    float smooth = speedBase * delta;
+    
     if (std::abs(fishTargetPos_ - fishPosition_) < smooth)
     {
         fishPosition_ = fishTargetPos_;
