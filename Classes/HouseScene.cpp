@@ -50,17 +50,21 @@ bool HouseScene::init(bool isPassedOut)
     {
         // 如果是晕倒模式，直接开始睡觉流程
         isSleeping_ = true;
-        if (player_) {
+        if (player_ && background_) {
             player_->setVisible(false);
             player_->disableKeyboardControl();
+            // 设为床的位置 (本地坐标 165, 77)
+            player_->setPosition(background_->convertToWorldSpace(Vec2(165, 77)));
         }
         if (sleepSprite_) sleepSprite_->setVisible(true);
         CCLOG("Player passed out - starting in sleep mode");
     }
     else
     {
-        // 正常进入，生成在门口
-        if (player_) player_->setPosition(Vec2(220, 100)); // 门口附近
+        // 正常进入，生成在门口 (本地坐标 79, 25 左右)
+        if (player_ && background_) {
+            player_->setPosition(background_->convertToWorldSpace(Vec2(79, 25)));
+        }
         if (sleepSprite_) sleepSprite_->setVisible(false);
     }
 

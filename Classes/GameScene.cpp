@@ -24,7 +24,7 @@ USING_NS_CC;
 
 namespace
 {
-    const Vec2 kHouseDoorTile(20.0f, 15.0f);
+    const Vec2 kHouseDoorTile(18.0f, 14.0f);
     const float kHouseDoorRadius = 40.0f;
     const Color4B kDayLightColor(255, 255, 255, 0);
     const Color4B kDawnLightColor(255, 180, 120, 70);

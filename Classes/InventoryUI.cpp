@@ -126,6 +126,7 @@ void InventoryUI::initPanel()
     infoLabel_ = Label::createWithSystemFont("", "Arial", 18);
     infoLabel_->setPosition(Vec2(panelWidth / 2, 30));
     infoLabel_->setColor(Color3B(200, 200, 200));
+    panel_->addChild(infoLabel_, 1);
 }
 
 void InventoryUI::initSlots()
@@ -390,7 +391,11 @@ void InventoryUI::onSlotClicked(int slotIndex)
         
         // 交换后维持选中在目标位置，方便连续移动
         selectedSlotIndex_ = slotIndex;
-        refresh(); // 刷新所有格子显示
+        
+        // 延迟刷新到下一帧，避免在触摸事件中修改场景图
+        this->scheduleOnce([this](float) {
+            refresh();
+        }, 0, "deferred_refresh");
     }
     else
     {
@@ -423,7 +428,10 @@ void InventoryUI::onSlotClicked(int slotIndex)
         }
     }
 
-    updateSelection(); 
+    // 延迟更新选中框到下一帧
+    this->scheduleOnce([this](float) {
+        updateSelection();
+    }, 0, "deferred_update_selection");
 }
 
 void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
