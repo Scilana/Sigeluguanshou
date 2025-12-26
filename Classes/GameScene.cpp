@@ -742,8 +742,22 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_8:
         selectItemByIndex(7);
         break;
-    default:
+    case EventKeyboard::KeyCode::KEY_TAB:
+    {
+        CCLOG("Cheat: Skipping Day...");
+        auto tm = TimeManager::getInstance();
+        if (tm) {
+             // 1. Save current state (including farm)
+             saveGame();
+            
+             // 2. Skip to just before wake up
+             tm->skipToNextMorning();
+             
+             // 3. Transition to House (Wake Up)
+             Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+        }
         break;
+    }
     }
 
 }

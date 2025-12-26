@@ -19,6 +19,12 @@ public:
     void startNewDay(); // Resets time to 6 AM
     void advanceToNextDay(); // Increments day count and starts new day
     void setDayCount(int day);
+    int getLastFarmUpdateDay() const { return lastFarmUpdateDay_; }
+    void setLastFarmUpdateDay(int day) { lastFarmUpdateDay_ = day; }
+    
+    // Cheat helper
+    void skipToNextMorning();
+
     
     // State checks
     bool isMidnight() const;
@@ -31,6 +37,8 @@ private:
 
     float dayTimer_;      // Current seconds passed in day
     int dayCount_;        // Current day number
+    int lastFarmUpdateDay_; // Track when farm was last updated
+
     
     // Constants
     const float SECONDS_PER_DAY = 300.0f; // 5 minutes real time = 1 day
