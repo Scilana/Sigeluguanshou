@@ -875,5 +875,13 @@ void BeachScene::startFishing()
         }
     });
 
-    this->addChild(fishingLayer, 100);
+    if (uiLayer_)
+    {
+        uiLayer_->addChild(fishingLayer, -1);
+        fishingLayer->setPosition(Vec2::ZERO);
+    }
+    else
+    {
+        this->addChild(fishingLayer, 100);
+    }
 }
