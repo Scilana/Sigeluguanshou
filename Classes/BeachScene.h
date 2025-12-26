@@ -52,6 +52,11 @@ private:
     void refreshToolbarUI();
     void selectItemByIndex(int idx);
 
+    void onMouseDown(cocos2d::Event* event);
+    void onMouseUp(cocos2d::Event* event);
+    void startFishing();
+    void updateFishingState(float delta);
+
     void updateCamera();
     void updateUI();
     void toggleInventory();
@@ -60,6 +65,18 @@ private:
     bool isPlayerAtFarmExit() const;
     void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
+
+    enum class FishingState { NONE, CHARGING, WAITING, BITING, REELING };
+    FishingState fishingState_ = FishingState::NONE;
+    float chargePower_ = 0.0f;
+    float fishingTimer_ = 0.0f;
+    float waitTimer_ = 0.0f;
+    float biteTimer_ = 0.0f;
+    bool isFishing_ = false;
+
+    cocos2d::Sprite* chargeBarBg_ = nullptr;
+    cocos2d::Sprite* chargeBarFg_ = nullptr;
+    cocos2d::Sprite* exclamationMark_ = nullptr;
 };
 
 #endif // __BEACH_SCENE_H__

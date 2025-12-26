@@ -5,6 +5,8 @@
 #include "InventoryManager.h"
 #include "GameScene.h"
 #include "HouseScene.h"
+#include "FishingLayer.h"
+#include "SkillManager.h"
 #include "EnergyBar.h"
 #include <algorithm>
 
@@ -284,6 +286,30 @@ void BeachScene::initUI()
             addChild(energyBar, 100);
         }
     }
+
+    if (player_)
+    {
+        chargeBarBg_ = Sprite::create();
+        chargeBarBg_->setTextureRect(Rect(0, 0, 50, 8));
+        chargeBarBg_->setColor(Color3B::GRAY);
+        chargeBarBg_->setPosition(Vec2(16, 70));
+        chargeBarBg_->setVisible(false);
+        player_->addChild(chargeBarBg_);
+
+        chargeBarFg_ = Sprite::create();
+        chargeBarFg_->setTextureRect(Rect(0, 0, 0, 8));
+        chargeBarFg_->setColor(Color3B::GREEN);
+        chargeBarFg_->setAnchorPoint(Vec2(0, 0));
+        chargeBarFg_->setPosition(Vec2(0, 0));
+        chargeBarBg_->addChild(chargeBarFg_);
+
+        exclamationMark_ = Sprite::create();
+        exclamationMark_->setTextureRect(Rect(0, 0, 10, 30));
+        exclamationMark_->setColor(Color3B::YELLOW);
+        exclamationMark_->setPosition(Vec2(16, 90));
+        exclamationMark_->setVisible(false);
+        player_->addChild(exclamationMark_);
+    }
 }
 
 void BeachScene::initControls()
@@ -291,6 +317,13 @@ void BeachScene::initControls()
     auto keyListener = EventListenerKeyboard::create();
     keyListener->onKeyPressed = CC_CALLBACK_2(BeachScene::onKeyPressed, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
+
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseDown = CC_CALLBACK_1(BeachScene::onMouseDown, this);
+    auto mouseUpListener = EventListenerMouse::create();
+    mouseUpListener->onMouseUp = CC_CALLBACK_1(BeachScene::onMouseUp, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseUpListener, this);
 }
 
 void BeachScene::initToolbar()
@@ -509,6 +542,7 @@ void BeachScene::update(float delta)
 {
     updateCamera();
     updateUI();
+    updateFishingState(delta);
 
     auto energyBar = getChildByName("EnergyBar");
     auto camera = getDefaultCamera();
@@ -697,4 +731,149 @@ void BeachScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     default:
         break;
     }
+}
+
+void BeachScene::onMouseDown(Event* event)
+{
+    auto mouseEvent = static_cast<EventMouse*>(event);
+    if (!mouseEvent || mouseEvent->getMouseButton() != EventMouse::MouseButton::BUTTON_LEFT)
+        return;
+
+    if (toolbarItems_.empty())
+        return;
+
+    ItemType current = ItemType::Hoe;
+    if (selectedItemIndex_ >= 0 && selectedItemIndex_ < static_cast<int>(toolbarItems_.size()))
+    {
+        current = toolbarItems_[selectedItemIndex_];
+    }
+
+    if (current != ItemType::FishingRod)
+        return;
+
+    if (fishingState_ == FishingState::NONE)
+    {
+        if (isFishing_) return;
+        if (player_ && player_->isFishingAnimationPlaying()) return;
+        fishingState_ = FishingState::CHARGING;
+        chargePower_ = 0.0f;
+        CCLOG("Start Charging...");
+    }
+    else if (fishingState_ == FishingState::BITING)
+    {
+        CCLOG("HOOKED!");
+        if (exclamationMark_) exclamationMark_->setVisible(false);
+        startFishing();
+    }
+    else if (fishingState_ == FishingState::WAITING)
+    {
+        CCLOG("Pulled too early!");
+        fishingState_ = FishingState::NONE;
+        if (exclamationMark_) exclamationMark_->setVisible(false);
+        if (player_) player_->startFishingReel();
+        showActionMessage("Too early!", Color3B::RED);
+    }
+}
+
+void BeachScene::onMouseUp(Event* event)
+{
+    auto mouseEvent = static_cast<EventMouse*>(event);
+    if (!mouseEvent || mouseEvent->getMouseButton() != EventMouse::MouseButton::BUTTON_LEFT)
+        return;
+
+    if (fishingState_ == FishingState::CHARGING)
+    {
+        fishingState_ = FishingState::WAITING;
+        if (chargeBarBg_) chargeBarBg_->setVisible(false);
+
+        waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
+        if (player_) player_->startFishingCast();
+        CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
+    }
+}
+
+void BeachScene::updateFishingState(float delta)
+{
+    if (fishingState_ == FishingState::CHARGING)
+    {
+        chargePower_ += delta * 1.5f;
+        if (chargePower_ > 1.0f) chargePower_ = 1.0f;
+
+        if (chargeBarBg_) chargeBarBg_->setVisible(true);
+        if (chargeBarFg_)
+        {
+            chargeBarFg_->setTextureRect(Rect(0, 0, 50 * chargePower_, 8));
+            chargeBarFg_->setColor(Color3B(255 * chargePower_, 255 * (1 - chargePower_) + 100, 0));
+        }
+    }
+    else if (fishingState_ == FishingState::WAITING)
+    {
+        waitTimer_ -= delta;
+        if (waitTimer_ <= 0)
+        {
+            fishingState_ = FishingState::BITING;
+            biteTimer_ = 1.0f;
+            if (exclamationMark_) exclamationMark_->setVisible(true);
+            CCLOG("Fish bit! Click now!");
+        }
+    }
+    else if (fishingState_ == FishingState::BITING)
+    {
+        biteTimer_ -= delta;
+        if (biteTimer_ <= 0)
+        {
+            fishingState_ = FishingState::NONE;
+            if (exclamationMark_) exclamationMark_->setVisible(false);
+            if (player_) player_->startFishingReel();
+            CCLOG("Missed...");
+            showActionMessage("Missed...", Color3B::GRAY);
+        }
+    }
+}
+
+void BeachScene::startFishing()
+{
+    isFishing_ = true;
+    fishingState_ = FishingState::REELING;
+
+    if (player_)
+    {
+        player_->setMoveSpeed(0.0f);
+        player_->startFishingWait();
+    }
+
+    auto fishingLayer = FishingLayer::create();
+    fishingLayer->setFinishCallback([this](bool success) {
+        auto finish = [this, success]() {
+            this->isFishing_ = false;
+            this->fishingState_ = FishingState::NONE;
+
+            if (this->chargeBarBg_) this->chargeBarBg_->setVisible(false);
+            if (this->exclamationMark_) this->exclamationMark_->setVisible(false);
+            if (this->player_) this->player_->setMoveSpeed(150.0f);
+
+            if (success)
+            {
+                CCLOG("Fishing SUCCESS!");
+                showActionMessage("Caught a Fish!", Color3B(255, 215, 0));
+                SkillManager::getInstance()->recordAction(SkillManager::SkillType::Fishing);
+            }
+            else
+            {
+                CCLOG("Fishing FAILED.");
+                showActionMessage("Fish got away...", Color3B::RED);
+            }
+        };
+
+        if (this->player_)
+        {
+            this->player_->startFishingReel(finish);
+        }
+        else
+        {
+            finish();
+        }
+    });
+
+    this->addChild(fishingLayer, 100);
 }
