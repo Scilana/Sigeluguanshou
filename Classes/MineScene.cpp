@@ -974,6 +974,14 @@ void MineScene::selectItemByIndex(int idx)
         inventory_->setSelectedSlotIndex(idx);
     }
 
+    if (player_) {
+        ItemType currentItem = ItemType::None;
+        if (inventory_ && idx >= 0 && idx < inventory_->getSlotCount()) {
+            currentItem = inventory_->getSlot(idx).type;
+        }
+        player_->setCurrentTool(currentItem);
+    }
+
     updateUI();
 }
 
