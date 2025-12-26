@@ -182,6 +182,9 @@ void GameScene::initMap()
     CCLOG("Initializing map...");
 
     // 创建地图层
+    FileUtils::getInstance()->purgeCachedEntries();
+    SpriteFrameCache::getInstance()->removeUnusedSpriteFrames();
+    Director::getInstance()->getTextureCache()->removeUnusedTextures();
 
     mapLayer_ = MapLayer::create("map/farm.tmx");
 

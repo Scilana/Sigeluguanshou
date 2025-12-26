@@ -101,6 +101,10 @@ Player::~Player()
     CC_SAFE_RELEASE(useHoeDownAnimation_);
     CC_SAFE_RELEASE(useHoeLeftAnimation_);
     CC_SAFE_RELEASE(useHoeRightAnimation_);
+    CC_SAFE_RELEASE(useWateringUpAnimation_);
+    CC_SAFE_RELEASE(useWateringDownAnimation_);
+    CC_SAFE_RELEASE(useWateringLeftAnimation_);
+    CC_SAFE_RELEASE(useWateringRightAnimation_);
     CC_SAFE_RELEASE(usePickaxeUpAnimation_);
     CC_SAFE_RELEASE(usePickaxeDownAnimation_);
     CC_SAFE_RELEASE(usePickaxeLeftAnimation_);
@@ -202,6 +206,10 @@ void Player::loadAnimations()
     useHoeDownAnimation_ = nullptr;
     useHoeLeftAnimation_ = nullptr;
     useHoeRightAnimation_ = nullptr;
+    useWateringUpAnimation_ = nullptr;
+    useWateringDownAnimation_ = nullptr;
+    useWateringLeftAnimation_ = nullptr;
+    useWateringRightAnimation_ = nullptr;
     usePickaxeUpAnimation_ = nullptr;
     usePickaxeDownAnimation_ = nullptr;
     usePickaxeLeftAnimation_ = nullptr;
@@ -280,6 +288,18 @@ void Player::loadAnimations()
     useHoeRightAnimation_ = createAnim("UseHoe", "right", 3);
     if (useHoeRightAnimation_) useHoeRightAnimation_->retain();
 
+    useWateringDownAnimation_ = createAnim("UseWateringCan", "down", 3);
+    if (useWateringDownAnimation_) useWateringDownAnimation_->retain();
+
+    useWateringUpAnimation_ = createAnim("UseWateringCan", "up", 4);
+    if (useWateringUpAnimation_) useWateringUpAnimation_->retain();
+
+    useWateringLeftAnimation_ = createAnim("UseWateringCan", "left", 5);
+    if (useWateringLeftAnimation_) useWateringLeftAnimation_->retain();
+
+    useWateringRightAnimation_ = createAnim("UseWateringCan", "right", 5);
+    if (useWateringRightAnimation_) useWateringRightAnimation_->retain();
+
     usePickaxeDownAnimation_ = createAnim("UsePickaxe", "down", 3);
     if (usePickaxeDownAnimation_) usePickaxeDownAnimation_->retain();
 
@@ -339,6 +359,15 @@ void Player::playAnimation(PlayerState state)
             }
             else {
                 targetAnim = isRight ? useHoeRightAnimation_ : useHoeLeftAnimation_;
+            }
+        }
+        else if (currentToolType_ == ItemType::WateringCan)
+        {
+            if (isVertical) {
+                targetAnim = isUp ? useWateringUpAnimation_ : useWateringDownAnimation_;
+            }
+            else {
+                targetAnim = isRight ? useWateringRightAnimation_ : useWateringLeftAnimation_;
             }
         }
         else if (currentToolType_ == ItemType::Pickaxe)
