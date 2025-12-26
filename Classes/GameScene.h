@@ -151,11 +151,8 @@ private:
     bool isPlayerNearElevator() const;
     bool isPlayerNearHouseDoor() const;
 
-    // 电梯位置（农场地图上的坐标，需根据实际地图调整）
-    // 假设在地图右上角附近 (例如 30*32, 20*32 处)
-    // 根据之前的 mine_floor1.tmx，可能是在某个边缘。
-    // 这里我们定义一个常量，并在 updateUI 中显示位置辅助调试
-    const cocos2d::Vec2 ELEVATOR_POS = cocos2d::Vec2(800, 600);
+    // 矿井入口位置（右下角的房子）
+    const cocos2d::Vec2 ELEVATOR_POS = cocos2d::Vec2(1202, 226);
 
     /**
      * @brief ESC键回调
