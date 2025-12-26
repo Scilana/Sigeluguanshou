@@ -101,6 +101,10 @@ Player::~Player()
     CC_SAFE_RELEASE(useHoeDownAnimation_);
     CC_SAFE_RELEASE(useHoeLeftAnimation_);
     CC_SAFE_RELEASE(useHoeRightAnimation_);
+    CC_SAFE_RELEASE(usePickaxeUpAnimation_);
+    CC_SAFE_RELEASE(usePickaxeDownAnimation_);
+    CC_SAFE_RELEASE(usePickaxeLeftAnimation_);
+    CC_SAFE_RELEASE(usePickaxeRightAnimation_);
 
 }
 
@@ -198,6 +202,10 @@ void Player::loadAnimations()
     useHoeDownAnimation_ = nullptr;
     useHoeLeftAnimation_ = nullptr;
     useHoeRightAnimation_ = nullptr;
+    usePickaxeUpAnimation_ = nullptr;
+    usePickaxeDownAnimation_ = nullptr;
+    usePickaxeLeftAnimation_ = nullptr;
+    usePickaxeRightAnimation_ = nullptr;
 
     // 2. 修正后的 Lambda 函数：区分走路和工具的命名格式
     auto createAnim = [](std::string actionName, std::string direction, int frameCount) -> Animation* {
@@ -271,6 +279,18 @@ void Player::loadAnimations()
 
     useHoeRightAnimation_ = createAnim("UseHoe", "right", 3);
     if (useHoeRightAnimation_) useHoeRightAnimation_->retain();
+
+    usePickaxeDownAnimation_ = createAnim("UsePickaxe", "down", 3);
+    if (usePickaxeDownAnimation_) usePickaxeDownAnimation_->retain();
+
+    usePickaxeUpAnimation_ = createAnim("UsePickaxe", "up", 2);
+    if (usePickaxeUpAnimation_) usePickaxeUpAnimation_->retain();
+
+    usePickaxeLeftAnimation_ = createAnim("UsePickaxe", "left", 3);
+    if (usePickaxeLeftAnimation_) usePickaxeLeftAnimation_->retain();
+
+    usePickaxeRightAnimation_ = createAnim("UsePickaxe", "right", 3);
+    if (usePickaxeRightAnimation_) usePickaxeRightAnimation_->retain();
 }
 
 // 播放动画的核心逻辑
@@ -319,6 +339,15 @@ void Player::playAnimation(PlayerState state)
             }
             else {
                 targetAnim = isRight ? useHoeRightAnimation_ : useHoeLeftAnimation_;
+            }
+        }
+        else if (currentToolType_ == ItemType::Pickaxe)
+        {
+            if (isVertical) {
+                targetAnim = isUp ? usePickaxeUpAnimation_ : usePickaxeDownAnimation_;
+            }
+            else {
+                targetAnim = isRight ? usePickaxeRightAnimation_ : usePickaxeLeftAnimation_;
             }
         }
         else

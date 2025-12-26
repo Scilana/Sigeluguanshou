@@ -122,6 +122,11 @@ private:
     cocos2d::Animation* useHoeLeftAnimation_;
     cocos2d::Animation* useHoeRightAnimation_;
 
+    cocos2d::Animation* usePickaxeUpAnimation_;
+    cocos2d::Animation* usePickaxeDownAnimation_;
+    cocos2d::Animation* usePickaxeLeftAnimation_;
+    cocos2d::Animation* usePickaxeRightAnimation_;
+
     /**
      * @brief 加载所有动画资源到内存
      */
