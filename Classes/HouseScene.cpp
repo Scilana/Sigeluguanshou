@@ -371,9 +371,22 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
     }
     break;
+    case EventKeyboard::KeyCode::KEY_TAB:
+    {
+        CCLOG("Cheat: Skipping Day from House...");
+        auto tm = TimeManager::getInstance();
+        if (tm) {
+             // Stop updating THIS scene so we don't trigger wakeUp() here
+             this->unscheduleUpdate();
+             
+             tm->skipToNextMorning();
+             // Reload scene (as passed out/sleeping)
+             Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+        }
+        break;
+    }
     case EventKeyboard::KeyCode::KEY_B:
     case EventKeyboard::KeyCode::KEY_I:
-    case EventKeyboard::KeyCode::KEY_TAB:
         toggleInventory();
         break;
         

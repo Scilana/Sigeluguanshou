@@ -1293,6 +1293,15 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         */
 
     case EventKeyboard::KeyCode::KEY_TAB:
+    {
+        CCLOG("Cheat: Skipping Day from Mine...");
+        auto tm = TimeManager::getInstance();
+        if (tm) {
+             tm->skipToNextMorning();
+             Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+        }
+        break;
+    }
     case EventKeyboard::KeyCode::KEY_B:
         toggleInventory();
         break;

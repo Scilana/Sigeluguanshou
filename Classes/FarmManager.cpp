@@ -1,6 +1,7 @@
 #include "FarmManager.h"
 #include "MapLayer.h"
 #include "TimeManager.h"
+#include "SaveManager.h"
 
 USING_NS_CC;
 
@@ -63,6 +64,29 @@ bool FarmManager::init(MapLayer* mapLayer)
     }
 
     this->scheduleUpdate();
+    
+    // Attempt to load saved farm state
+    // This is crucial when reloading the scene (e.g. after sleeping/passing out)
+    SaveManager::SaveData saveData;
+    if (SaveManager::getInstance()->hasSaveFile() && SaveManager::getInstance()->loadGame(saveData))
+    {
+        CCLOG("FarmManager: Loading saved tiles...");
+        for (const auto& tileData : saveData.farmTiles)
+        {
+            if (isValidTile(Vec2(tileData.x, tileData.y)))
+            {
+               int idx = tileData.y * mapSizeTiles_.width + tileData.x;
+               auto& tile = tiles_[idx];
+               tile.tilled = tileData.tilled;
+               tile.watered = tileData.watered;
+               tile.hasCrop = tileData.hasCrop;
+               tile.cropId = tileData.cropId;
+               tile.stage = tileData.stage;
+               tile.progressDays = tileData.progressDays;
+            }
+        }
+    }
+
     redrawOverlay();
     return true;
 }
@@ -80,6 +104,12 @@ void FarmManager::initCropDefs()
 
 void FarmManager::progressDay()
 {
+    // Update TimeManager's record first
+    auto tm = TimeManager::getInstance();
+    if (tm) {
+        tm->setLastFarmUpdateDay(tm->getDay());
+    }
+
     if (shippingBin_ && priceFunction_) {
         int totalEarnings = 0;
         auto inv = shippingBin_->getInventory();
@@ -114,7 +144,68 @@ void FarmManager::progressDay()
     redrawOverlay();
 }
 
-void FarmManager::update(float delta) {}
+void FarmManager::update(float delta)
+{
+    // Catch-up logic for saved games or scene transitions
+    auto tm = TimeManager::getInstance();
+    if (tm) {
+        int currentDay = tm->getDay();
+        int lastUpdate = tm->getLastFarmUpdateDay();
+        
+        // If this is the very first run (lastUpdate == 0), just sync it
+        if (lastUpdate == 0) {
+            tm->setLastFarmUpdateDay(currentDay);
+        }
+            // Missed some days! Catch up.
+            int daysMissed = currentDay - lastUpdate;
+            CCLOG("FarmManager catching up: %d days", daysMissed);
+            
+            // Prevent recursive updates to LastFarmUpdateDay inside the loop
+            // We just want to run the logic N times.
+            for (int i = 0; i < daysMissed; ++i) {
+                // Manually run the logic usually found in progressDay
+                // But without the TimeManager update part which ruins the loop
+                
+                // 1. Shipping Bin
+                if (shippingBin_ && priceFunction_) {
+                    int totalEarnings = 0;
+                    auto inv = shippingBin_->getInventory();
+                    auto& slots = inv->getAllSlots();
+                    for (const auto& slot : slots) {
+                        if (!slot.isEmpty()) {
+                            int price = priceFunction_(slot.type);
+                            if (price > 0) totalEarnings += price * slot.count;
+                        }
+                    }
+                    inv->clear();
+                    if (totalEarnings > 0 && earningsCallback_) earningsCallback_(totalEarnings);
+                }
+
+                // 2. Crop Growth
+                for (auto& tile : tiles_)
+                {
+                    if (tile.hasCrop && tile.watered)
+                    {
+                        auto def = getCropDef(tile.cropId);
+                        if (tile.stage < (int)def.stageDays.size())
+                        {
+                            tile.progressDays++;
+                            if (tile.progressDays >= def.stageDays[tile.stage])
+                            {
+                                tile.stage++;
+                                tile.progressDays = 0;
+                            }
+                        }
+                    }
+                    tile.watered = false; // Reset water daily
+                }
+            }
+            
+            // Finally update the timestamp to current
+            tm->setLastFarmUpdateDay(currentDay);
+            redrawOverlay();
+    }
+}
 
 int FarmManager::getHour() const { return TimeManager::getInstance()->getHour(); }
 int FarmManager::getMinute() const { return TimeManager::getInstance()->getMinute(); }

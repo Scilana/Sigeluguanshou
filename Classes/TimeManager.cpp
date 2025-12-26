@@ -24,6 +24,7 @@ void TimeManager::destroyInstance()
 TimeManager::TimeManager()
     : dayTimer_(0.0f)
     , dayCount_(1)
+    , lastFarmUpdateDay_(0)
 {
     startNewDay();
 }
@@ -44,6 +45,17 @@ void TimeManager::advanceToNextDay()
 {
     dayCount_++;
     startNewDay();
+}
+
+void TimeManager::skipToNextMorning()
+{
+    // Jump time to just before 6:00 AM the next day (e.g. 5:59 AM next day)
+    // 6:00 AM relative to current day start is:
+    // Midnight (SECONDS_PER_DAY) + 6h (SECONDS_PER_DAY * 6/24)
+    float nextMorning = SECONDS_PER_DAY + (SECONDS_PER_DAY * (START_HOUR / 24.0f));
+    
+    // Set slightly before to ensure update loop catches the trigger point
+    dayTimer_ = nextMorning - 0.2f; 
 }
 
 
