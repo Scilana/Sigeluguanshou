@@ -137,6 +137,39 @@ private:
     // ==========================================
     // 控制与交互
     // ==========================================
+    // 商人交互状态
+    // ==========================================
+    enum class MerchantState {
+        None,
+        Greeting,
+        Choice,
+        BuyTransition, // New State
+        BuyPre, // Actually this might be redundant, let's just use BuyTransition as the pre-state
+        Buy,    // In Market
+        SellPre,
+        Sell,   // In Inventory Selection
+        TradeConfirm,
+        End,
+        Reject
+    };
+    MerchantState merchantState_;
+    Npc* activeNpc_;
+    
+    // For selling details
+    ItemType pendingSellItem_;
+    int pendingSellCount_;
+    
+    void startMerchantInteraction(Npc* npc);
+    void advanceMerchantDialogue();
+    void endMerchantInteraction();
+    void onMerchantChoice(int choiceIndex); // 0: Buy, 1: Sell
+    
+    // Callbacks
+    void handleSellSelection(int slotIndex, ItemType type, int count);
+    void onQuantityConfirmed(int quantity);
+    void onTradeConfirmResult(bool confirmed);
+
+    // ==========================================
     void backToMenu();
     void toggleInventory();
     void toggleSkillTree();

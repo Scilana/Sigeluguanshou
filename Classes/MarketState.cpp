@@ -164,7 +164,24 @@ std::string MarketState::getSeasonName() const
 
 std::string MarketState::getWeatherName() const
 {
-    switch (weather_) {
+    return getWeatherName(weather_);
+}
+
+MarketState::Weather MarketState::predictWeather(int dayCount)
+{
+    if (dayCount <= 0) dayCount = 1;
+    int weatherIndex = (dayCount * 3) % 4;
+    switch (weatherIndex) {
+    case 0: return Weather::Sunny;
+    case 1: return Weather::LightRain;
+    case 2: return Weather::HeavyRain;
+    default: return Weather::Snowy;
+    }
+}
+
+std::string MarketState::getWeatherName(Weather weather)
+{
+    switch (weather) {
     case Weather::Sunny: return "Sunny";
     case Weather::LightRain: return "Light Rain";
     case Weather::HeavyRain: return "Heavy Rain";

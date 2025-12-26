@@ -123,46 +123,34 @@ void MarketUI::initLists()
     float panelWidth = panel_->getContentSize().width;
     float panelHeight = panel_->getContentSize().height;
 
-    float leftX = 40.0f;
-    float rightX = panelWidth / 2 + 20.0f;
+    float centerX = panelWidth / 2;
     float listTop = panelHeight - 125.0f;
     float rowHeight = 28.0f;
 
-    buyTitle_ = Label::createWithSystemFont("Buy Seeds", "Arial", 20);
-    buyTitle_->setAnchorPoint(Vec2(0, 0.5f));
-    buyTitle_->setPosition(Vec2(leftX, panelHeight - 100));
+    buyTitle_ = Label::createWithSystemFont("Items for Sale", "Arial", 20);
+    buyTitle_->setAnchorPoint(Vec2(0.5f, 0.5f));
+    buyTitle_->setPosition(Vec2(centerX, panelHeight - 100));
     buyTitle_->setColor(Color3B(220, 220, 220));
     panel_->addChild(buyTitle_, 1);
-
-    sellTitle_ = Label::createWithSystemFont("Sell Crops", "Arial", 20);
-    sellTitle_->setAnchorPoint(Vec2(0, 0.5f));
-    sellTitle_->setPosition(Vec2(rightX, panelHeight - 100));
-    sellTitle_->setColor(Color3B(220, 220, 220));
-    panel_->addChild(sellTitle_, 1);
+    
+    // REMOVED Sell Title
 
     const auto& buyGoods = marketState_->getBuyGoods();
-    const auto& sellGoods = marketState_->getSellGoods();
+    // const auto& sellGoods = marketState_->getSellGoods(); // Not showing sell goods in market anymore
 
     buyLabels_.clear();
-    sellLabels_.clear();
+    sellLabels_.clear(); // Keep empty
 
     for (size_t i = 0; i < buyGoods.size(); ++i)
     {
         auto label = Label::createWithSystemFont("", "Arial", 18);
-        label->setAnchorPoint(Vec2(0, 0.5f));
-        label->setPosition(Vec2(leftX, listTop - rowHeight * i));
+        label->setAnchorPoint(Vec2(0.5f, 0.5f));
+        label->setPosition(Vec2(centerX, listTop - rowHeight * i));
         panel_->addChild(label, 1);
         buyLabels_.push_back(label);
     }
-
-    for (size_t i = 0; i < sellGoods.size(); ++i)
-    {
-        auto label = Label::createWithSystemFont("", "Arial", 18);
-        label->setAnchorPoint(Vec2(0, 0.5f));
-        label->setPosition(Vec2(rightX, listTop - rowHeight * i));
-        panel_->addChild(label, 1);
-        sellLabels_.push_back(label);
-    }
+    
+    // REMOVED Sell Labels Loop
 }
 
 void MarketUI::initControls()
@@ -201,12 +189,7 @@ void MarketUI::refresh()
         buyLabels_[i]->setString(StringUtils::format("%s - %dG", name.c_str(), buyGoods[i].currentPrice));
     }
 
-    const auto& sellGoods = marketState_->getSellGoods();
-    for (size_t i = 0; i < sellLabels_.size() && i < sellGoods.size(); ++i)
-    {
-        std::string name = InventoryManager::getItemName(sellGoods[i].itemType);
-        sellLabels_[i]->setString(StringUtils::format("%s - %dG", name.c_str(), sellGoods[i].currentPrice));
-    }
+    // Sell labels refresh removed
 
     updateHighlight();
     updateInfo();
@@ -216,40 +199,27 @@ void MarketUI::updateHighlight()
 {
     for (size_t i = 0; i < buyLabels_.size(); ++i)
     {
-        bool selected = (focus_ == FocusList::Buy && static_cast<int>(i) == selectedBuy_);
+        bool selected = (static_cast<int>(i) == selectedBuy_);
         buyLabels_[i]->setColor(selected ? Color3B(255, 215, 0) : Color3B(210, 210, 210));
     }
 
-    for (size_t i = 0; i < sellLabels_.size(); ++i)
-    {
-        bool selected = (focus_ == FocusList::Sell && static_cast<int>(i) == selectedSell_);
-        sellLabels_[i]->setColor(selected ? Color3B(255, 215, 0) : Color3B(210, 210, 210));
-    }
+    // Sell highlight removed
 
-    buyTitle_->setColor(focus_ == FocusList::Buy ? Color3B(255, 235, 200) : Color3B(180, 180, 180));
-    sellTitle_->setColor(focus_ == FocusList::Sell ? Color3B(255, 235, 200) : Color3B(180, 180, 180));
+    buyTitle_->setColor(Color3B(255, 235, 200));
+    // sellTitle_ removed
 }
 
 void MarketUI::updateInfo()
 {
     const auto& buyGoods = marketState_->getBuyGoods();
-    const auto& sellGoods = marketState_->getSellGoods();
-
-    if (focus_ == FocusList::Buy && !buyGoods.empty())
+    
+    if (!buyGoods.empty())
     {
         int index = std::min(selectedBuy_, static_cast<int>(buyGoods.size() - 1));
         const auto& good = buyGoods[index];
         std::string name = InventoryManager::getItemName(good.itemType);
         int owned = inventory_->getItemCount(good.itemType);
         infoLabel_->setString(StringUtils::format("Buy %s for %dG (You have %d)", name.c_str(), good.currentPrice, owned));
-    }
-    else if (focus_ == FocusList::Sell && !sellGoods.empty())
-    {
-        int index = std::min(selectedSell_, static_cast<int>(sellGoods.size() - 1));
-        const auto& good = sellGoods[index];
-        std::string name = InventoryManager::getItemName(good.itemType);
-        int owned = inventory_->getItemCount(good.itemType);
-        infoLabel_->setString(StringUtils::format("Sell %s for %dG (You have %d)", name.c_str(), good.currentPrice, owned));
     }
     else
     {
@@ -259,29 +229,15 @@ void MarketUI::updateInfo()
 
 void MarketUI::moveSelection(int delta)
 {
-    if (focus_ == FocusList::Buy)
-    {
-        int size = static_cast<int>(marketState_->getBuyGoods().size());
-        if (size == 0) return;
-        selectedBuy_ = (selectedBuy_ + delta + size) % size;
-    }
-    else
-    {
-        int size = static_cast<int>(marketState_->getSellGoods().size());
-        if (size == 0) return;
-        selectedSell_ = (selectedSell_ + delta + size) % size;
-    }
+    int size = static_cast<int>(marketState_->getBuyGoods().size());
+    if (size == 0) return;
+    selectedBuy_ = (selectedBuy_ + delta + size) % size;
 
     updateHighlight();
     updateInfo();
 }
 
-void MarketUI::switchFocus()
-{
-    focus_ = (focus_ == FocusList::Buy) ? FocusList::Sell : FocusList::Buy;
-    updateHighlight();
-    updateInfo();
-}
+
 
 void MarketUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
@@ -289,16 +245,6 @@ void MarketUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         keyCode == EventKeyboard::KeyCode::KEY_P)
     {
         close();
-        event->stopPropagation();
-        return;
-    }
-
-    if (keyCode == EventKeyboard::KeyCode::KEY_LEFT_ARROW ||
-        keyCode == EventKeyboard::KeyCode::KEY_A ||
-        keyCode == EventKeyboard::KeyCode::KEY_RIGHT_ARROW ||
-        keyCode == EventKeyboard::KeyCode::KEY_D)
-    {
-        switchFocus();
         event->stopPropagation();
         return;
     }
@@ -332,64 +278,35 @@ void MarketUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 void MarketUI::executeTrade()
 {
     const auto& buyGoods = marketState_->getBuyGoods();
-    const auto& sellGoods = marketState_->getSellGoods();
     statusLabel_->setString("");
 
-    if (focus_ == FocusList::Buy)
+    if (buyGoods.empty())
+        return;
+
+    const auto& good = buyGoods[static_cast<size_t>(selectedBuy_)];
+    int price = marketState_->getBuyPrice(good.itemType);
+    std::string name = InventoryManager::getItemName(good.itemType);
+
+    if (price <= 0)
     {
-        if (buyGoods.empty())
-            return;
-
-        const auto& good = buyGoods[static_cast<size_t>(selectedBuy_)];
-        int price = marketState_->getBuyPrice(good.itemType);
-        std::string name = InventoryManager::getItemName(good.itemType);
-
-        if (price <= 0)
-        {
-            statusLabel_->setString("This item is not for sale.");
-            return;
-        }
-
-        if (!inventory_->removeMoney(price))
-        {
-            statusLabel_->setString("Not enough gold.");
-            return;
-        }
-
-        if (!inventory_->addItem(good.itemType, 1))
-        {
-            inventory_->addMoney(price);
-            statusLabel_->setString("Inventory full.");
-            return;
-        }
-
-        statusLabel_->setString(StringUtils::format("Bought %s (-%dG)", name.c_str(), price));
+        statusLabel_->setString("This item is not for sale.");
+        return;
     }
-    else
+
+    if (!inventory_->removeMoney(price))
     {
-        if (sellGoods.empty())
-            return;
+        statusLabel_->setString("Not enough gold.");
+        return;
+    }
 
-        const auto& good = sellGoods[static_cast<size_t>(selectedSell_)];
-        int price = marketState_->getSellPrice(good.itemType);
-        std::string name = InventoryManager::getItemName(good.itemType);
-
-        if (price <= 0)
-        {
-            statusLabel_->setString("This item cannot be sold.");
-            return;
-        }
-
-        if (!inventory_->hasItem(good.itemType, 1))
-        {
-            statusLabel_->setString(StringUtils::format("No %s to sell.", name.c_str()));
-            return;
-        }
-
-        inventory_->removeItem(good.itemType, 1);
+    if (!inventory_->addItem(good.itemType, 1))
+    {
         inventory_->addMoney(price);
-        statusLabel_->setString(StringUtils::format("Sold %s (+%dG)", name.c_str(), price));
+        statusLabel_->setString("Inventory full.");
+        return;
     }
+
+    statusLabel_->setString(StringUtils::format("Bought %s (-%dG)", name.c_str(), price));
 
     refresh();
 }

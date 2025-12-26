@@ -122,6 +122,11 @@ private:
     cocos2d::Animation* useHoeLeftAnimation_;
     cocos2d::Animation* useHoeRightAnimation_;
 
+    cocos2d::Animation* useWateringUpAnimation_;
+    cocos2d::Animation* useWateringDownAnimation_;
+    cocos2d::Animation* useWateringLeftAnimation_;
+    cocos2d::Animation* useWateringRightAnimation_;
+
     cocos2d::Animation* usePickaxeUpAnimation_;
     cocos2d::Animation* usePickaxeDownAnimation_;
     cocos2d::Animation* usePickaxeLeftAnimation_;

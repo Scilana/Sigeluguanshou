@@ -26,6 +26,8 @@ public:
     std::string getWeatherName() const;
     enum class Weather { Sunny, LightRain, HeavyRain, Snowy };
     Weather getWeather() const { return weather_; }
+    static Weather predictWeather(int dayCount);
+    static std::string getWeatherName(Weather weather);
 
 private:
     enum class Season { Spring, Summer, Fall, Winter };

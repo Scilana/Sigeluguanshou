@@ -37,12 +37,14 @@ bool DialogueBox::init(Npc* npc) {
 
     // Label
     _dialogueLabel = Label::createWithSystemFont("", "Arial", 28);
-    _dialogueLabel->setDimensions(700, 160);
-    // Align text to the right of the portrait
-    _dialogueLabel->setPosition(Vec2(100, 0)); 
+    _dialogueLabel->setDimensions(480, 160); // Reduced width for left panel
+    // Align text to the center of left panel (even further left as requested)
+    _dialogueLabel->setPosition(Vec2(-250, 0)); 
     _dialogueLabel->setTextColor(Color4B::BLACK);
-    _dialogueLabel->setAlignment(TextHAlignment::LEFT, TextVAlignment::CENTER);
+    _dialogueLabel->setAlignment(TextHAlignment::CENTER, TextVAlignment::CENTER);
     this->addChild(_dialogueLabel, 2); // Z=2
+    
+
     
     // Position the whole box (e.g. bottom of screen)
     Size visibleSize = Director::getInstance()->getVisibleSize();
@@ -50,25 +52,88 @@ bool DialogueBox::init(Npc* npc) {
     
     this->setVisible(false);
 
-    // Mouse Listener
-    auto listener = EventListenerMouse::create();
-    listener->onMouseDown = CC_CALLBACK_1(DialogueBox::onMouseDown, this);
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(listener, this);
-    _mouseListener = listener;
+    // Touch Event Listener
+    auto touchListener = EventListenerTouchOneByOne::create();
+    touchListener->setSwallowTouches(true);
+    touchListener->onTouchBegan = [this](Touch* touch, Event* event) {
+        if (!_isVisible) return false;
+
+        // Handle Choice Click
+        if (_waitingForChoice && _choiceNode->isVisible()) {
+            
+            // Standard Hit Test (Same as InventoryUI)
+            Vec2 locationInNode = _choiceNode->convertTouchToNodeSpace(touch);
+
+            // Button sizing: 150x50. Pos: -80 and +80.
+            // Option 1 (Left): (-80, 0). Bounds: [-155, -5] x [-40, 40]
+            if (locationInNode.x > -155 && locationInNode.x < -5 && locationInNode.y > -40 && locationInNode.y < 40) {
+                if (_choiceCallback) _choiceCallback(0); // Buy
+                return true; 
+            }
+            // Option 2 (Right): (80, 0). Bounds: [5, 155] x [-40, 40]
+            if (locationInNode.x > 5 && locationInNode.x < 155 && locationInNode.y > -40 && locationInNode.y < 40) {
+                if (_choiceCallback) _choiceCallback(1); // Sell
+                return true;
+            }
+        } 
+        
+        // Normal click to advance text
+        if (_onClickCallback) _onClickCallback();
+        return true;
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
+
+    _waitingForChoice = false;
+
+    // Create Choice UI Container
+    _choiceNode = Node::create();
+    // Let's put choices inside the box but near bottom right or clearly separated
+    // Box dimensions are roughly 800x200?
+    // Label is at (100, 0) relative to center?
+    // Let's place choices at relative coordinates.
+    // Box center is (0,0) of this node.
+    // Center the choice node near the bottom, moved left by 50
+    _choiceNode->setPosition(Vec2(-50, -60)); 
+    this->addChild(_choiceNode, 5);
+    _choiceNode->setVisible(false);
+
+    // Option 1 (Left/Top)
+    auto opt1Bg = DrawNode::create();
+    // Darker gray for visibility
+    opt1Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f)); 
+    opt1Bg->setPosition(Vec2(-80, 0));
+    _choiceNode->addChild(opt1Bg);
+    _option1Label = Label::createWithSystemFont("Option 1", "Arial", 24); // Larger font
+    _option1Label->setPosition(Vec2(-80, 0));
+    _option1Label->setTextColor(Color4B::BLACK);
+    _choiceNode->addChild(_option1Label);
+
+    // Option 2 (Right/Bottom)
+    auto opt2Bg = DrawNode::create();
+    opt2Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f)); 
+    opt2Bg->setPosition(Vec2(80, 0));
+    _choiceNode->addChild(opt2Bg);
+    _option2Label = Label::createWithSystemFont("Option 2", "Arial", 24); // Larger font
+    _option2Label->setPosition(Vec2(80, 0));
+    _option2Label->setTextColor(Color4B::BLACK);
+    _choiceNode->addChild(_option2Label);
 
     return true;
 }
+
+
 
 void DialogueBox::setNpc(Npc* npc) {
     _npc = npc;
     if (_npc) {
         std::string portraitFile = _npc->getPortraitFile();
-        _portrait->setTexture(portraitFile);
+        if (FileUtils::getInstance()->isFileExist(portraitFile)) {
+             _portrait->setTexture(portraitFile);
+        }
         // Move portrait to the left side
-        _portrait->setPosition(Vec2(-350, 0));
-        // Scale portrait if too large (assuming 256x256 or similar, fit in box height ~200)
-        // If box is 150-200 high, portrait should be scaled.
-        // Let's protect against huge portraits:
+        // Move portrait to the right side box
+        _portrait->setPosition(Vec2(300, 0));
+        
         if (_portrait->getContentSize().height > 200) {
             float scale = 180.0f / _portrait->getContentSize().height;
             _portrait->setScale(scale);
@@ -81,42 +146,64 @@ void DialogueBox::setNpc(Npc* npc) {
     }
 }
 
-void DialogueBox::showDialogue() {
-    if (!_npc) return;
-    
-    // Load full conversation
-    _lines = _npc->getDialogues();
-    if (_lines.empty()) {
-        _lines.push_back("...");
-    }
-    _currentLineIndex = -1;
+void DialogueBox::showDialogue(const std::string& text) {
+    _waitingForChoice = false;
+    _choiceNode->setVisible(false);
     
     this->setVisible(true);
     _isVisible = true;
 
-    showNextLine();
+    _dialogueLabel->setString(text);
+}
+
+// Deprecated old method, keeping for compatibility if needed or redirecting
+void DialogueBox::showDialogue() {
+    if (_npc) {
+        showDialogue(_npc->getDialogue());
+    }
 }
 
 void DialogueBox::showNextLine() {
-    _currentLineIndex++;
-    if (_currentLineIndex < (int)_lines.size()) {
-        _dialogueLabel->setString(_lines[_currentLineIndex]);
-    } else {
-        closeDialogue();
-    }
+    // If waiting for choice, click shouldn't advance text
+    if (_waitingForChoice) return;
+    
+    // In complex dialogue, GameScene controls flow.
+    // This simple method was for random multi-line.
+    // We'll leave it empty or basic.
+    closeDialogue();
+}
+
+void DialogueBox::showChoices(const std::string& option1, const std::string& option2, const ChoiceCallback& callback)
+{
+    _option1Label->setString(option1);
+    _option2Label->setString(option2);
+    _choiceCallback = callback;
+    // Show simple prompt?
+    // For now we assume the dialogue text itself explains instructions or we can append.
+    // Let's just set the state.
+    // Optionally we can show a visual hint.
+    
+    _choiceCallback = callback;
+    _waitingForChoice = true;
+    _isVisible = true; // Force visible
+    this->setVisible(true); // Force node visible
+    _choiceNode->setVisible(true); // Show buttons
+}
+
+void DialogueBox::hideChoices()
+{
+    _choiceNode->setVisible(false);
+    _waitingForChoice = false;
 }
 
 void DialogueBox::closeDialogue() {
     this->setVisible(false);
     _isVisible = false;
+    _waitingForChoice = false;
+    this->setVisible(false);
+    _isVisible = false;
+    _waitingForChoice = false;
+    _choiceNode->setVisible(false);
 }
 
-void DialogueBox::onMouseDown(Event* event) {
-    if (!_isVisible) return;
-    
-    EventMouse* e = (EventMouse*)event;
-    if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT) {
-        // Advance to next line instead of closing immediately
-        showNextLine();
-    }
-}
+

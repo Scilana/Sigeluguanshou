@@ -99,17 +99,22 @@ void MapLayer::initCollisionLayer()
     }
 
     // 尝试查找 "Buildings" 层（矿洞地图）
-    collisionLayer_ = tmxMap_->getLayer("Buildings");
-    if (collisionLayer_)
+    if (!collisionLayer_)
     {
-        collisionLayer_->setVisible(false);
-        CCLOG("Buildings layer found and used as collision layer (hidden)");
-        return;
+        collisionLayer_ = tmxMap_->getLayer("Buildings");
+        if (collisionLayer_)
+        {
+            collisionLayer_->setVisible(false);
+            CCLOG("Buildings layer found and used as collision layer (hidden)");
+        }
+    }
+
+    if (!collisionLayer_)
+    {
+        CCLOG("Warning: No collision layer found (tried 'Collision' and 'Buildings')");
     }
 
     waterLayer_ = tmxMap_->getLayer("Water");
-
-    CCLOG("Warning: No collision layer found (tried 'Collision' and 'Buildings')");
 }
 
 

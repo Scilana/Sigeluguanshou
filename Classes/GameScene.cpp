@@ -16,7 +16,9 @@
 #include <cmath>
 #include <queue>
 #include <unordered_set>
+#include <unordered_set>
 #include "EnergyBar.h"
+#include "QuantityPopup.h"
 
 USING_NS_CC;
 
@@ -34,6 +36,10 @@ namespace
     const Color4B kToolbarBarColor(40, 35, 30, 220);
     const Color3B kToolbarSlotColor(70, 60, 50);
     const Color3B kToolbarSlotSelectedColor(170, 150, 95);
+
+    // NPC Constants
+    const Vec2 kMerchantPos(500.0f, 400.0f);
+    const float kInteractionRadius = 80.0f; // Slightly larger for better UX
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
     {
@@ -97,6 +103,11 @@ bool GameScene::init()
 
 {
 
+    // ...
+    // Note: Doing this in init() is safer usually
+    merchantState_ = MerchantState::None;
+    activeNpc_ = nullptr;
+    
     if (!Scene::init())
 
         return false;
@@ -171,6 +182,9 @@ void GameScene::initMap()
     CCLOG("Initializing map...");
 
     // 创建地图层
+    FileUtils::getInstance()->purgeCachedEntries();
+    SpriteFrameCache::getInstance()->removeUnusedSpriteFrames();
+    Director::getInstance()->getTextureCache()->removeUnusedTextures();
 
     mapLayer_ = MapLayer::create("map/farm.tmx");
 
@@ -598,12 +612,12 @@ void GameScene::initNpcs()
 
     if (!mapLayer_ || !uiLayer_) return;
 
-    // Wizard
-    auto wizard = Npc::create("Wizard", "npcImages/wizard.png");
+    // Wizard (Merchant)
+    auto wizard = Npc::create("Wizard", "npcImages/wizard.png", Npc::NpcType::Merchant);
     if (wizard) {
-        // Place relative to map
-        wizard->setPosition(Vec2(500, 400));
-        wizard->setScale(0.5f); // Scale down if sprite is too big
+        // Place using Global Constant
+        wizard->setPosition(kMerchantPos);
+        wizard->setScale(0.5f); 
         mapLayer_->addChild(wizard, 10);
         npcs_.push_back(wizard);
     }
@@ -660,13 +674,45 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         backToMenu();
         break;
     case EventKeyboard::KeyCode::KEY_B:
-        toggleInventory();
+        if (merchantState_ != MerchantState::None) {
+            if (merchantState_ == MerchantState::Buy && marketUI_) {
+                // Close Market, return to choice
+                marketUI_->close(); // Assuming close() calls onMarketClosed which sets nullptr
+                // onMarketClosed needs to handle state transition back to Choice
+                merchantState_ = MerchantState::Choice;
+                if (dialogueBox_) {
+                    dialogueBox_->setVisible(true);
+                    dialogueBox_->showDialogue("Is there anything else you need?");
+                    dialogueBox_->showChoices("Buy", "Sell", [this](int choice) {
+                        this->onMerchantChoice(choice);
+                    });
+                }
+            }
+            else if ( (merchantState_ == MerchantState::SellPre || merchantState_ == MerchantState::Sell) && inventoryUI_) {
+                // Close Inventory, return to choice
+                inventoryUI_->close();
+                inventoryUI_ = nullptr; // Fix: Prevent dangling pointer crash
+                
+                merchantState_ = MerchantState::Choice;
+                if (dialogueBox_) {
+                    dialogueBox_->setVisible(true);
+                    // Reset dialogue internal state if needed
+                    dialogueBox_->showDialogue("Is there anything else you need?");
+                    dialogueBox_->showChoices("Buy", "Sell", [this](int choice) {
+                        this->onMerchantChoice(choice);
+                    });
+                }
+            }
+            else {
+                // Default fallback
+                endMerchantInteraction();
+            }
+        } else {
+            toggleInventory();
+        }
         break;
     case EventKeyboard::KeyCode::KEY_E:
         toggleSkillTree();
-        break;
-    case EventKeyboard::KeyCode::KEY_P:
-        toggleMarket();
         break;
     case EventKeyboard::KeyCode::KEY_X:
         // 保存游戏
@@ -697,7 +743,28 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         handleChestPlacement();
         break;
     case EventKeyboard::KeyCode::KEY_SPACE:
-        // 查找附近的箱子并打开
+    {
+        // 1. Check for Merchant Interaction First
+        if (npcs_.size() > 0 && farmManager_ && player_) {
+             Npc* merchant = nullptr;
+             // Find Merchant
+             for (auto npc : npcs_) {
+                 if (npc->isMerchant()) {
+                     merchant = npc;
+                     break;
+                 }
+             }
+             
+             if (merchant) {
+                 float dist = player_->getPosition().distance(merchant->getPosition());
+                 if (dist < kInteractionRadius) {
+                     startMerchantInteraction(merchant);
+                     break; // Interaction started, skip chest check
+                 }
+             }
+        }
+
+        // 2. 查找附近的箱子并打开 (Existing logic)
         if (farmManager_ && mapLayer_ && player_) {
             Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
             tileCoord.x = std::round(tileCoord.x);
@@ -717,6 +784,7 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 openChestInventory(nearbyChest);
             }
         }
+    }
         break;
     case EventKeyboard::KeyCode::KEY_1:
         selectItemByIndex(0);
@@ -3119,4 +3187,235 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
     CCLOG("========================================");
     CCLOG("✓ Save data applied successfully!");
     CCLOG("========================================");
+}
+
+// ==========================================
+// Merchant Interaction Logic
+// ==========================================
+
+void GameScene::startMerchantInteraction(Npc* npc) {
+    if (!npc || !npc->isMerchant()) return;
+
+    activeNpc_ = npc;
+    merchantState_ = MerchantState::Greeting;
+    
+    if (dialogueBox_) {
+        dialogueBox_->setNpc(npc);
+        dialogueBox_->setVisible(true);
+        dialogueBox_->showDialogue("Welcome! What can I do for you?");
+        
+        // Advancing via click
+        dialogueBox_->setOnClickCallback([this]() {
+            this->advanceMerchantDialogue();
+        });
+    }
+}
+
+void GameScene::advanceMerchantDialogue() {
+    if (merchantState_ == MerchantState::Greeting) {
+        merchantState_ = MerchantState::Choice;
+        if (dialogueBox_) {
+            dialogueBox_->showDialogue("Would you like to buy or sell?");
+            dialogueBox_->showChoices("Buy", "Sell", [this](int choice) {
+                this->onMerchantChoice(choice);
+            });
+        }
+    }
+    else if (merchantState_ == MerchantState::End) {
+        endMerchantInteraction();
+    }
+    else if (merchantState_ == MerchantState::BuyTransition) {
+        // Transition from text to actual shop
+        merchantState_ = MerchantState::Buy; 
+        if (dialogueBox_) dialogueBox_->setVisible(false);
+        toggleMarket(); 
+    }
+    else if (merchantState_ == MerchantState::SellPre) {
+        // Transition from text to inventory selection
+        merchantState_ = MerchantState::Sell; // Change state to prevent re-entry
+
+        if (dialogueBox_) {
+             dialogueBox_->hideChoices(); 
+             dialogueBox_->closeDialogue(); // Use closeDialogue to set _isVisible=false
+        }
+        
+        // Ensure InventoryUI exists
+        if (!inventoryUI_) {
+            if (inventory_) {
+                 inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
+                 if (inventoryUI_) {
+                     this->addChild(inventoryUI_, 1100); 
+                     inventoryUI_->setGlobalZOrder(1100);
+                     // Position logic from toggleInventory
+                     auto camera = this->getDefaultCamera();
+                     if (camera) {
+                         Vec3 cameraPos = camera->getPosition3D();
+                         auto visibleSize = Director::getInstance()->getVisibleSize();
+                         Vec2 uiPos = Vec2(cameraPos.x - visibleSize.width/2, cameraPos.y - visibleSize.height/2);
+                         inventoryUI_->setPosition(uiPos);
+                     }
+                 }
+            }
+        }
+
+        if (inventoryUI_) {
+            inventoryUI_->show();
+            // Important: We need a way to know we are in "Sell Mode" in inventory
+            // or we handle the selection via callback cleanly.
+            inventoryUI_->setSelectionMode(true);
+            inventoryUI_->setOnItemSelectedCallback([this](int slotIndex, ItemType type, int count) {
+                this->handleSellSelection(slotIndex, type, count);
+            });
+            
+            // Show a hint?
+            showActionMessage("Select an item to sell", Color3B::YELLOW);
+        }
+    }
+}
+
+void GameScene::onMerchantChoice(int choice) {
+    if (merchantState_ != MerchantState::Choice) return;
+
+    if (choice == 0) { // Buy
+        // New flow: Show dialogue first
+        merchantState_ = MerchantState::BuyTransition;
+        if (dialogueBox_) {
+            dialogueBox_->hideChoices(); // Hide buttons
+            // "Just got new stock..."
+            dialogueBox_->showDialogue("We just got a fresh shipment in. Take a look!");
+        }
+    } else { // Sell
+        merchantState_ = MerchantState::SellPre;
+        if (dialogueBox_) {
+             dialogueBox_->hideChoices();
+             dialogueBox_->showDialogue("Let me see what fine goods you've brought.");
+        }
+        // Wait for next click to open inventory (handled in advanceMerchantDialogue)
+    }
+}
+
+void GameScene::handleSellSelection(int slotIndex, ItemType type, int count) {
+    if (merchantState_ != MerchantState::Sell && merchantState_ != MerchantState::SellPre) return; // Allow both states
+
+    pendingSellItem_ = type;
+    pendingSellCount_ = count; // Default placeholder, will be updated by popup
+    
+    if (count > 1) {
+        auto popup = QuantityPopup::create(count, [this](int qty) {
+             this->onQuantityConfirmed(qty);
+        });
+        
+        // Fix: Add to 'this' scene directly to ensure it sits above InventoryUI (which is also on 'this')
+        this->addChild(popup, 3000); 
+        popup->setGlobalZOrder(3000);
+        
+        // Position it relative to camera since 'this' logic moves with camera? 
+        // No, 'this' implies world space, but popup usually expects HUD.
+        // Wait, InventoryUI is added to 'this' and manually positioned.
+        // QuantityPopup is adding itself to center of screen usually.
+        // If its parent is 'this' (World), we need to position it at Camera Center.
+        
+        auto camera = this->getDefaultCamera();
+        if (camera) {
+             Vec3 camPos = camera->getPosition3D();
+             auto visibleSize = Director::getInstance()->getVisibleSize();
+             // QuantityPopup internally positions elements at visibleSize/2
+             // So if we position the node at (CamPos - HalfSize), the internal center (HalfSize)
+             // will align with (CamPos - HalfSize + HalfSize) = CamPos.
+             popup->setPosition(Vec2(camPos.x - visibleSize.width/2, camPos.y - visibleSize.height/2));
+        }
+    } else {
+        onQuantityConfirmed(1);
+    }
+}
+
+void GameScene::onQuantityConfirmed(int qty) {
+    if (qty <= 0) return;
+    
+    // Fix Flow: Close inventory immediately
+    if (inventoryUI_) {
+        inventoryUI_->close();
+        inventoryUI_ = nullptr;
+    }
+    
+    // Simple Pricing Logic 
+    MarketState marketState; 
+    int unitPrice = marketState.getSellPrice(pendingSellItem_);
+    
+    if (unitPrice <= 0) {
+        if (dialogueBox_) {
+             dialogueBox_->setVisible(true); // Ensure visible
+             dialogueBox_->showDialogue("I cannot buy that.");
+             
+             // Issue 2 Fix: End interaction on next click
+             merchantState_ = MerchantState::End;
+             dialogueBox_->setOnClickCallback([this]() {
+                 this->endMerchantInteraction();
+             });
+        }
+        return;
+    }
+
+    int totalPrice = unitPrice * qty;
+
+    std::string itemName = InventoryManager::getItemName(pendingSellItem_);
+    std::string text = StringUtils::format("I'll take %d %s for %d G. Deal?", qty, itemName.c_str(), totalPrice);
+    
+    merchantState_ = MerchantState::TradeConfirm;
+    pendingSellCount_ = qty; 
+    
+    if (dialogueBox_) {
+        dialogueBox_->setVisible(true);
+        dialogueBox_->showDialogue(text);
+        dialogueBox_->showChoices("Yes", "No", [this](int choice) {
+             this->onTradeConfirmResult(choice == 0);
+        });
+    }
+}
+
+void GameScene::onTradeConfirmResult(bool confirmed) {
+    if (!confirmed) {
+        if (dialogueBox_) dialogueBox_->showDialogue("Maybe next time.");
+        merchantState_ = MerchantState::End;
+    } else {
+        if (inventory_) {
+            int currentMoney = inventory_->getMoney();
+             MarketState marketState; 
+             int unitPrice = marketState.getSellPrice(pendingSellItem_);
+             int total = unitPrice * pendingSellCount_;
+             
+             inventory_->addMoney(total);
+             // Note: removeItem needs to be robust, here assuming simple remove by type works or we need to find slot.
+             // Given inventory structure, remove by type/count is standard.
+             inventory_->removeItem(pendingSellItem_, pendingSellCount_);
+             
+             if (inventoryUI_) inventoryUI_->refresh();
+        }
+        
+        if (dialogueBox_) dialogueBox_->showDialogue("Thank you! Here is your gold.");
+        merchantState_ = MerchantState::End;
+    }
+    
+     if (dialogueBox_) {
+        dialogueBox_->hideChoices();
+        dialogueBox_->setOnClickCallback([this]() {
+            this->endMerchantInteraction();
+        });
+    }
+}
+
+void GameScene::endMerchantInteraction() {
+    activeNpc_ = nullptr;
+    merchantState_ = MerchantState::None;
+    
+    if (dialogueBox_) {
+        dialogueBox_->closeDialogue();
+        dialogueBox_->hideChoices();
+        dialogueBox_->setOnClickCallback(nullptr);
+    }
+    
+    if (inventoryUI_) {
+        inventoryUI_->setSelectionMode(false);
+        inventoryUI_->close(); 
+    }
 }
