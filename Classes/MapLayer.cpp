@@ -26,10 +26,12 @@ bool MapLayer::init(const std::string& tmxFile)
 
     if (!loadTMXMap(tmxFile))
     {
+        CCLOG("Failed to load TMX map: %s", tmxFile.c_str());
         return false;
     }
 
     initCollisionLayer();
+    CCLOG("MapLayer initialized with map: %s", tmxFile.c_str());
     return true;
 }
 
@@ -42,15 +44,21 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
         return false;
     }
 
-    // 查找底图层（支持英文 "Ground" 和中文 "图块层 1"）
+    // 记录第一层（底图），方便清除树贴图
+    // [Fix] Renamed "图块层 1" to "Ground" to avoid encoding issues
     baseLayer_ = tmxMap_->getLayer("Ground");
     if (!baseLayer_)
     {
-        baseLayer_ = tmxMap_->getLayer("图块层 1");
-    }
-    if (!baseLayer_)
-    {
-        // 如果都没找到，使用第一个 TMXLayer 作为底图
+        CCLOG("DEBUG: 'Ground' layer not found. Listing all available layers:");
+        for (const auto& child : tmxMap_->getChildren()) {
+             auto layer = dynamic_cast<TMXLayer*>(child);
+             if (layer) {
+                 CCLOG(" - Found Layer: %s (Opacity: %d, Visible: %d)", layer->getLayerName().c_str(), layer->getOpacity(), layer->isVisible());
+             }
+        }
+
+        // 如果没有固定名称，取第一个 TMXLayer 作为底图
+        // 如果没有固定名称，取第一个 TMXLayer 作为底图
         auto children = tmxMap_->getChildren();
         for (auto child : children)
         {
@@ -65,6 +73,15 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
 
     this->addChild(tmxMap_, 0);
 
+    Size mapSize = tmxMap_->getMapSize();
+    Size tileSize = tmxMap_->getTileSize();
+    CCLOG("Map loaded: %s", tmxFile.c_str());
+    CCLOG("  Map size: %.0f x %.0f tiles", mapSize.width, mapSize.height);
+    CCLOG("  Tile size: %.0f x %.0f pixels", tileSize.width, tileSize.height);
+    CCLOG("  Total size: %.0f x %.0f pixels",
+        mapSize.width * tileSize.width,
+        mapSize.height * tileSize.height);
+
     return true;
 }
 
@@ -73,22 +90,26 @@ void MapLayer::initCollisionLayer()
     if (!tmxMap_)
         return;
 
+    // 尝试查找 "Collision" 层（农场地图）
     collisionLayer_ = tmxMap_->getLayer("Collision");
     if (collisionLayer_)
     {
         collisionLayer_->setVisible(false);
+        CCLOG("Collision layer found and hidden");
     }
 
-    if (!collisionLayer_)
+    // 尝试查找 "Buildings" 层（矿洞地图）
+    collisionLayer_ = tmxMap_->getLayer("Buildings");
+    if (collisionLayer_)
     {
-        collisionLayer_ = tmxMap_->getLayer("Buildings");
-        if (collisionLayer_)
-        {
-            collisionLayer_->setVisible(false);
-        }
+        collisionLayer_->setVisible(false);
+        CCLOG("Buildings layer found and used as collision layer (hidden)");
+        return;
     }
 
     waterLayer_ = tmxMap_->getLayer("Water");
+
+    CCLOG("Warning: No collision layer found (tried 'Collision' and 'Buildings')");
 }
 
 
