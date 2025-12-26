@@ -10,10 +10,11 @@
 #include "GameScene.h"
 #include "Slime.h"
 #include "Zombie.h"
-#include <cmath>
 #include <algorithm>
 #include "EnergyBar.h"
 #include "HouseScene.h"
+#include "TimeManager.h"
+
 
 USING_NS_CC;
 
@@ -49,10 +50,10 @@ namespace
 // 定义静态成员
 std::map<int, int> MineScene::openedChestsPerWeek_;
 
-MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds)
+MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor)
 {
     MineScene* ret = new (std::nothrow) MineScene();
-    if (ret && ret->init(inventory, currentFloor, dayCount, accumulatedSeconds))
+    if (ret && ret->init(inventory, currentFloor))
     {
         ret->autorelease();
         return ret;
@@ -61,15 +62,15 @@ MineScene* MineScene::createScene(InventoryManager* inventory, int currentFloor,
     return nullptr;
 }
 
-bool MineScene::init(InventoryManager* inventory, int currentFloor, int dayCount, float accumulatedSeconds)
+
+bool MineScene::init(InventoryManager* inventory, int currentFloor)
 {
     if (!Scene::init())
         return false;
 
     inventory_ = inventory;
     currentFloor_ = currentFloor;
-    dayCount_ = dayCount;
-    accumulatedSeconds_ = accumulatedSeconds;
+
     CCLOG("========================================");
     CCLOG("Initializing Mine Scene (Floor %d)", currentFloor);
     CCLOG("========================================");
@@ -400,6 +401,19 @@ void MineScene::initUI()
     floorLabel_->setPosition(Vec2(origin.x + 20, origin.y + visibleSize.height - 20));
     floorLabel_->setColor(Color3B::YELLOW);
     uiLayer_->addChild(floorLabel_, 1);
+    
+    // Time Label in Mine
+    auto tm = TimeManager::getInstance();
+    std::string timeStr = "Day ?, ??:??";
+    if (tm) {
+         timeStr = StringUtils::format("Day %d, %02d:%02d", tm->getDay(), tm->getHour(), tm->getMinute());
+    }
+    auto timeLabel = Label::createWithSystemFont(timeStr, "Arial", 20);
+    timeLabel->setName("TimeLabel"); // Give it a name to find update later
+    timeLabel->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height - 20));
+    timeLabel->setColor(Color3B::WHITE);
+    uiLayer_->addChild(timeLabel, 1);
+
 
     // 当前物品
     itemLabel_ = Label::createWithSystemFont("Tool: None", "Arial", 18);
@@ -496,7 +510,10 @@ void MineScene::initChests()
     if (chestCount > 0)
     {
         // 1. 检查这一周这一层的宝箱是否已经开过
-        int currentWeek = (dayCount_ - 1) / 7 + 1;
+        int dayCount = 1;
+        if (TimeManager::getInstance()) dayCount = TimeManager::getInstance()->getDay();
+        int currentWeek = (dayCount - 1) / 7 + 1;
+
 
         if (openedChestsPerWeek_.count(currentFloor_) > 0 &&
             openedChestsPerWeek_[currentFloor_] == currentWeek)
@@ -535,21 +552,29 @@ void MineScene::update(float delta)
     updateMonsters(delta);
 
     // 1. 模拟时间流逝
-    accumulatedSeconds_ += delta;
+    auto tm = TimeManager::getInstance();
+    if (tm) {
+        tm->update(delta);
+        
+        // Update Time Label
+        if (uiLayer_) {
+            auto label = dynamic_cast<Label*>(uiLayer_->getChildByName("TimeLabel"));
+            if (label) {
+                label->setString(StringUtils::format("Day %d, %02d:%02d", tm->getDay(), tm->getHour(), tm->getMinute()));
+            }
+        }
 
-    // 2. 检查是否到达午夜 (120秒 = 24小时，午夜即 120秒)
-    // 假设 0.0 是午夜前一天? 还是说 0.0 就是 0:00?
-    // FarmManager start 0.0, progressDay at 120.0. 
-    // Usually Stardew day ends at 2AM (26h). 
-    // 用户要求 "凌晨十二点" (12:00 AM / 0:00) -> 24h -> 120s
-    if (accumulatedSeconds_ >= secondsPerDay_)
-    {
-        CCLOG("It's midnight! Passing out...");
-        if (inventory_) inventory_->removeMoney(200);
-        showActionMessage("Passed out...", Color3B::RED);
-        Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
-        return;
+        // 2. 检查是否到达午夜
+        if (tm->isMidnight())
+        {
+            CCLOG("It's midnight! Passing out...");
+            if (inventory_) inventory_->removeMoney(200);
+            showActionMessage("Passed out...", Color3B::RED);
+            Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
+            return;
+        }
     }
+
 
     // 3. 检查生命值 (死亡逻辑)
     if (player_ && player_->getHp() <= 0)
@@ -1178,8 +1203,11 @@ void MineScene::handleChestInteraction()
                     showActionMessage(result.message, Color3B::YELLOW);
 
                     // 记录开启状态（按周记录持久化）
-                    int currentWeek = (dayCount_ - 1) / 7 + 1;
+                    int dayCount = 1;
+                    if (TimeManager::getInstance()) dayCount = TimeManager::getInstance()->getDay();
+                    int currentWeek = (dayCount - 1) / 7 + 1;
                     openedChestsPerWeek_[currentFloor_] = currentWeek;
+
                 }
             }
             return;
@@ -1303,8 +1331,9 @@ void MineScene::goToPreviousFloor()
     }
 
     CCLOG("Switching to previous floor: %d -> %d", currentFloor_, prevFloor);
-    auto prevScene = MineScene::createScene(inventory_, prevFloor, dayCount_, accumulatedSeconds_);
+    auto prevScene = MineScene::createScene(inventory_, prevFloor);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, prevScene));
+
 }
 
 void MineScene::goToNextFloor()
@@ -1318,8 +1347,9 @@ void MineScene::goToNextFloor()
     }
 
     CCLOG("Switching to next floor: %d -> %d", currentFloor_, nextFloor);
-    auto nextScene = MineScene::createScene(inventory_, nextFloor, dayCount_, accumulatedSeconds_);
+    auto nextScene = MineScene::createScene(inventory_, nextFloor);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
+
 }
 
 bool MineScene::isPlayerOnStairs() const
@@ -1568,8 +1598,9 @@ void MineScene::onElevatorFloorSelected(int floor)
     else if (floor >= 1 && floor <= 5) // Limits could be dynamic
     {
         CCLOG("Elevator to floor %d", floor);
-        auto nextScene = MineScene::createScene(inventory_, floor, dayCount_, accumulatedSeconds_);
+        auto nextScene = MineScene::createScene(inventory_, floor);
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
+
     }
     else
     {
