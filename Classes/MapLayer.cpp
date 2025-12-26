@@ -22,6 +22,7 @@ bool MapLayer::init(const std::string& tmxFile)
     tmxMap_ = nullptr;
     baseLayer_ = nullptr;
     collisionLayer_ = nullptr;
+    waterLayer_ = nullptr;
 
     if (!loadTMXMap(tmxFile))
     {
@@ -72,22 +73,24 @@ void MapLayer::initCollisionLayer()
     if (!tmxMap_)
         return;
 
-    // 查找 "Collision" 层（农场地图）
     collisionLayer_ = tmxMap_->getLayer("Collision");
     if (collisionLayer_)
     {
         collisionLayer_->setVisible(false);
-        return;
     }
 
-    // 查找 "Buildings" 层（矿洞地图）
-    collisionLayer_ = tmxMap_->getLayer("Buildings");
-    if (collisionLayer_)
+    if (!collisionLayer_)
     {
-        collisionLayer_->setVisible(false);
-        return;
+        collisionLayer_ = tmxMap_->getLayer("Buildings");
+        if (collisionLayer_)
+        {
+            collisionLayer_->setVisible(false);
+        }
     }
+
+    waterLayer_ = tmxMap_->getLayer("Water");
 }
+
 
 Size MapLayer::getMapSize() const
 {
@@ -118,8 +121,8 @@ Size MapLayer::getTileSize() const
 
 bool MapLayer::isWalkable(const Vec2& position) const
 {
-    if (!tmxMap_ || !collisionLayer_)
-        return true;  // 没有碰撞层则默认可走
+    if (!tmxMap_)
+        return true;
 
     Vec2 tileCoord = positionToTileCoord(position);
     Size mapSize = tmxMap_->getMapSize();
@@ -129,13 +132,26 @@ bool MapLayer::isWalkable(const Vec2& position) const
         return false;
     }
 
-    int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
-    return (tileGID == 0);
+    bool blocked = false;
+    if (collisionLayer_)
+    {
+        int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
+        blocked = blocked || (tileGID != 0);
+    }
+
+    if (waterLayer_)
+    {
+        int waterGID = waterLayer_->getTileGIDAt(tileCoord);
+        blocked = blocked || (waterGID != 0);
+    }
+
+    return !blocked;
 }
+
 
 bool MapLayer::hasCollisionAt(const Vec2& tileCoord) const
 {
-    if (!tmxMap_ || !collisionLayer_)
+    if (!tmxMap_)
         return false;
 
     Size mapSize = tmxMap_->getMapSize();
@@ -145,9 +161,23 @@ bool MapLayer::hasCollisionAt(const Vec2& tileCoord) const
         return false;
     }
 
-    int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
-    return tileGID != 0;
+    if (collisionLayer_)
+    {
+        int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
+        if (tileGID != 0)
+            return true;
+    }
+
+    if (waterLayer_)
+    {
+        int waterGID = waterLayer_->getTileGIDAt(tileCoord);
+        if (waterGID != 0)
+            return true;
+    }
+
+    return false;
 }
+
 
 void MapLayer::clearCollisionAt(const Vec2& tileCoord)
 {

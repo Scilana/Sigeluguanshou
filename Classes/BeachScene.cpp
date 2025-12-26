@@ -16,6 +16,7 @@ namespace
     const Vec2 kBeachSpawnTile(3.0f, 10.0f);
     const int kBeachExitTileX = 1;
     const float kExitCooldownSeconds = 0.8f;
+    const float kBeachPlayerScale = 1.0f;
 
     const float kToolbarSlotSize = 48.0f;
     const float kToolbarSlotPadding = 6.0f;
@@ -23,6 +24,56 @@ namespace
     const Color4B kToolbarBarColor(40, 35, 30, 220);
     const Color3B kToolbarSlotColor(70, 60, 50);
     const Color3B kToolbarSlotSelectedColor(170, 150, 95);
+
+    Vec2 findNearestWalkableTile(MapLayer* mapLayer, const Vec2& desiredTile)
+    {
+        if (!mapLayer)
+            return desiredTile;
+
+        Size mapSize = mapLayer->getMapSizeInTiles();
+        int maxX = static_cast<int>(mapSize.width) - 1;
+        int maxY = static_cast<int>(mapSize.height) - 1;
+        if (maxX < 0 || maxY < 0)
+            return desiredTile;
+
+        int startX = std::min(std::max(static_cast<int>(desiredTile.x), 0), maxX);
+        int startY = std::min(std::max(static_cast<int>(desiredTile.y), 0), maxY);
+
+        auto isWalkableTile = [mapLayer](int x, int y) {
+            Vec2 pos = mapLayer->tileCoordToPosition(Vec2(static_cast<float>(x), static_cast<float>(y)));
+            return mapLayer->isWalkable(pos);
+        };
+
+        if (isWalkableTile(startX, startY))
+        {
+            return Vec2(static_cast<float>(startX), static_cast<float>(startY));
+        }
+
+        int maxRadius = static_cast<int>(std::max(mapSize.width, mapSize.height));
+        for (int r = 1; r <= maxRadius; ++r)
+        {
+            for (int dy = -r; dy <= r; ++dy)
+            {
+                for (int dx = -r; dx <= r; ++dx)
+                {
+                    if (dx != -r && dx != r && dy != -r && dy != r)
+                        continue;
+
+                    int x = startX + dx;
+                    int y = startY + dy;
+                    if (x < 0 || x > maxX || y < 0 || y > maxY)
+                        continue;
+
+                    if (isWalkableTile(x, y))
+                    {
+                        return Vec2(static_cast<float>(x), static_cast<float>(y));
+                    }
+                }
+            }
+        }
+
+        return Vec2(static_cast<float>(startX), static_cast<float>(startY));
+    }
 
     Sprite* createToolbarIcon(ItemType itemType)
     {
@@ -99,7 +150,8 @@ void BeachScene::initPlayer()
 
     if (mapLayer_)
     {
-        Vec2 spawnPos = mapLayer_->tileCoordToPosition(kBeachSpawnTile);
+        Vec2 spawnTile = findNearestWalkableTile(mapLayer_, kBeachSpawnTile);
+        Vec2 spawnPos = mapLayer_->tileCoordToPosition(spawnTile);
         player_->setPosition(spawnPos);
         mapLayer_->addChild(player_, 10);
         player_->setMapLayer(mapLayer_);
@@ -109,6 +161,7 @@ void BeachScene::initPlayer()
         addChild(player_, 10);
     }
 
+    player_->setScale(kBeachPlayerScale);
     player_->enableKeyboardControl();
 }
 
