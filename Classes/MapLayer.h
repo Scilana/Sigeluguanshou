@@ -32,6 +32,7 @@ private:
     cocos2d::TMXTiledMap* tmxMap_{ nullptr };
     cocos2d::TMXLayer* baseLayer_{ nullptr };
     cocos2d::TMXLayer* collisionLayer_{ nullptr };
+    cocos2d::TMXLayer* waterLayer_{ nullptr };
 
     bool loadTMXMap(const std::string& tmxFile);
     void initCollisionLayer();
