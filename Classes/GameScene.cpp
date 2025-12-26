@@ -1300,11 +1300,58 @@ void GameScene::openChestInventory(StorageChest* chest)
         inventoryUI_->close();
     }
 
-    // 创建背包 UI，以玩家背包为主，箱子为合作伙伴
-    inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
+    // 创建背包 UI，指向箱子的 Inventory
+    inventoryUI_ = InventoryUI::create(chest->getInventory(), &marketState_);
     if (inventoryUI_) {
-        // 设置合作伙伴为箱子背包，并传递是否为交易箱
-        inventoryUI_->setPartnerInventory(chest->getInventory(), chest->isShippingBin());
+        // 设置合作伙伴为玩家背包，这样按 J 可以转移到背包
+        inventoryUI_->setPartnerInventory(inventory_, false); // false = partner is NOT shipping bin (player inv is never a bin)
+
+        // 如果箱子是 ShippingBin，UI 需要知道 self 是 bin 吗？
+        // 实际上 InventoryUI 里是用 partnerIsShippingBin_ 来判断“卖出”逻辑。
+        // 当我们打开箱子时：
+        //   Main = Chest
+        //   Partner = Player
+        //   此时是从 Chest -> Player (取出)。这不需要卖出逻辑。
+        
+        // 当我们打开背包时：
+        //   Main = Player
+        //   Partner = Chest/Bin
+        //   此时是从 Player -> Chest (放入)。如果 Partner 是 Bin，则触发卖出。
+        
+        // 所以这里不需要特殊的 flag，除非我们允许从箱子直接卖出？
+        // 不，根据需求，卖出是“放入交易箱”。即 Player -> Bin。
+        
+        // 但是！还有一个需求：“3. 玩家将物品放置进储物箱的方式是：打开背包...按下J键...移入储物箱”
+        // 这意味着放置物品时，必须打开的是【背包】。
+        // 而“4. ...从储物箱中去取出物品的方式是：...直接点击箱子有效...按下J键...移入背包”
+        // 这意味着取出物品时，必须打开的是【箱子】。
+        
+        // 所以 openChestInventory 只是为了“取出”物品（查看箱子）。
+        
+        // 等等，用户在 Rule 3 说：
+        // "玩家将物品放置进储物箱的方式是：打开背包...按下J键...移入储物箱"
+        // 这意味着要放东西，得先打开背包（按B/Esc或者UI按钮），然后如果旁边有箱子，J键就生效。
+        
+        // 那么问题来了：如果我只打开了箱子 (Rule 4)，我能放东西进去吗？
+        // Rule 4 只说了“取出”。
+        // 但通常游戏里的箱子界面是双向的，或者你打开箱子时也会显示背包。
+        // 如果 InventoryUI 只能显示一个， user interaction flow is:
+        //  - To Put: Open Backpack (B). Stand near chest. Select Item. J.
+        //  - To Take: Click Chest. (Opens Chest Inv). Select Item. J.
+        
+        // 现在的逻辑：
+        // openChestInventory 打开的是 Chest Inv。 Partner 是 Player Inv。
+        // Press J -> move from Chest to Player. (Take). Correct.
+        
+        // The previous bug was: I opened Player Inv, passed Chest as Partner.
+        // So it displayed Player Inv.
+        // Press J -> move from Player to Chest. (Put).
+        // This effectively made "Clicking Chest" act as "Opening Backpack to Put Items".
+        // But the user complained "Storage chests share space". 
+        // Because "Clicking Chest A" showed Player Inv. "Clicking Chest B" showed Player Inv.
+        // So it looked like A and B shared space (and with Player).
+        
+        // Fix is indeed to revert to showing Chest Inventory.
         
         inventoryUI_->setCloseCallback([this]() {
             onInventoryClosed();
