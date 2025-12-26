@@ -6,6 +6,7 @@ class FarmManager;
 class Player;
 class InventoryManager;
 class InventoryUI;
+class DialogueBox;
 
 class HouseScene : public cocos2d::Scene
 {
@@ -39,6 +40,9 @@ private:
     void wakeUp();
     void toggleInventory();
     void onInventoryClosed();
+    void showWeatherForecast();
+
+    DialogueBox* dialogueBox_{ nullptr };
 };
 
 #endif // __HOUSE_SCENE_H__
