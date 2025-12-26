@@ -755,7 +755,7 @@ void MineScene::initToolbar()
         // 检查是否有剑和镐
         bool hasSword = false;
         bool hasPickaxe = false;
-        for (int i=0; i<8; ++i) {
+        for (int i = 0; i < inventory_->getSlotCount(); ++i) {
             ItemType t = inventory_->getSlot(i).type;
             if (t == ItemType::ITEM_WoodenSword || t == ItemType::ITEM_IronSword ||
                 t == ItemType::ITEM_GoldSword || t == ItemType::ITEM_DiamondSword) hasSword = true;
