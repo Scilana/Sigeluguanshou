@@ -269,7 +269,7 @@ void InventoryUI::updateSlot(int slotIndex)
     }
 
     // 创建物品图标
-    slot.icon = createItemIcon(itemSlot.type);
+    slot.icon = createItemIcon(itemSlot);
     if (slot.icon)
     {
         slot.icon->setPosition(Vec2(SLOT_SIZE / 2, SLOT_SIZE / 2));
@@ -307,53 +307,101 @@ cocos2d::Sprite* InventoryUI::createSlotBackground()
     return sprite;
 }
 
-cocos2d::Sprite* InventoryUI::createItemIcon(ItemType itemType)
+cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& slot)
 {
+    ItemType itemType = slot.type;
     std::string iconPath = InventoryManager::getItemIconPath(itemType);
+    Sprite* icon = nullptr;
+    float iconSize = SLOT_SIZE - 10.0f;
+
     if (!iconPath.empty() && FileUtils::getInstance()->isFileExist(iconPath))
     {
-        auto icon = Sprite::create(iconPath);
+        icon = Sprite::create(iconPath);
         if (icon)
         {
             auto size = icon->getContentSize();
-            float maxSize = SLOT_SIZE - 10.0f;
-            float scale = std::min(maxSize / size.width, maxSize / size.height);
+            float scale = std::min(iconSize / size.width, iconSize / size.height);
             icon->setScale(scale);
-            return icon;
         }
     }
 
-    // Fallback colored placeholder.
-    auto icon = Sprite::create();
-    icon->setTextureRect(Rect(0, 0, SLOT_SIZE - 10, SLOT_SIZE - 10));
-
-    Color3B color = getItemColor(itemType);
-    icon->setColor(color);
-
-    std::string name = InventoryManager::getItemName(itemType);
-    std::string abbreviation;
-
-    if (!name.empty())
+    if (!icon)
     {
-        if (name.find(" ") != std::string::npos)
+        // Fallback colored placeholder.
+        icon = Sprite::create();
+        icon->setTextureRect(Rect(0, 0, iconSize, iconSize));
+        Color3B color = getItemColor(itemType);
+        icon->setColor(color);
+
+        std::string name = InventoryManager::getItemName(itemType);
+        std::string abbreviation;
+        if (!name.empty())
         {
-            abbreviation += name[0];
-            for (size_t i = 1; i < name.length(); ++i)
+            if (name.find(" ") != std::string::npos)
             {
-                if (name[i - 1] == ' ')
-                    abbreviation += name[i];
+                abbreviation += name[0];
+                for (size_t i = 1; i < name.length(); ++i) {
+                    if (name[i - 1] == ' ') abbreviation += name[i];
+                }
+            }
+            else {
+                abbreviation = name.substr(0, std::min((size_t)3, name.length()));
             }
         }
-        else
-        {
-            abbreviation = name.substr(0, std::min((size_t)3, name.length()));
-        }
+
+        auto label = Label::createWithSystemFont(abbreviation, "Arial", 14);
+        label->setPosition(Vec2(iconSize / 2, iconSize / 2));
+        label->setColor(Color3B::WHITE);
+        icon->addChild(label, 1);
     }
 
-    auto label = Label::createWithSystemFont(abbreviation, "Arial", 14);
-    label->setPosition(Vec2((SLOT_SIZE - 10) / 2, (SLOT_SIZE - 10) / 2));
-    label->setColor(Color3B::WHITE);
-    icon->addChild(label, 1);
+    // === Durability Bar ===
+    if (slot.isTool() && slot.maxDurability > 0)
+    {
+        float percent = (float)slot.durability / slot.maxDurability;
+        float barWidth = iconSize; // Full width of icon
+        float barHeight = 4.0f;
+        
+        // Background (Black)
+        auto barBg = LayerColor::create(Color4B::BLACK, barWidth, barHeight);
+        barBg->setPosition(Vec2(0, 0)); // Bottom of icon
+        // LayerColor anchor is usually (0,0), but strictly it's a layer. 
+        // Best to use DrawNode for small bars or just LayerColor.
+        // Since icon is a Sprite, (0,0) is bottom-left relative to its texture RECT if anchor is (0.5, 0.5) UNLESS it's a child.
+        // Sprites have anchor (0.5, 0.5) by default. Children are placed relative to (0,0) of the parent's content size space.
+        // Sprite content space (0,0) is bottom-left.
+        float contentW = icon->getContentSize().width;
+        float contentH = icon->getContentSize().height;
+        
+        // We need to scale the bar to match the visual size, but the icon might be scaled.
+        // Providing a consistent overlay is easier if we attach it to a Node that isn't scaled, OR we handle scale.
+        // Actually, let's attach to the icon and inverse scale? No, that's complex.
+        // Let's attach to the icon but position at bottom.
+        
+        // Using DrawNode is safer for dynamic sizing
+        auto draw = DrawNode::create();
+        
+        // Local coordinates on the icon
+        Vec2 start(0, 0);
+        Vec2 end(contentW, contentH * 0.1f); // 10% height bar? Or fixed pixels?
+        // Let's use fixed logic assuming the icon roughly fills the slot visually
+        
+        float w = contentW;
+        float h = 5.0f; 
+        
+        // Bg
+        draw->drawSolidRect(Vec2(0, 0), Vec2(w, h), Color4F(0, 0, 0, 1));
+        
+        // Fg color
+        Color4F color = Color4F::GREEN;
+        if (percent < 0.2f) color = Color4F::RED;
+        else if (percent < 0.5f) color = Color4F(1.0f, 0.8f, 0.0f, 1.0f); // Yellow/Orange
+        
+        // Fg
+        draw->drawSolidRect(Vec2(0, 0), Vec2(w * percent, h), color);
+        
+        icon->addChild(draw, 10);
+    }
 
     return icon;
 }

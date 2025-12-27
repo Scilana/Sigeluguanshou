@@ -63,6 +63,7 @@ list(APPEND GAME_SOURCE
      Classes/Npc.cpp
      Classes/TimeManager.cpp
      Classes/Fish.cpp
+     Classes/BlacksmithUI.cpp
      )
 list(APPEND GAME_HEADER
      Classes/AppDelegate.h
@@ -100,6 +101,7 @@ list(APPEND GAME_HEADER
      Classes/Npc.h
      Classes/TimeManager.h
      Classes/Fish.h
+     Classes/BlacksmithUI.h
      )
 
 if(ANDROID)

@@ -241,6 +241,13 @@ public:
     bool decreaseDurability(int slotIndex, int amount = 1);
 
     /**
+     * @brief 修复指定槽位的工具 (满耐久)
+     * @param slotIndex 槽位索引
+     * @return 是否修复成功
+     */
+    bool repairSlot(int slotIndex);
+
+    /**
      * @brief 获取指定类型的默认最大耐久度
      */
     static int getDefaultMaxDurability(ItemType type);

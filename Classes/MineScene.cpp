@@ -1007,13 +1007,13 @@ void MineScene::toggleInventory()
     // uiLayer_ 的 ZOrder 是 1000，背包需要在更上面
     // 但是 uiLayer_ 跟随摄像机移动，InventoryUI 通常也是跟随摄像机的或者固定在屏幕空间
     // 这里我们把 InventoryUI 添加到 TOP
+    // 添加到 uiLayer_ 以跟随摄像机移动
     if (uiLayer_) {
-        // 使用高 Local ZOrder 确保在 uiLayer 内部最顶层
-        // uiLayer 已经有 1000 的 Global ZOrder，这足够覆盖场景中大部分物体
-        uiLayer_->addChild(inventoryUI_, 9999); 
-        inventoryUI_->setPosition(Vec2::ZERO);
+         inventoryUI_->setPosition(Vec2::ZERO); // Local to uiLayer
+         uiLayer_->addChild(inventoryUI_, 9999); 
     }
     else {
+        // Fallback: Add to scene but won't follow camera without extra code
         this->addChild(inventoryUI_, 9999);
     }
 
@@ -1106,6 +1106,13 @@ void MineScene::handleMiningAction()
                     DelayTime::create(delay),
                     CallFunc::create([this, targetTile]() {
                         executeMining(targetTile);
+                        // 扣除耐久
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                             showActionMessage("Pickaxe broke!", Color3B::RED);
+                             // 刷新 UI
+                             if (inventoryUI_) inventoryUI_->refresh(); // Force refresh if open
+                             initToolbarUI(); // Refresh toolbar
+                        }
                         }),
                     nullptr
                 );
@@ -1113,6 +1120,12 @@ void MineScene::handleMiningAction()
             }
             else {
                 executeMining(targetTile);
+                // 扣除耐久
+                if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                        showActionMessage("Pickaxe broke!", Color3B::RED);
+                        if (inventoryUI_) inventoryUI_->refresh();
+                        initToolbarUI();
+                }
             }
 
             // 找到一个矿石就退出，避免一次操作挖掉周围所有矿石 (如果想群挖，可以删除 break)

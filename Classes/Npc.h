@@ -11,7 +11,8 @@ class Npc : public cocos2d::Sprite {
 public:
     enum class NpcType {
         Villager,
-        Merchant
+        Merchant,
+        Blacksmith
     };
 
     static Npc* create(const std::string& name, const std::string& spriteFile, NpcType type = NpcType::Villager);

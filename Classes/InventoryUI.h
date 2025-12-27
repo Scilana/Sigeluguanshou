@@ -141,11 +141,11 @@ private:
     cocos2d::Sprite* createSlotBackground();
 
     /**
-     * @brief 创建物品图标（占位符）
-     * @param itemType 物品类型
+     * @brief 创建物品图标（含耐久度条）
+     * @param slot 物品槽位数据
      * @return 物品图标精灵
      */
-    cocos2d::Sprite* createItemIcon(ItemType itemType);
+    cocos2d::Sprite* createItemIcon(const InventoryManager::ItemSlot& slot);
 
     /**
      * @brief 处理格子点击

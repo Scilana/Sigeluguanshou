@@ -293,8 +293,19 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
         return false;
 
     auto& slot = slots_[slotIndex];
-    if (slot.isEmpty() || !slot.isTool())
-        return false;
+    if (slot.isEmpty()) return false;
+
+    // Check if it should be a tool but has invalid durability (Legacy Save Fix)
+    if (!slot.isTool()) {
+        int defMax = getDefaultMaxDurability(slot.type);
+        if (defMax > 0) {
+            slot.maxDurability = defMax;
+            slot.durability = defMax;
+            CCLOG("Restored legacy tool durability for %s", getItemName(slot.type).c_str());
+        } else {
+            return false; // Not a tool
+        }
+    }
 
     slot.durability -= amount;
     CCLOG("Tool %s durability: %d/%d", getItemName(slot.type).c_str(), slot.durability, slot.maxDurability);
@@ -306,6 +317,20 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
         return true; // Broke
     }
     return false;
+}
+
+bool InventoryManager::repairSlot(int slotIndex)
+{
+    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+        return false;
+
+    auto& slot = slots_[slotIndex];
+    if (slot.isEmpty() || !slot.isTool())
+        return false;
+
+    slot.durability = slot.maxDurability;
+    CCLOG("Repaired tool in slot %d", slotIndex);
+    return true;
 }
 
 int InventoryManager::getDefaultMaxDurability(ItemType type)

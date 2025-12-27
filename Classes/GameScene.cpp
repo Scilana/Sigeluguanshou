@@ -8,6 +8,7 @@
 
 #include "MarketUI.h"
 #include "ElevatorUI.h"
+#include "BlacksmithUI.h"
 #include "MarketUI.h"
 #include "WeatherManager.h"
 #include "SkillManager.h"
@@ -623,13 +624,13 @@ void GameScene::initNpcs()
         npcs_.push_back(wizard);
     }
 
-    // Cleaner
-    auto cleaner = Npc::create("Cleaner", "npcImages/cleaner.png");
-    if (cleaner) {
-        cleaner->setPosition(Vec2(600, 400));
-        cleaner->setScale(0.5f); // Scale down
-        mapLayer_->addChild(cleaner, 10);
-        npcs_.push_back(cleaner);
+    // Blacksmith (Replaces Cleaner)
+    auto blacksmith = Npc::create("Blacksmith", "npcImages/cleaner.png", Npc::NpcType::Blacksmith);
+    if (blacksmith) {
+        blacksmith->setPosition(Vec2(600, 400));
+        blacksmith->setScale(0.5f); // Scale down
+        mapLayer_->addChild(blacksmith, 10);
+        npcs_.push_back(blacksmith);
     }
 
     // DialogueBox
@@ -761,6 +762,26 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                  if (dist < kInteractionRadius) {
                      startMerchantInteraction(merchant);
                      break; // Interaction started, skip chest check
+                 }
+             }
+             
+             // Find Blacksmith
+             Npc* blacksmith = nullptr;
+             for (auto npc : npcs_) {
+                 if (npc->getNpcName() == "Blacksmith") { // Or Check Type
+                     blacksmith = npc;
+                     break;
+                 }
+             }
+             
+             if (blacksmith) {
+                 float dist = player_->getPosition().distance(blacksmith->getPosition());
+                 if (dist < kInteractionRadius) {
+                     // Open Blacksmith UI
+                     auto ui = BlacksmithUI::create();
+                     ui->show();
+                     uiLayer_->addChild(ui, 200);
+                     break;
                  }
              }
         }
@@ -1095,6 +1116,10 @@ void GameScene::handleFarmAction(bool waterOnly)
                     if (result.success) {
                         player_->consumeEnergy(2.0f);
                         SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                            showActionMessage("Watering Can broke!", Color3B::RED);
+                            refreshToolbarUI();
+                        }
                     }
                 }
                 else {
@@ -1112,6 +1137,10 @@ void GameScene::handleFarmAction(bool waterOnly)
                     if (result.success) {
                         player_->consumeEnergy(2.0f);
                         SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                            showActionMessage("Hoe broke!", Color3B::RED);
+                            refreshToolbarUI();
+                        }
                     }
                     break;
 
@@ -1121,6 +1150,10 @@ void GameScene::handleFarmAction(bool waterOnly)
                     if (result.success) {
                         player_->consumeEnergy(2.0f);
                         SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                            showActionMessage("Watering Can broke!", Color3B::RED);
+                            refreshToolbarUI();
+                        }
                     }
                     break;
 
@@ -1222,6 +1255,11 @@ void GameScene::handleFarmAction(bool waterOnly)
                         else {
                             result = { true, "", -1 }; // 砍到了但没倒，不弹提示以免刷屏
                         }
+                        
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                             showActionMessage("Axe broke!", Color3B::RED);
+                             refreshToolbarUI();
+                        }
                     }
                     else {
                         // --- 第 1 刀 (新砍伐) ---
@@ -1237,6 +1275,11 @@ void GameScene::handleFarmAction(bool waterOnly)
                         showActionMessage("Thump! (1)", Color3B::WHITE);
                         player_->consumeEnergy(2.0f);
                         result = { true, "", -1 };
+                        
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                             showActionMessage("Axe broke!", Color3B::RED);
+                             refreshToolbarUI();
+                        }
                     }
                     break;
                 }
@@ -2335,6 +2378,14 @@ void GameScene::onMouseDown(Event* event)
             if (npc->getBoundingBox().containsPoint(mapLayerClickPos)) {
                 // Clicked on NPC
                 CCLOG("Clicked NPC: %s", npc->getNpcName().c_str());
+                
+                if (npc->getNpcName() == "Blacksmith") {
+                     auto ui = BlacksmithUI::create();
+                     ui->show();
+                     uiLayer_->addChild(ui, 200);
+                     return;
+                }
+                
                 if (dialogueBox_) { // Ensure dialogueBox_ is initialized
                     dialogueBox_->setNpc(npc);
                     dialogueBox_->showDialogue();
