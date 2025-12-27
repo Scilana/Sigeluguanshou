@@ -484,15 +484,76 @@ void MineScene::initElevator()
     Size mapSize = map->getContentSize();
     Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
 
-    // Create Elevator Sprite
-    elevatorSprite_ = Sprite::create("myhouse/elevator.png"); // Try house asset first
+    // Create Mine Shaft Elevator (矿井入口) - 精致小巧版
+    elevatorSprite_ = Sprite::create("myhouse/elevator.png");
     if (!elevatorSprite_) {
-        // Fallback: Create a visual placeholder if file missing
-        auto draw = DrawNode::create();
-        draw->drawSolidRect(Vec2(-20, -20), Vec2(20, 20), Color4F(0.4f, 0.4f, 0.5f, 1.0f)); // Greyish
+        // Create a compact and refined mine shaft entrance
         elevatorSprite_ = Sprite::create();
+        auto draw = DrawNode::create();
+
+        // 缩小尺寸：48x48 (原来70x70)
+        const float size = 24.0f;  // 半径24px，总尺寸48px
+        const float frameWidth = 4.0f;  // 边框宽度
+        const float innerSize = size - frameWidth;
+
+        // 外框底色（深棕色）
+        draw->drawSolidRect(Vec2(-size, -size), Vec2(size, size),
+                           Color4F(0.25f, 0.15f, 0.08f, 1.0f));
+
+        // 内部洞口（深黑）
+        draw->drawSolidRect(Vec2(-innerSize, -innerSize), Vec2(innerSize, innerSize),
+                           Color4F(0.05f, 0.05f, 0.05f, 1.0f));
+
+        // 左侧木质边框（带高光）
+        draw->drawSolidRect(Vec2(-size, -size), Vec2(-innerSize, size),
+                           Color4F(0.45f, 0.30f, 0.18f, 1.0f));
+
+        // 右侧木质边框（略暗，制造立体感）
+        draw->drawSolidRect(Vec2(innerSize, -size), Vec2(size, size),
+                           Color4F(0.35f, 0.22f, 0.13f, 1.0f));
+
+        // 上方横梁
+        draw->drawSolidRect(Vec2(-size, innerSize), Vec2(size, size),
+                           Color4F(0.40f, 0.26f, 0.15f, 1.0f));
+
+        // 下方横梁
+        draw->drawSolidRect(Vec2(-size, -size), Vec2(size, -innerSize),
+                           Color4F(0.30f, 0.20f, 0.12f, 1.0f));
+
+        // 精致的梯子（4层细横档）
+        for (int i = 0; i < 4; i++) {
+            float y = -14 + i * 8;
+            draw->drawSolidRect(Vec2(-14, y), Vec2(14, y + 1.5f),
+                               Color4F(0.65f, 0.55f, 0.35f, 0.8f));
+        }
+
+        // 梯子竖杆（左右两根）
+        draw->drawSolidRect(Vec2(-14, -14), Vec2(-12, 14),
+                           Color4F(0.55f, 0.45f, 0.30f, 0.7f));
+        draw->drawSolidRect(Vec2(12, -14), Vec2(14, 14),
+                           Color4F(0.55f, 0.45f, 0.30f, 0.7f));
+
+        // 简洁的"M"标识（不用完整MINE，更精致）
+        auto label = Label::createWithSystemFont("M", "Arial", 10, Size::ZERO,
+                                                 TextHAlignment::CENTER, TextVAlignment::CENTER);
+        label->setPosition(Vec2(0, size + 8));
+        label->setColor(Color3B(220, 180, 100));
+        label->enableOutline(Color4B(40, 30, 20, 255), 1);
+        elevatorSprite_->addChild(label, 10);
+
+        // 内部微弱光晕（增加深度感）
+        auto glow = DrawNode::create();
+        Vec2 glowPoints[] = {
+            Vec2(-innerSize, -innerSize),
+            Vec2(innerSize, -innerSize),
+            Vec2(innerSize, innerSize),
+            Vec2(-innerSize, innerSize)
+        };
+        glow->drawSolidPoly(glowPoints, 4, Color4F(0.3f, 0.25f, 0.15f, 0.3f));
+        draw->addChild(glow, -1);
+
         elevatorSprite_->addChild(draw);
-        elevatorSprite_->setContentSize(Size(40, 40));
+        elevatorSprite_->setContentSize(Size(48, 48));
     }
 
     elevatorSprite_->setPosition(centerPos);

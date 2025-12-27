@@ -14,6 +14,7 @@
 #include "SkillManager.h"
 #include "SkillTreeUI.h"
 #include "BeachScene.h"
+#include "BarnScene.h"
 #include <algorithm>
 #include <cmath>
 #include <queue>
@@ -28,6 +29,8 @@ namespace
 {
     const Vec2 kHouseDoorTile(18.0f, 14.0f);
     const float kHouseDoorRadius = 40.0f;
+    const Vec2 kBarnDoorTile(12.0f, 13.0f);
+    const float kBarnDoorRadius = 60.0f;
     const Color4B kDayLightColor(255, 255, 255, 0);
     const Color4B kDawnLightColor(255, 180, 120, 70);
     const Color4B kDuskLightColor(120, 100, 160, 110);
@@ -532,25 +535,6 @@ void GameScene::initUI()
 
     updateDayNightLighting();
 
-    // 添加矿井入口标识（固定在世界坐标）
-    auto mineLabel = Label::createWithSystemFont("MINE", "Arial", 28, Size::ZERO, TextHAlignment::CENTER, TextVAlignment::CENTER);
-    mineLabel->setPosition(ELEVATOR_POS.x, ELEVATOR_POS.y + 80);  // 在矿井入口上方
-    mineLabel->setColor(Color3B(255, 200, 0));  // 金黄色
-    mineLabel->enableOutline(Color4B::BLACK, 2);  // 黑色描边
-    this->addChild(mineLabel, 100);  // 添加到游戏场景（会随相机移动）
-
-    // 添加向下箭头指示
-    auto arrow = Label::createWithSystemFont("▼", "Arial", 36);
-    arrow->setPosition(ELEVATOR_POS.x, ELEVATOR_POS.y + 50);
-    arrow->setColor(Color3B(255, 200, 0));
-    arrow->enableOutline(Color4B::BLACK, 2);
-    this->addChild(arrow, 100);
-
-    // 添加一个闪烁动作让它更醒目
-    auto blink = Blink::create(2.0f, 3);
-    auto repeat = RepeatForever::create(blink);
-    arrow->runAction(repeat);
-
     CCLOG("UI initialized - using simple fixed layer method");
 
     // 能量条
@@ -736,7 +720,18 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_ENTER:
     case EventKeyboard::KeyCode::KEY_KP_ENTER:
-        enterHouse();
+        if (isPlayerNearBarnDoor())
+        {
+            enterBarn();
+        }
+        else if (isPlayerNearHouseDoor())
+        {
+            enterHouse();
+        }
+        else
+        {
+            showActionMessage("Door is too far!", Color3B::RED);
+        }
         break;
     case EventKeyboard::KeyCode::KEY_J:
         handleFarmAction(false);  // till / plant / harvest
@@ -2756,6 +2751,19 @@ void GameScene::enterHouse()
     Director::getInstance()->pushScene(transition);
 }
 
+void GameScene::enterBarn()
+{
+    auto barnScene = BarnScene::createScene();
+    if (!barnScene)
+    {
+        CCLOG("ERROR: Failed to create barn scene!");
+        return;
+    }
+
+    auto transition = TransitionFade::create(0.4f, barnScene);
+    Director::getInstance()->pushScene(transition);
+}
+
 void GameScene::enterBeach()
 {
     if (enteringBeach_)
@@ -2916,6 +2924,15 @@ bool GameScene::isPlayerNearHouseDoor() const
 
     Vec2 doorPos = mapLayer_->tileCoordToPosition(kHouseDoorTile);
     return player_->getPosition().distance(doorPos) <= kHouseDoorRadius;
+}
+
+bool GameScene::isPlayerNearBarnDoor() const
+{
+    if (!player_ || !mapLayer_)
+        return false;
+
+    Vec2 doorPos = mapLayer_->tileCoordToPosition(kBarnDoorTile);
+    return player_->getPosition().distance(doorPos) <= kBarnDoorRadius;
 }
 
 // ==========================================

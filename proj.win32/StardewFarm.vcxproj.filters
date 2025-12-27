@@ -36,6 +36,9 @@
     <ClCompile Include="..\Classes\BeachScene.cpp">
       <Filter>Scenes</Filter>
     </ClCompile>
+    <ClCompile Include="..\Classes\BarnScene.cpp">
+      <Filter>Scenes</Filter>
+    </ClCompile>
     <ClCompile Include="GameScene.cpp">
       <Filter>Scenes</Filter>
     </ClCompile>
@@ -60,6 +63,9 @@
       <Filter>Core</Filter>
     </ClInclude>
     <ClInclude Include="..\Classes\BeachScene.h">
+      <Filter>Scenes</Filter>
+    </ClInclude>
+    <ClInclude Include="..\Classes\BarnScene.h">
       <Filter>Scenes</Filter>
     </ClInclude>
     <ClInclude Include="GameScene.h">
