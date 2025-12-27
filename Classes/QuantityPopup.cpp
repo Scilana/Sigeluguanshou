@@ -91,7 +91,7 @@ void QuantityPopup::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
     if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
     {
-        int num = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
+        int num = static_cast<int>(keyCode) - static_cast<int>(EventKeyboard::KeyCode::KEY_0);
         
         if (isFirstInput_) {
             inputText_ = "";

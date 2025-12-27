@@ -243,7 +243,7 @@ void ElevatorUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     int number = -1;
     if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
     {
-        number = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
+        number = static_cast<int>(keyCode) - static_cast<int>(EventKeyboard::KeyCode::KEY_0);
     }
     // 注意：部分 Cocos2d-x 版本可能使用不同的枚举名（如 KEY_NUMPAD0），
     // 或者根本没有定义小键盘枚举。为避免编译错误，暂时移除小键盘支持，
