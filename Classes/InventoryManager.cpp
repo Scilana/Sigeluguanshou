@@ -396,15 +396,15 @@ std::string InventoryManager::getItemName(ItemType itemType)
     case ItemType::ITEM_GoldSword: return "Gold Sword";
     case ItemType::ITEM_DiamondSword: return "Diamond Sword";
     // 鱼类
-    case ItemType::ITEM_Anchovy: return "Anchovy";
-    case ItemType::ITEM_Carp: return "Carp";
-    case ItemType::ITEM_Eel: return "Eel";
-    case ItemType::ITEM_Flounder: return "Flounder";
-    case ItemType::ITEM_Largemouth_Bass: return "Largemouth Bass";
-    case ItemType::ITEM_Pufferfish: return "Pufferfish";
-    case ItemType::ITEM_Rainbow_Trout: return "Rainbow Trout";
-    case ItemType::ITEM_Sturgeon: return "Sturgeon";
-    case ItemType::ITEM_Tilapia: return "Tilapia";
+            case ItemType::ITEM_Anchovy: return "Anchovy";
+            case ItemType::ITEM_Carp: return "Carp";
+            case ItemType::ITEM_Eel: return "Eel";
+            case ItemType::ITEM_Flounder: return "Flounder";
+            case ItemType::ITEM_Largemouth_Bass: return "Largemouth Bass";
+            case ItemType::ITEM_Pufferfish: return "Pufferfish";
+            case ItemType::ITEM_Rainbow_Trout: return "Rainbow Trout";
+            case ItemType::ITEM_Sturgeon: return "Sturgeon";
+            case ItemType::ITEM_Tilapia: return "Tilapia";
     default: return "Unknown";
     }
 }
@@ -445,15 +445,15 @@ std::string InventoryManager::getItemDescription(ItemType itemType)
     case ItemType::ITEM_GoldSword: return "Elegant sword, 40 attack";
     case ItemType::ITEM_DiamondSword: return "Legendary sword, 60 attack";
     // 鱼类
-    case ItemType::ITEM_Anchovy: return "A small saltwater fish.";
-    case ItemType::ITEM_Carp: return "A common pond fish.";
-    case ItemType::ITEM_Eel: return "A long, slippery fish.";
-    case ItemType::ITEM_Flounder: return "A flat sea fish.";
-    case ItemType::ITEM_Largemouth_Bass: return "A popular freshwater game fish.";
-    case ItemType::ITEM_Pufferfish: return "Can inflate itself when threatened.";
-    case ItemType::ITEM_Rainbow_Trout: return "A colorful freshwater fish.";
-    case ItemType::ITEM_Sturgeon: return "An ancient, valuable fish.";
-    case ItemType::ITEM_Tilapia: return "A common tropical fish.";
+            case ItemType::ITEM_Anchovy: return "A small saltwater fish.";
+            case ItemType::ITEM_Carp: return "A common pond fish.";
+            case ItemType::ITEM_Eel: return "A long, slippery fish.";
+            case ItemType::ITEM_Flounder: return "A flat sea fish.";
+            case ItemType::ITEM_Largemouth_Bass: return "A popular freshwater game fish.";
+            case ItemType::ITEM_Pufferfish: return "Can inflate itself when threatened.";
+            case ItemType::ITEM_Rainbow_Trout: return "A colorful freshwater fish.";
+            case ItemType::ITEM_Sturgeon: return "An ancient, valuable fish.";
+            case ItemType::ITEM_Tilapia: return "A common tropical fish.";
     default: return "";
     }
 }
@@ -469,15 +469,15 @@ std::string InventoryManager::getItemIconPath(ItemType itemType)
     case ItemType::Pickaxe: return "tools/pickaxe.png";
     case ItemType::Fish: return "tools/fish.png";
     // 鱼类
-    case ItemType::ITEM_Anchovy: return "鱼/Anchovy.png";
-    case ItemType::ITEM_Carp: return "鱼/Carp.png";
-    case ItemType::ITEM_Eel: return "鱼/Eel.png";
-    case ItemType::ITEM_Flounder: return "鱼/Flounder.png";
-    case ItemType::ITEM_Largemouth_Bass: return "鱼/Largemouth_Bass.png";
-    case ItemType::ITEM_Pufferfish: return "鱼/Pufferfish.png";
-    case ItemType::ITEM_Rainbow_Trout: return "鱼/Rainbow_Trout.png";
-    case ItemType::ITEM_Sturgeon: return "鱼/Sturgeon.png";
-    case ItemType::ITEM_Tilapia: return "鱼/Tilapia.png";
+        case ItemType::ITEM_Anchovy: return "fish/Anchovy.png";
+        case ItemType::ITEM_Carp: return "fish/Carp.png";
+        case ItemType::ITEM_Eel: return "fish/Eel.png";
+        case ItemType::ITEM_Flounder: return "fish/Flounder.png";
+        case ItemType::ITEM_Largemouth_Bass: return "fish/Largemouth_Bass.png";
+        case ItemType::ITEM_Pufferfish: return "fish/Pufferfish.png";
+        case ItemType::ITEM_Rainbow_Trout: return "fish/Rainbow_Trout.png";
+        case ItemType::ITEM_Sturgeon: return "fish/Sturgeon.png";
+        case ItemType::ITEM_Tilapia: return "fish/Tilapia.png";
     case ItemType::CopperOre: return "";
     case ItemType::IronOre: return "";
     case ItemType::SilverOre: return "";

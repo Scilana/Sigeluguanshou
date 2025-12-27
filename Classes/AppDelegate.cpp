@@ -47,6 +47,7 @@ static cocos2d::Size designResolutionSize = cocos2d::Size(1280, 720);
 static cocos2d::Size smallResolutionSize = cocos2d::Size(960, 640);
 static cocos2d::Size mediumResolutionSize = cocos2d::Size(1280, 720);
 static cocos2d::Size largeResolutionSize = cocos2d::Size(1920, 1080);
+static const float kWindowScale = 2.0f;
 
 AppDelegate::AppDelegate()
 {
@@ -84,7 +85,11 @@ bool AppDelegate::applicationDidFinishLaunching() {
     auto glview = director->getOpenGLView();
     if(!glview) {
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_MAC) || (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX)
-        glview = GLViewImpl::createWithRect("StardewFarm - Farm Simulation Game", cocos2d::Rect(0, 0, designResolutionSize.width, designResolutionSize.height));
+        Size windowSize = designResolutionSize;
+        windowSize.width *= kWindowScale;
+        windowSize.height *= kWindowScale;
+        glview = GLViewImpl::createWithRect("StardewFarm - Farm Simulation Game",
+            cocos2d::Rect(0, 0, windowSize.width, windowSize.height));
 #else
         glview = GLViewImpl::create("StardewFarm - ��¶��ũ��");
 #endif
@@ -100,13 +105,18 @@ bool AppDelegate::applicationDidFinishLaunching() {
     // Set the design resolution
     glview->setDesignResolutionSize(designResolutionSize.width, designResolutionSize.height, ResolutionPolicy::SHOW_ALL);
     auto frameSize = glview->getFrameSize();
+    float frameScale = 1.0f;
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32) || (CC_TARGET_PLATFORM == CC_PLATFORM_MAC) || (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX)
+    frameScale = kWindowScale;
+#endif
+    Size logicalFrameSize(frameSize.width / frameScale, frameSize.height / frameScale);
     // if the frame's height is larger than the height of medium size.
-    if (frameSize.height > mediumResolutionSize.height)
+    if (logicalFrameSize.height > mediumResolutionSize.height)
     {        
         director->setContentScaleFactor(MIN(largeResolutionSize.height/designResolutionSize.height, largeResolutionSize.width/designResolutionSize.width));
     }
     // if the frame's height is larger than the height of small size.
-    else if (frameSize.height > smallResolutionSize.height)
+    else if (logicalFrameSize.height > smallResolutionSize.height)
     {        
         director->setContentScaleFactor(MIN(mediumResolutionSize.height/designResolutionSize.height, mediumResolutionSize.width/designResolutionSize.width));
     }
