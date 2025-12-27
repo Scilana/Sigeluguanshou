@@ -531,25 +531,6 @@ void GameScene::initUI()
 
     updateDayNightLighting();
 
-    // 添加矿井入口标识（固定在世界坐标）
-    auto mineLabel = Label::createWithSystemFont("MINE", "Arial", 28, Size::ZERO, TextHAlignment::CENTER, TextVAlignment::CENTER);
-    mineLabel->setPosition(ELEVATOR_POS.x, ELEVATOR_POS.y + 80);  // 在矿井入口上方
-    mineLabel->setColor(Color3B(255, 200, 0));  // 金黄色
-    mineLabel->enableOutline(Color4B::BLACK, 2);  // 黑色描边
-    this->addChild(mineLabel, 100);  // 添加到游戏场景（会随相机移动）
-
-    // 添加向下箭头指示
-    auto arrow = Label::createWithSystemFont("▼", "Arial", 36);
-    arrow->setPosition(ELEVATOR_POS.x, ELEVATOR_POS.y + 50);
-    arrow->setColor(Color3B(255, 200, 0));
-    arrow->enableOutline(Color4B::BLACK, 2);
-    this->addChild(arrow, 100);
-
-    // 添加一个闪烁动作让它更醒目
-    auto blink = Blink::create(2.0f, 3);
-    auto repeat = RepeatForever::create(blink);
-    arrow->runAction(repeat);
-
     CCLOG("UI initialized - using simple fixed layer method");
 
     // 能量条
