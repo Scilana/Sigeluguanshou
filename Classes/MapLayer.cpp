@@ -19,10 +19,12 @@ bool MapLayer::init(const std::string& tmxFile)
     if (!Layer::init())
         return false;
 
+    // 指针初始化
     tmxMap_ = nullptr;
     baseLayer_ = nullptr;
     collisionLayer_ = nullptr;
     waterLayer_ = nullptr;
+    treeLayer_ = nullptr;
 
     if (!loadTMXMap(tmxFile))
     {
@@ -30,13 +32,16 @@ bool MapLayer::init(const std::string& tmxFile)
         return false;
     }
 
+    // 初始化碰撞层（调用下面定义的函数）
     initCollisionLayer();
+
     CCLOG("MapLayer initialized with map: %s", tmxFile.c_str());
     return true;
 }
 
 bool MapLayer::loadTMXMap(const std::string& tmxFile)
 {
+    // 1. 创建 TiledMap 对象
     tmxMap_ = TMXTiledMap::create(tmxFile);
     if (!tmxMap_)
     {
@@ -44,20 +49,21 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
         return false;
     }
 
-    // 记录第一层（底图），方便清除树贴图
-    // [Fix] Renamed "图块层 1" to "Ground" to avoid encoding issues
+    // 2. 将地图添加到场景 (注意：只添加这一次)
+    this->addChild(tmxMap_, 0);
+
+    // 3. 获取 Ground 层 (底图)
     baseLayer_ = tmxMap_->getLayer("Ground");
     if (!baseLayer_)
     {
         CCLOG("DEBUG: 'Ground' layer not found. Listing all available layers:");
         for (const auto& child : tmxMap_->getChildren()) {
-             auto layer = dynamic_cast<TMXLayer*>(child);
-             if (layer) {
-                 CCLOG(" - Found Layer: %s (Opacity: %d, Visible: %d)", layer->getLayerName().c_str(), layer->getOpacity(), layer->isVisible());
-             }
+            auto layer = dynamic_cast<TMXLayer*>(child);
+            if (layer) {
+                CCLOG(" - Found Layer: %s (Opacity: %d, Visible: %d)", layer->getLayerName().c_str(), layer->getOpacity(), layer->isVisible());
+            }
         }
 
-        // 如果没有固定名称，取第一个 TMXLayer 作为底图
         // 如果没有固定名称，取第一个 TMXLayer 作为底图
         auto children = tmxMap_->getChildren();
         for (auto child : children)
@@ -71,8 +77,18 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
         }
     }
 
-    this->addChild(tmxMap_, 0);
+    // 4. [新增] 获取 Tree 层
+    treeLayer_ = tmxMap_->getLayer("Tree");
+    if (!treeLayer_)
+    {
+        CCLOG("Warning: 'Tree' layer not found in TMX file!");
+    }
+    else
+    {
+        CCLOG("Tree layer loaded.");
+    }
 
+    // 5. 打印调试信息
     Size mapSize = tmxMap_->getMapSize();
     Size tileSize = tmxMap_->getTileSize();
     CCLOG("Map loaded: %s", tmxFile.c_str());
@@ -90,33 +106,23 @@ void MapLayer::initCollisionLayer()
     if (!tmxMap_)
         return;
 
-    // 尝试查找 "Collision" 层（农场地图）
+    // 1. 尝试查找名为 "Collision" 的层
     collisionLayer_ = tmxMap_->getLayer("Collision");
+
     if (collisionLayer_)
     {
+        //通常我们把碰撞层隐藏，不让玩家看到红色的块
         collisionLayer_->setVisible(false);
         CCLOG("Collision layer found and hidden");
     }
-
-    // 尝试查找 "Buildings" 层（矿洞地图）
-    if (!collisionLayer_)
+    else
     {
-        collisionLayer_ = tmxMap_->getLayer("Buildings");
-        if (collisionLayer_)
-        {
-            collisionLayer_->setVisible(false);
-            CCLOG("Buildings layer found and used as collision layer (hidden)");
-        }
+        CCLOG("Warning: 'Collision' layer not found in TMX!");
     }
 
-    if (!collisionLayer_)
-    {
-        CCLOG("Warning: No collision layer found (tried 'Collision' and 'Buildings')");
-    }
-
+    // 2. 顺便初始化水域层 (如果有的话)
     waterLayer_ = tmxMap_->getLayer("Water");
 }
-
 
 Size MapLayer::getMapSize() const
 {
@@ -157,15 +163,11 @@ bool MapLayer::isWalkable(const Vec2& position) const
     Vec2 tileCoord = positionToTileCoord(position);
     Size mapSize = tmxMap_->getMapSize();
 
-    // 调试日志（可选，上线后可删除）
-    // CCLOG("Checking walkable: world(%.1f, %.1f) -> tile(%.0f, %.0f)", 
-    //       position.x, position.y, tileCoord.x, tileCoord.y);
-
     // 边界检查
     if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
         tileCoord.y < 0 || tileCoord.y >= mapSize.height)
     {
-        CCLOG("Position out of map bounds: tile(%.0f, %.0f)", tileCoord.x, tileCoord.y);
+        // CCLOG("Position out of map bounds: tile(%.0f, %.0f)", tileCoord.x, tileCoord.y);
         return false;
     }
 
@@ -177,9 +179,6 @@ bool MapLayer::isWalkable(const Vec2& position) const
         int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
         if (tileGID != 0)
         {
-            // 调试日志
-            // CCLOG("Blocked by Collision layer at tile(%.0f, %.0f), GID=%d", 
-            //       tileCoord.x, tileCoord.y, tileGID);
             return false; // Collision 层有 tile = 不可行走
         }
     }
@@ -187,21 +186,17 @@ bool MapLayer::isWalkable(const Vec2& position) const
     // ==========================================
     // 方式2：检查所有层的 tile 属性
     // ==========================================
-    // 遍历所有可见层，检查是否有带 Collidable 属性的 tile
     auto children = tmxMap_->getChildren();
     for (auto child : children)
     {
         auto layer = dynamic_cast<TMXLayer*>(child);
         if (layer && layer->isVisible())
         {
-            // 跳过 Collision 层（已经在方式1中检查过了）
-            if (layer == collisionLayer_)
-                continue;
+            if (layer == collisionLayer_) continue;
 
             int gid = layer->getTileGIDAt(tileCoord);
             if (gid > 0)
             {
-                // 获取该 tile 的属性
                 auto properties = tmxMap_->getPropertiesForGID(gid);
                 if (!properties.isNull())
                 {
@@ -210,26 +205,13 @@ bool MapLayer::isWalkable(const Vec2& position) const
                     // 检查 Collidable 属性（注意：TMX 中是大写 C）
                     if (propMap.find("Collidable") != propMap.end())
                     {
-                        bool isCollidable = propMap["Collidable"].asBool();
-                        if (isCollidable)
-                        {
-                            // 调试日志
-                            CCLOG("Blocked by Collidable tile in layer '%s' at tile(%.0f, %.0f), GID=%d",
-                                layer->getLayerName().c_str(), tileCoord.x, tileCoord.y, gid);
-                            return false;
-                        }
+                        if (propMap["Collidable"].asBool()) return false;
                     }
 
-                    // 兼容小写 collidable（可选）
+                    // 兼容小写 collidable
                     if (propMap.find("collidable") != propMap.end())
                     {
-                        bool isCollidable = propMap["collidable"].asBool();
-                        if (isCollidable)
-                        {
-                            CCLOG("Blocked by collidable tile in layer '%s' at tile(%.0f, %.0f), GID=%d",
-                                layer->getLayerName().c_str(), tileCoord.x, tileCoord.y, gid);
-                            return false;
-                        }
+                        if (propMap["collidable"].asBool()) return false;
                     }
                 }
             }
@@ -244,17 +226,12 @@ bool MapLayer::isWalkable(const Vec2& position) const
         int waterGID = waterLayer_->getTileGIDAt(tileCoord);
         if (waterGID != 0)
         {
-            // 调试日志
-            // CCLOG("Blocked by Water layer at tile(%.0f, %.0f), GID=%d", 
-            //       tileCoord.x, tileCoord.y, waterGID);
             return false;
         }
     }
 
-    // 所有检查都通过，可以行走
     return true;
 }
-
 
 bool MapLayer::hasCollisionAt(const Vec2& tileCoord) const
 {
@@ -284,7 +261,6 @@ bool MapLayer::hasCollisionAt(const Vec2& tileCoord) const
 
     return false;
 }
-
 
 void MapLayer::clearCollisionAt(const Vec2& tileCoord)
 {
@@ -370,4 +346,31 @@ Vec2 MapLayer::tileCoordToPosition(const Vec2& tileCoord) const
     float x = tileCoord.x * tileSize.width + tileSize.width / 2;
     float y = (mapSize.height - tileCoord.y) * tileSize.height - tileSize.height / 2;
     return Vec2(x, y);
+}
+
+// =======================================================
+// [新增] Tree 层专用接口
+// =======================================================
+
+int MapLayer::getTreeGIDAt(const cocos2d::Vec2& tileCoord) const
+{
+    if (!tmxMap_ || !treeLayer_) return 0;
+
+    // 简单的越界检查
+    Size s = tmxMap_->getMapSize();
+    if (tileCoord.x < 0 || tileCoord.y < 0 || tileCoord.x >= s.width || tileCoord.y >= s.height)
+        return 0;
+
+    return treeLayer_->getTileGIDAt(tileCoord);
+}
+
+void MapLayer::setTreeGID(const cocos2d::Vec2& tileCoord, int gid)
+{
+    if (!tmxMap_ || !treeLayer_) return;
+
+    Size s = tmxMap_->getMapSize();
+    if (tileCoord.x < 0 || tileCoord.y < 0 || tileCoord.x >= s.width || tileCoord.y >= s.height)
+        return;
+
+    treeLayer_->setTileGID(gid, tileCoord);
 }
