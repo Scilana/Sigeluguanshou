@@ -89,9 +89,12 @@ void FishingLayer::initUI()
     greenBar_ = (Sprite*)green;
 
     // 3. 鱼 (Target)
-    std::string fishIcon = "鱼/Carp.png"; // Default
+    std::string fishIcon = "fish/Carp.png"; // Default
     if (currentFish_) {
         fishIcon = InventoryManager::getItemIconPath(currentFish_->getType());
+    }
+    if (!FileUtils::getInstance()->isFileExist(fishIcon)) {
+        fishIcon = "tools/fish.png";
     }
 
     auto fish = Sprite::create(fishIcon);
