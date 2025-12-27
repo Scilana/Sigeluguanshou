@@ -38,6 +38,7 @@ private:
 
     cocos2d::Vec2 exitTile_ = cocos2d::Vec2::ZERO;
     float exitRadius_ = 40.0f;
+    float mapScale_ = 1.0f;
 
     void initMap();
     void initPlayer();

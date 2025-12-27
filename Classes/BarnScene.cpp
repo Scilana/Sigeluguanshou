@@ -15,6 +15,7 @@ namespace
 {
     const char* kBarnMapFile = "map/Barn.tmx";
     const Vec2 kFallbackDoorTile(11.0f, 14.0f);
+    const float kBarnFillRatio = 0.95f;
 
     const float kToolbarSlotSize = 48.0f;
     const float kToolbarSlotPadding = 6.0f;
@@ -158,6 +159,17 @@ void BarnScene::initMap()
     if (mapLayer_)
     {
         addChild(mapLayer_, 0);
+        auto visibleSize = Director::getInstance()->getVisibleSize();
+        Size mapSize = mapLayer_->getMapSize();
+        if (mapSize.width > 0.0f && mapSize.height > 0.0f)
+        {
+            float scaleX = visibleSize.width / mapSize.width;
+            float scaleY = visibleSize.height / mapSize.height;
+            float targetScale = std::min(scaleX, scaleY) * kBarnFillRatio;
+            mapScale_ = std::max(1.0f, targetScale);
+            mapLayer_->setScale(mapScale_);
+        }
+
         auto tmxMap = mapLayer_->getTMXMap();
         if (tmxMap)
         {
@@ -214,6 +226,10 @@ void BarnScene::initCamera()
     if (camera && player_)
     {
         Vec2 playerPos = player_->getPosition();
+        if (mapLayer_)
+        {
+            playerPos = mapLayer_->convertToWorldSpace(playerPos);
+        }
         camera->setPosition(playerPos.x, playerPos.y);
     }
 }
@@ -505,6 +521,10 @@ void BarnScene::updateCamera()
         return;
 
     Vec2 playerPos = player_->getPosition();
+    if (mapLayer_)
+    {
+        playerPos = mapLayer_->convertToWorldSpace(playerPos);
+    }
     Vec3 currentPos = camera->getPosition3D();
     Vec3 targetPos = Vec3(playerPos.x, playerPos.y, currentPos.z);
 
@@ -515,14 +535,18 @@ void BarnScene::updateCamera()
     {
         auto visibleSize = Director::getInstance()->getVisibleSize();
         Size mapSize = mapLayer_->getMapSize();
+        float scale = mapLayer_->getScale();
+        mapSize.width *= scale;
+        mapSize.height *= scale;
+        Vec2 mapOrigin = mapLayer_->convertToWorldSpace(Vec2::ZERO);
 
-        float minX = visibleSize.width / 2;
-        float maxX = mapSize.width - visibleSize.width / 2;
-        float minY = visibleSize.height / 2;
-        float maxY = mapSize.height - visibleSize.height / 2;
+        float minX = mapOrigin.x + visibleSize.width / 2;
+        float maxX = mapOrigin.x + mapSize.width - visibleSize.width / 2;
+        float minY = mapOrigin.y + visibleSize.height / 2;
+        float maxY = mapOrigin.y + mapSize.height - visibleSize.height / 2;
 
-        if (mapSize.width < visibleSize.width) minX = maxX = mapSize.width / 2;
-        if (mapSize.height < visibleSize.height) minY = maxY = mapSize.height / 2;
+        if (mapSize.width < visibleSize.width) minX = maxX = mapOrigin.x + mapSize.width / 2;
+        if (mapSize.height < visibleSize.height) minY = maxY = mapOrigin.y + mapSize.height / 2;
 
         newPos.x = std::max(minX, std::min(maxX, newPos.x));
         newPos.y = std::max(minY, std::min(maxY, newPos.y));
