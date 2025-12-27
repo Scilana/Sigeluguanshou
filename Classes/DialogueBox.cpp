@@ -15,34 +15,34 @@ DialogueBox* DialogueBox::create(Npc* npc) {
 bool DialogueBox::init(Npc* npc) {
     if (!Node::init()) return false;
 
-    _npc = npc;
-    _isVisible = false;
+    npc_ = npc;
+    is_visible_ = false;
 
     // Background
-    _background = Sprite::create("npcImages/dialogueBox.png");
-    if (!_background) {
+    background_ = Sprite::create("npcImages/dialogueBox.png");
+    if (!background_) {
         CCLOG("Failed to load dialogueBox.png");
         return false;
     }
-    // _background->setPosition(Vec2(0, 0)); // Center relative to node
-    this->addChild(_background);
+    // background_->setPosition(Vec2(0, 0)); // Center relative to node
+    this->addChild(background_);
 
     // Portrait
     // Default portrait placeholder or none
-    _portrait = Sprite::create();
-    this->addChild(_portrait, 1); // Ensure above background, Z=1
+    portrait_ = Sprite::create();
+    this->addChild(portrait_, 1); // Ensure above background, Z=1
     if (npc) {
         setNpc(npc);
     }
 
     // Label
-    _dialogueLabel = Label::createWithSystemFont("", "Arial", 28);
-    _dialogueLabel->setDimensions(480, 160); // Reduced width for left panel
+    dialogue_label_ = Label::createWithSystemFont("", "Arial", 28);
+    dialogue_label_->setDimensions(480, 160); // Reduced width for left panel
     // Align text to the center of left panel (even further left as requested)
-    _dialogueLabel->setPosition(Vec2(-250, 0)); 
-    _dialogueLabel->setTextColor(Color4B::BLACK);
-    _dialogueLabel->setAlignment(TextHAlignment::CENTER, TextVAlignment::CENTER);
-    this->addChild(_dialogueLabel, 2); // Z=2
+    dialogue_label_->setPosition(Vec2(-250, 0));
+    dialogue_label_->setTextColor(Color4B::BLACK);
+    dialogue_label_->setAlignment(TextHAlignment::CENTER, TextVAlignment::CENTER);
+    this->addChild(dialogue_label_, 2); // Z=2
     
 
     
@@ -56,67 +56,67 @@ bool DialogueBox::init(Npc* npc) {
     auto touchListener = EventListenerTouchOneByOne::create();
     touchListener->setSwallowTouches(true);
     touchListener->onTouchBegan = [this](Touch* touch, Event* event) {
-        if (!_isVisible) return false;
+        if (!is_visible_) return false;
 
         // Handle Choice Click
-        if (_waitingForChoice && _choiceNode->isVisible()) {
-            
+        if (waiting_for_choice_ && choice_node_->isVisible()) {
+
             // Standard Hit Test (Same as InventoryUI)
-            Vec2 locationInNode = _choiceNode->convertTouchToNodeSpace(touch);
+            Vec2 locationInNode = choice_node_->convertTouchToNodeSpace(touch);
 
             // Button sizing: 150x50. Pos: -80 and +80.
             // Option 1 (Left): (-80, 0). Bounds: [-155, -5] x [-40, 40]
             if (locationInNode.x > -155 && locationInNode.x < -5 && locationInNode.y > -40 && locationInNode.y < 40) {
-                if (_choiceCallback) _choiceCallback(0); // Buy
-                return true; 
+                if (choice_callback_) choice_callback_(0); // Buy
+                return true;
             }
             // Option 2 (Right): (80, 0). Bounds: [5, 155] x [-40, 40]
             if (locationInNode.x > 5 && locationInNode.x < 155 && locationInNode.y > -40 && locationInNode.y < 40) {
-                if (_choiceCallback) _choiceCallback(1); // Sell
+                if (choice_callback_) choice_callback_(1); // Sell
                 return true;
             }
-        } 
-        
+        }
+
         // Normal click to advance text
-        if (_onClickCallback) _onClickCallback();
+        if (on_click_callback_) on_click_callback_();
         return true;
     };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
-    _waitingForChoice = false;
+    waiting_for_choice_ = false;
 
     // Create Choice UI Container
-    _choiceNode = Node::create();
+    choice_node_ = Node::create();
     // Let's put choices inside the box but near bottom right or clearly separated
     // Box dimensions are roughly 800x200?
     // Label is at (100, 0) relative to center?
     // Let's place choices at relative coordinates.
     // Box center is (0,0) of this node.
     // Center the choice node near the bottom, moved left by 50
-    _choiceNode->setPosition(Vec2(-50, -60)); 
-    this->addChild(_choiceNode, 5);
-    _choiceNode->setVisible(false);
+    choice_node_->setPosition(Vec2(-50, -60));
+    this->addChild(choice_node_, 5);
+    choice_node_->setVisible(false);
 
     // Option 1 (Left/Top)
     auto opt1Bg = DrawNode::create();
     // Darker gray for visibility
-    opt1Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f)); 
+    opt1Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f));
     opt1Bg->setPosition(Vec2(-80, 0));
-    _choiceNode->addChild(opt1Bg);
-    _option1Label = Label::createWithSystemFont("Option 1", "Arial", 24); // Larger font
-    _option1Label->setPosition(Vec2(-80, 0));
-    _option1Label->setTextColor(Color4B::BLACK);
-    _choiceNode->addChild(_option1Label);
+    choice_node_->addChild(opt1Bg);
+    option1_label_ = Label::createWithSystemFont("Option 1", "Arial", 24); // Larger font
+    option1_label_->setPosition(Vec2(-80, 0));
+    option1_label_->setTextColor(Color4B::BLACK);
+    choice_node_->addChild(option1_label_);
 
     // Option 2 (Right/Bottom)
     auto opt2Bg = DrawNode::create();
-    opt2Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f)); 
+    opt2Bg->drawSolidRect(Vec2(-75, -25), Vec2(75, 25), Color4F(0.5f, 0.5f, 0.5f, 1.0f));
     opt2Bg->setPosition(Vec2(80, 0));
-    _choiceNode->addChild(opt2Bg);
-    _option2Label = Label::createWithSystemFont("Option 2", "Arial", 24); // Larger font
-    _option2Label->setPosition(Vec2(80, 0));
-    _option2Label->setTextColor(Color4B::BLACK);
-    _choiceNode->addChild(_option2Label);
+    choice_node_->addChild(opt2Bg);
+    option2_label_ = Label::createWithSystemFont("Option 2", "Arial", 24); // Larger font
+    option2_label_->setPosition(Vec2(80, 0));
+    option2_label_->setTextColor(Color4B::BLACK);
+    choice_node_->addChild(option2_label_);
 
     return true;
 }
@@ -124,49 +124,49 @@ bool DialogueBox::init(Npc* npc) {
 
 
 void DialogueBox::setNpc(Npc* npc) {
-    _npc = npc;
-    if (_npc) {
-        std::string portraitFile = _npc->getPortraitFile();
+    npc_ = npc;
+    if (npc_) {
+        std::string portraitFile = npc_->getPortraitFile();
         if (FileUtils::getInstance()->isFileExist(portraitFile)) {
-             _portrait->setTexture(portraitFile);
+             portrait_->setTexture(portraitFile);
         }
         // Move portrait to the left side
         // Move portrait to the right side box
-        _portrait->setPosition(Vec2(300, 0));
-        
-        if (_portrait->getContentSize().height > 200) {
-            float scale = 180.0f / _portrait->getContentSize().height;
-            _portrait->setScale(scale);
+        portrait_->setPosition(Vec2(300, 0));
+
+        if (portrait_->getContentSize().height > 200) {
+            float scale = 180.0f / portrait_->getContentSize().height;
+            portrait_->setScale(scale);
         } else {
-             _portrait->setScale(1.0f);
+             portrait_->setScale(1.0f);
         }
-        _portrait->setVisible(true);
+        portrait_->setVisible(true);
     } else {
-        _portrait->setVisible(false);
+        portrait_->setVisible(false);
     }
 }
 
 void DialogueBox::showDialogue(const std::string& text) {
-    _waitingForChoice = false;
-    _choiceNode->setVisible(false);
-    
-    this->setVisible(true);
-    _isVisible = true;
+    waiting_for_choice_ = false;
+    choice_node_->setVisible(false);
 
-    _dialogueLabel->setString(text);
+    this->setVisible(true);
+    is_visible_ = true;
+
+    dialogue_label_->setString(text);
 }
 
 // Deprecated old method, keeping for compatibility if needed or redirecting
 void DialogueBox::showDialogue() {
-    if (_npc) {
-        showDialogue(_npc->getDialogue());
+    if (npc_) {
+        showDialogue(npc_->getDialogue());
     }
 }
 
 void DialogueBox::showNextLine() {
     // If waiting for choice, click shouldn't advance text
-    if (_waitingForChoice) return;
-    
+    if (waiting_for_choice_) return;
+
     // In complex dialogue, GameScene controls flow.
     // This simple method was for random multi-line.
     // We'll leave it empty or basic.
@@ -175,35 +175,35 @@ void DialogueBox::showNextLine() {
 
 void DialogueBox::showChoices(const std::string& option1, const std::string& option2, const ChoiceCallback& callback)
 {
-    _option1Label->setString(option1);
-    _option2Label->setString(option2);
-    _choiceCallback = callback;
+    option1_label_->setString(option1);
+    option2_label_->setString(option2);
+    choice_callback_ = callback;
     // Show simple prompt?
     // For now we assume the dialogue text itself explains instructions or we can append.
     // Let's just set the state.
     // Optionally we can show a visual hint.
-    
-    _choiceCallback = callback;
-    _waitingForChoice = true;
-    _isVisible = true; // Force visible
+
+    choice_callback_ = callback;
+    waiting_for_choice_ = true;
+    is_visible_ = true; // Force visible
     this->setVisible(true); // Force node visible
-    _choiceNode->setVisible(true); // Show buttons
+    choice_node_->setVisible(true); // Show buttons
 }
 
 void DialogueBox::hideChoices()
 {
-    _choiceNode->setVisible(false);
-    _waitingForChoice = false;
+    choice_node_->setVisible(false);
+    waiting_for_choice_ = false;
 }
 
 void DialogueBox::closeDialogue() {
     this->setVisible(false);
-    _isVisible = false;
-    _waitingForChoice = false;
+    is_visible_ = false;
+    waiting_for_choice_ = false;
     this->setVisible(false);
-    _isVisible = false;
-    _waitingForChoice = false;
-    _choiceNode->setVisible(false);
+    is_visible_ = false;
+    waiting_for_choice_ = false;
+    choice_node_->setVisible(false);
 }
 
 

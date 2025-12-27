@@ -278,71 +278,103 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
 
 bool SaveManager::saveGame(const SaveData& data)
 {
-    std::string path = getSaveFilePath();
-    CCLOG("Saving game to: %s", path.c_str());
-
-    // 序列化为 JSON
-    rapidjson::Document doc = serializeToJson(data);
-
-    // 转换为字符串
-    rapidjson::StringBuffer buffer;
-    rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
-    doc.Accept(writer);
-
-    std::string jsonStr = buffer.GetString();
-
-    // 写入文件
-    FILE* file = fopen(path.c_str(), "w");
-    if (file)
+    try
     {
-        fwrite(jsonStr.c_str(), 1, jsonStr.length(), file);
+        std::string path = getSaveFilePath();
+        CCLOG("Saving game to: %s", path.c_str());
+
+        // 序列化为 JSON
+        rapidjson::Document doc = serializeToJson(data);
+
+        // 转换为字符串
+        rapidjson::StringBuffer buffer;
+        rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(buffer);
+        doc.Accept(writer);
+
+        std::string jsonStr = buffer.GetString();
+
+        // 写入文件
+        FILE* file = fopen(path.c_str(), "w");
+        if (!file)
+        {
+            CCLOG("Error: Failed to open save file for writing: %s", path.c_str());
+            return false;
+        }
+
+        size_t written = fwrite(jsonStr.c_str(), 1, jsonStr.length(), file);
         fclose(file);
+
+        if (written != jsonStr.length())
+        {
+            CCLOG("Error: Failed to write complete save data (wrote %zu of %zu bytes)",
+                  written, jsonStr.length());
+            return false;
+        }
         CCLOG("Game saved successfully!");
         return true;
     }
-    else
+    catch (const std::exception& e)
     {
-        CCLOG("Error: Failed to open file for writing: %s", path.c_str());
+        CCLOG("Error: Exception during save operation: %s", e.what());
+        return false;
+    }
+    catch (...)
+    {
+        CCLOG("Error: Unknown exception during save operation");
         return false;
     }
 }
 
 bool SaveManager::loadGame(SaveData& data)
 {
-    std::string path = getSaveFilePath();
-    CCLOG("Loading game from: %s", path.c_str());
-
-    if (!FileUtils::getInstance()->isFileExist(path))
+    try
     {
-        CCLOG("Error: Save file does not exist");
+        std::string path = getSaveFilePath();
+        CCLOG("Loading game from: %s", path.c_str());
+
+        if (!FileUtils::getInstance()->isFileExist(path))
+        {
+            CCLOG("Error: Save file does not exist");
+            return false;
+        }
+
+        // 读取文件内容
+        std::string jsonStr = FileUtils::getInstance()->getStringFromFile(path);
+        if (jsonStr.empty())
+        {
+            CCLOG("Error: Failed to read save file or file is empty");
+            return false;
+        }
+
+        // 解析 JSON
+        rapidjson::Document doc;
+        doc.Parse(jsonStr.c_str());
+
+        if (doc.HasParseError())
+        {
+            CCLOG("Error: Failed to parse JSON at offset %zu: %d",
+                  doc.GetErrorOffset(), doc.GetParseError());
+            return false;
+        }
+
+        // 反序列化
+        if (!deserializeFromJson(doc, data))
+        {
+            CCLOG("Error: Failed to deserialize save data");
+            return false;
+        }
+
+        CCLOG("Game loaded successfully!");
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        CCLOG("Error: Exception during load operation: %s", e.what());
         return false;
     }
-
-    // 读取文件内容
-    std::string jsonStr = FileUtils::getInstance()->getStringFromFile(path);
-    if (jsonStr.empty())
+    catch (...)
     {
-        CCLOG("Error: Failed to read save file");
+        CCLOG("Error: Unknown exception during load operation");
         return false;
     }
-
-    // 解析 JSON
-    rapidjson::Document doc;
-    doc.Parse(jsonStr.c_str());
-
-    if (doc.HasParseError())
-    {
-        CCLOG("Error: Failed to parse JSON: %d", doc.GetParseError());
-        return false;
-    }
-
-    // 反序列化
-    if (!deserializeFromJson(doc, data))
-    {
-        CCLOG("Error: Failed to deserialize save data");
-        return false;
-    }
-
-    CCLOG("Game loaded successfully!");
-    return true;
 }

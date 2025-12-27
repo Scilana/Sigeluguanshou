@@ -14,7 +14,7 @@ public:
     typedef std::function<void(int)> ChoiceCallback; // 0 for left option, 1 for right option
 
     // Callback for general click (to advance text)
-    void setOnClickCallback(const std::function<void()>& cb) { _onClickCallback = cb; }
+    void setOnClickCallback(const std::function<void()>& cb) { on_click_callback_ = cb; }
 
     void showDialogue(const std::string& text);
     void showDialogue(); // Overload for default/compatibility
@@ -22,31 +22,31 @@ public:
     void showNextLine();
     void hideChoices();
     void closeDialogue();
-    
+
     void onMouseDown(cocos2d::Event* event); // Mouse Handler
-    
+
     // Check if dialogue is currently visible
-    bool isVisible() const { return _isVisible; }
-    bool isWaitingForChoice() const { return _waitingForChoice; }
+    bool isVisible() const { return is_visible_; }
+    bool isWaitingForChoice() const { return waiting_for_choice_; }
 
 private:
-    Npc* _npc;
-    cocos2d::Label* _dialogueLabel;
-    cocos2d::Sprite* _background;
-    cocos2d::Sprite* _portrait;
-    cocos2d::EventListenerMouse* _mouseListener;
-    bool _isVisible;
-    bool _waitingForChoice;
+    Npc* npc_;
+    cocos2d::Label* dialogue_label_;
+    cocos2d::Sprite* background_;
+    cocos2d::Sprite* portrait_;
+    cocos2d::EventListenerMouse* mouse_listener_;
+    bool is_visible_;
+    bool waiting_for_choice_;
 
     // Choice UI
-    cocos2d::Node* _choiceNode;
-    cocos2d::Label* _option1Label;
-    cocos2d::Label* _option2Label;
-    ChoiceCallback _choiceCallback;
-    std::function<void()> _onClickCallback;
+    cocos2d::Node* choice_node_;
+    cocos2d::Label* option1_label_;
+    cocos2d::Label* option2_label_;
+    ChoiceCallback choice_callback_;
+    std::function<void()> on_click_callback_;
 
-    std::vector<std::string> _lines;
-    int _currentLineIndex;
+    std::vector<std::string> lines_;
+    int current_line_index_;
 
 };
 
