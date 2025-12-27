@@ -34,6 +34,7 @@ list(APPEND GAME_SOURCE
      Classes/HouseScene.cpp
      Classes/GameScene.cpp
      Classes/BeachScene.cpp
+     Classes/BarnScene.cpp
      Classes/Player.cpp
      Classes/MapLayer.cpp
      Classes/FarmManager.cpp
@@ -71,6 +72,7 @@ list(APPEND GAME_HEADER
      Classes/HouseScene.h
      Classes/GameScene.h
      Classes/BeachScene.h
+     Classes/BarnScene.h
      Classes/Player.h
      Classes/MapLayer.h
      Classes/FarmManager.h

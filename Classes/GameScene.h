@@ -21,6 +21,7 @@ class MarketUI;
 class WeatherManager;
 class SkillTreeUI;
 class BeachScene;
+class BarnScene;
 
 /**
  * @brief 游戏场景类（总控制）
@@ -178,6 +179,7 @@ private:
     void onMarketClosed();
     void enterMine();
     void enterHouse();
+    void enterBarn();
     void enterBeach();
     void checkBeachEntrance();
 
@@ -186,6 +188,7 @@ private:
      */
     bool isPlayerNearElevator() const;
     bool isPlayerNearHouseDoor() const;
+    bool isPlayerNearBarnDoor() const;
     bool isPlayerAtBeachEntrance() const;
 
     bool enteringBeach_ = false;
