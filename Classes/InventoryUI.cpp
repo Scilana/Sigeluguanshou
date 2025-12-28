@@ -53,26 +53,6 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
 
-    auto mouseListener = EventListenerMouse::create();
-    mouseListener->onMouseDown = [this](EventMouse* event) {
-        if (!event || event->getMouseButton() != EventMouse::MouseButton::BUTTON_LEFT) return;
-        if (!panel_) return;
-
-        suppressTouch_ = true;
-        this->scheduleOnce([this](float) { suppressTouch_ = false; }, 0, "clear_mouse_touch");
-
-        Vec2 panelPos = panel_->convertToNodeSpace(event->getLocation());
-        for (const auto& slot : slotSprites_)
-        {
-            if (slot.background && slot.background->getBoundingBox().containsPoint(panelPos))
-            {
-                onSlotClicked(slot.slotIndex);
-                break;
-            }
-        }
-    };
-    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
-
     CCLOG("InventoryUI initialized");
 
     _selectionMode = false;
@@ -157,7 +137,7 @@ void InventoryUI::initSlots()
     slotSprites_.clear();
 
     float startX = 20 + SLOT_SPACING;
-    float startY = panel_->getContentSize().height - 80 - SLOT_SPACING;
+    float startY = panel_->getContentSize().height - 120 - SLOT_SPACING;
 
     for (int row = 0; row < ROWS; ++row)
     {
@@ -193,7 +173,6 @@ void InventoryUI::initSlots()
             auto listener = EventListenerTouchOneByOne::create();
             listener->setSwallowTouches(true);
             listener->onTouchBegan = [this, slotIndex](Touch* touch, Event* event) {
-                if (suppressTouch_) return false;
                 auto target = static_cast<Sprite*>(event->getCurrentTarget());
                 
                 // Debugging Click Issue: Revert to standard and Log EVERYTHING
@@ -443,68 +422,72 @@ void InventoryUI::onSlotClicked(int slotIndex)
         return;
     }
 
-    // 如果已经选中了一个槽位，且点击的是另一个槽位，则进行交换
-    if (selectedSlotIndex_ != -1 && selectedSlotIndex_ != slotIndex)
+    bool clearedInvalidSelection = false;
+    if (selectedSlotIndex_ != -1 && inventory_->getSlot(selectedSlotIndex_).isEmpty())
     {
-        CCLOG("Swapping slot %d with %d", selectedSlotIndex_, slotIndex);
-        inventory_->swapSlots(selectedSlotIndex_, slotIndex);
-        
-        // 更新信息显示
-        const auto& newSlot = inventory_->getSlot(slotIndex);
-        if (!newSlot.isEmpty())
+        selectedSlotIndex_ = -1;
+        clearedInvalidSelection = true;
+        infoLabel_->setString("");
+    }
+
+    const auto& clickedSlot = inventory_->getSlot(slotIndex);
+    if (selectedSlotIndex_ == -1)
+    {
+        if (clickedSlot.isEmpty())
         {
-            std::string info = StringUtils::format(
-                "%s x%d - %s",
-                InventoryManager::getItemName(newSlot.type).c_str(),
-                newSlot.count,
-                InventoryManager::getItemDescription(newSlot.type).c_str()
-            );
-            infoLabel_->setString(info);
+            if (clearedInvalidSelection)
+            {
+                this->scheduleOnce([this](float) { updateSelection(); }, 0, "deferred_update_selection");
+            }
+            return;
         }
-        
-        // 交换后维持选中在目标位置，方便连续移动
+
+        CCLOG("Selecting slot %d", slotIndex);
         selectedSlotIndex_ = slotIndex;
-        
-        // 延迟刷新到下一帧，避免在触摸事件中修改场景图
-        this->scheduleOnce([this](float) {
-            refresh();
-        }, 0, "deferred_refresh");
+        std::string info = StringUtils::format(
+            "%s x%d - %s",
+            InventoryManager::getItemName(clickedSlot.type).c_str(),
+            clickedSlot.count,
+            InventoryManager::getItemDescription(clickedSlot.type).c_str()
+        );
+        infoLabel_->setString(info);
+
+        this->scheduleOnce([this](float) { updateSelection(); }, 0, "deferred_update_selection");
+        return;
+    }
+
+    if (selectedSlotIndex_ == slotIndex)
+    {
+        CCLOG("Deselecting slot %d", slotIndex);
+        selectedSlotIndex_ = -1;
+        infoLabel_->setString("");
+
+        this->scheduleOnce([this](float) { updateSelection(); }, 0, "deferred_update_selection");
+        return;
+    }
+
+    CCLOG("Swapping slot %d with %d", selectedSlotIndex_, slotIndex);
+    inventory_->swapSlots(selectedSlotIndex_, slotIndex);
+
+    const auto& newSlot = inventory_->getSlot(slotIndex);
+    if (!newSlot.isEmpty())
+    {
+        std::string info = StringUtils::format(
+            "%s x%d - %s",
+            InventoryManager::getItemName(newSlot.type).c_str(),
+            newSlot.count,
+            InventoryManager::getItemDescription(newSlot.type).c_str()
+        );
+        infoLabel_->setString(info);
     }
     else
     {
-        // 第一次点击，或者是点击同一个（取消选中）
-        if (selectedSlotIndex_ == slotIndex)
-        {
-            CCLOG("Deselecting slot %d", slotIndex);
-            selectedSlotIndex_ = -1;
-            infoLabel_->setString("");
-        }
-        else
-        {
-            CCLOG("Selecting slot %d", slotIndex);
-            selectedSlotIndex_ = slotIndex;
-            const auto& slot = inventory_->getSlot(slotIndex);
-            if (!slot.isEmpty())
-            {
-                std::string info = StringUtils::format(
-                    "%s x%d - %s",
-                    InventoryManager::getItemName(slot.type).c_str(),
-                    slot.count,
-                    InventoryManager::getItemDescription(slot.type).c_str()
-                );
-                infoLabel_->setString(info);
-            }
-            else
-            {
-                infoLabel_->setString("Empty slot");
-            }
-        }
+        infoLabel_->setString("");
     }
 
-    // 延迟更新选中框到下一帧
-    this->scheduleOnce([this](float) {
-        updateSelection();
-    }, 0, "deferred_update_selection");
+    selectedSlotIndex_ = slotIndex;
+
+    this->scheduleOnce([this](float) { refresh(); }, 0, "deferred_refresh");
 }
 
 void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
