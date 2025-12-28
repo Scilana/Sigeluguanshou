@@ -44,7 +44,7 @@ namespace
 
     // NPC Constants
     const Vec2 kMerchantTile(35.0f, 9.0f);
-    const Vec2 kBlacksmithTile(5.0f, 9.0f);
+    const Vec2 kBlacksmithTile(6.0f, 4.0f);
     const float kInteractionRadius = 80.0f; // Slightly larger for better UX
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
@@ -600,20 +600,18 @@ void GameScene::initNpcs()
     if (!mapLayer_ || !uiLayer_) return;
 
     // Wizard (Merchant)
-    auto wizard = Npc::create("Wizard", "npcImages/wizard.png", Npc::NpcType::Merchant);
+    auto wizard = Npc::create("Wizard", "NPC/bussiness_person_processed.png", Npc::NpcType::Merchant);
     if (wizard) {
         // Place using tile coordinates (map-friendly)
         wizard->setPosition(mapLayer_->tileCoordToPosition(kMerchantTile));
-        wizard->setScale(0.5f); 
         mapLayer_->addChild(wizard, 10);
         npcs_.push_back(wizard);
     }
 
     // Blacksmith (Replaces Cleaner)
-    auto blacksmith = Npc::create("Blacksmith", "npcImages/cleaner.png", Npc::NpcType::Blacksmith);
+    auto blacksmith = Npc::create("Blacksmith", "NPC/blacksmith_processed.png", Npc::NpcType::Blacksmith);
     if (blacksmith) {
         blacksmith->setPosition(mapLayer_->tileCoordToPosition(kBlacksmithTile));
-        blacksmith->setScale(0.5f); // Scale down
         mapLayer_->addChild(blacksmith, 10);
         npcs_.push_back(blacksmith);
     }
