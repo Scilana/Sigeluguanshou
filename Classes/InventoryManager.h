@@ -163,6 +163,7 @@ public:
      * @param count 数量
      */
     void setSlot(int slotIndex, ItemType itemType, int count);
+    void setSlotData(int slotIndex, ItemType itemType, int count, int durability, int maxDurability);
 
     /**
      * @brief 交换两个槽位

@@ -33,6 +33,8 @@ public:
             {
                 int type;  // ItemType 枚举值
                 int count;
+                int durability;
+                int maxDurability;
             };
             std::vector<ItemSlotData> slots;
             int money;
@@ -64,6 +66,8 @@ public:
             {
                 int type;
                 int count;
+                int durability;
+                int maxDurability;
             };
             std::vector<SlotData> slots;
         };

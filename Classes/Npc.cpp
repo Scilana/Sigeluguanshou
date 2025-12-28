@@ -38,7 +38,8 @@ std::string Npc::getPortraitFile() const {
     // Determine portrait file based on name
     // Assuming resources are in Resources/npcImages/
     // e.g., "Wizard" -> "Wizard YuuuTalk.png"
-    if (name_ == "Wizard") return "npcImages/Wizard YuuuTalk.png";
+    if (name_ == "Wizard") return "NPC/bussiness_head_processed.png";
+    if (name_ == "Blacksmith") return "NPC/blacksmith_processed.png"; // Use sprite as portrait fallback
     if (name_ == "Cleaner") return "npcImages/Cleaner LeviTalk.png";
     return "npcImages/Wizard YuuuTalk.png"; // Default
 }

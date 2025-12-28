@@ -244,6 +244,7 @@ private:
     float waitTimer_ = 0.0f;
     float biteTimer_ = 0.0f;
     bool isFishing_ = false;
+    int fishingRodSlotIndex_ = -1;
 
     cocos2d::Sprite* chargeBarBg_ = nullptr;
     cocos2d::Sprite* chargeBarFg_ = nullptr;

@@ -7,6 +7,8 @@
 #include "HouseScene.h"
 #include "FishingLayer.h"
 #include "SkillManager.h"
+#include "SaveManager.h"
+#include "TimeManager.h"
 #include "EnergyBar.h"
 #include "Fish.h"
 #include <algorithm>
@@ -159,6 +161,67 @@ namespace
         float scale = std::min(maxSize / size.width, maxSize / size.height);
         icon->setScale(scale);
         return icon;
+    }
+
+    bool syncSaveInventoryAndSkills(InventoryManager* inventory)
+    {
+        if (!inventory)
+            return false;
+
+        auto saveMgr = SaveManager::getInstance();
+        if (!saveMgr || !saveMgr->hasSaveFile())
+            return false;
+
+        SaveManager::SaveData data;
+        if (!saveMgr->loadGame(data))
+            return false;
+
+        data.inventory.slots.clear();
+        int slotCount = inventory->getSlotCount();
+        data.inventory.slots.reserve(slotCount);
+        for (int i = 0; i < slotCount; ++i)
+        {
+            const auto& slot = inventory->getSlot(i);
+            SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+            if (!slot.isEmpty())
+            {
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                slotData.durability = slot.durability;
+                slotData.maxDurability = slot.maxDurability;
+            }
+            else
+            {
+                slotData.type = static_cast<int>(ItemType::ITEM_NONE);
+                slotData.count = 0;
+                slotData.durability = -1;
+                slotData.maxDurability = -1;
+            }
+            data.inventory.slots.push_back(slotData);
+        }
+        data.inventory.money = inventory->getMoney();
+
+        if (auto tm = TimeManager::getInstance())
+        {
+            data.dayCount = tm->getDay();
+        }
+
+        if (auto skillMgr = SkillManager::getInstance())
+        {
+            data.skills.clear();
+            for (int i = 0; i < static_cast<int>(SkillManager::SkillType::Count); ++i)
+            {
+                auto type = static_cast<SkillManager::SkillType>(i);
+                const auto& sd = skillMgr->getSkillData(type);
+                SaveManager::SaveData::SkillData skillData;
+                skillData.type = i;
+                skillData.level = sd.level;
+                skillData.actionCount = sd.actionCount;
+                data.skills.push_back(skillData);
+            }
+        }
+
+        return saveMgr->saveGame(data);
     }
 }
 
@@ -679,7 +742,8 @@ void BeachScene::backToFarm()
         return;
 
     transitioning_ = true;
-    auto gameScene = GameScene::createScene(true);
+    bool saveSynced = syncSaveInventoryAndSkills(inventory_);
+    auto gameScene = GameScene::createScene(saveSynced);
     Director::getInstance()->replaceScene(TransitionFade::create(0.8f, gameScene));
 }
 
@@ -757,6 +821,7 @@ void BeachScene::onMouseDown(Event* event)
         if (isFishing_) return;
         if (player_ && player_->isFishingAnimationPlaying()) return;
         fishingState_ = FishingState::CHARGING;
+        fishingRodSlotIndex_ = selectedItemIndex_;
         chargePower_ = 0.0f;
         CCLOG("Start Charging...");
     }
@@ -764,12 +829,14 @@ void BeachScene::onMouseDown(Event* event)
     {
         CCLOG("HOOKED!");
         if (exclamationMark_) exclamationMark_->setVisible(false);
+        fishingRodSlotIndex_ = selectedItemIndex_;
         startFishing();
     }
     else if (fishingState_ == FishingState::WAITING)
     {
         CCLOG("Pulled too early!");
         fishingState_ = FishingState::NONE;
+        fishingRodSlotIndex_ = -1;
         if (exclamationMark_) exclamationMark_->setVisible(false);
         if (player_) player_->startFishingReel();
         showActionMessage("Too early!", Color3B::RED);
@@ -824,6 +891,7 @@ void BeachScene::updateFishingState(float delta)
         if (biteTimer_ <= 0)
         {
             fishingState_ = FishingState::NONE;
+            fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
             CCLOG("Missed...");
@@ -843,6 +911,9 @@ void BeachScene::startFishing()
         player_->startFishingWait();
     }
 
+    int rodSlotIndex = fishingRodSlotIndex_;
+    fishingRodSlotIndex_ = -1;
+
     // 1. 根据环境随机生成一条鱼
     ItemType fishToCatch = ItemType::ITEM_Anchovy; // 默认
     std::vector<ItemType> seaFish = {
@@ -858,8 +929,8 @@ void BeachScene::startFishing()
 
     // 2. 创建钓鱼图层
     auto fishingLayer = FishingLayer::create(fishObj);
-    fishingLayer->setFinishCallback([this, fishObj](bool success) {
-        auto finish = [this, success, fishObj]() {
+    fishingLayer->setFinishCallback([this, fishObj, rodSlotIndex](bool success) {
+        auto finish = [this, success, fishObj, rodSlotIndex]() {
             this->isFishing_ = false;
             this->fishingState_ = FishingState::NONE;
 
@@ -889,6 +960,20 @@ void BeachScene::startFishing()
             }
             
             // 释放鱼对象
+            if (this->inventory_ && rodSlotIndex >= 0 && rodSlotIndex < this->inventory_->getSlotCount())
+            {
+                const auto& rodSlot = this->inventory_->getSlot(rodSlotIndex);
+                if (rodSlot.type == ItemType::FishingRod)
+                {
+                    if (this->inventory_->decreaseDurability(rodSlotIndex, 1))
+                    {
+                        showActionMessage("Fishing Rod broke!", Color3B::RED);
+                        refreshToolbarUI();
+                    }
+                    if (inventoryUI_) inventoryUI_->refresh();
+                }
+            }
+
             if (fishObj) delete fishObj;
         };
 
