@@ -24,6 +24,8 @@ public:
     void clearBaseTileAt(const cocos2d::Vec2& tileCoord);
     int getBaseTileGID(const cocos2d::Vec2& tileCoord) const;
     void setBaseTileGID(const cocos2d::Vec2& tileCoord, int gid);
+    int getTreeGIDAt(const cocos2d::Vec2& tileCoord) const;
+    void setTreeGID(const cocos2d::Vec2& tileCoord, int gid);
 
     cocos2d::Vec2 positionToTileCoord(const cocos2d::Vec2& position) const;
     cocos2d::Vec2 tileCoordToPosition(const cocos2d::Vec2& tileCoord) const;
@@ -33,6 +35,8 @@ private:
     cocos2d::TMXLayer* baseLayer_{ nullptr };
     cocos2d::TMXLayer* collisionLayer_{ nullptr };
     cocos2d::TMXLayer* waterLayer_{ nullptr };
+    cocos2d::TMXLayer* treeLayer_{ nullptr };
+
 
     bool loadTMXMap(const std::string& tmxFile);
     void initCollisionLayer();
