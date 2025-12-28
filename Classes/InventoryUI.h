@@ -79,7 +79,6 @@ private:
     // Selection
     bool _selectionMode;
     ItemSelectCallback _onItemSelected;
-    bool suppressTouch_ = false;
     MarketState* marketState_{ nullptr };            // 市场状态，用于查询价格
     std::function<void()> closeCallback_;            // 关闭回调
 
