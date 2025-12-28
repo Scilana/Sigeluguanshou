@@ -53,6 +53,26 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
 
+    auto mouseListener = EventListenerMouse::create();
+    mouseListener->onMouseDown = [this](EventMouse* event) {
+        if (!event || event->getMouseButton() != EventMouse::MouseButton::BUTTON_LEFT) return;
+        if (!panel_) return;
+
+        suppressTouch_ = true;
+        this->scheduleOnce([this](float) { suppressTouch_ = false; }, 0, "clear_mouse_touch");
+
+        Vec2 panelPos = panel_->convertToNodeSpace(event->getLocation());
+        for (const auto& slot : slotSprites_)
+        {
+            if (slot.background && slot.background->getBoundingBox().containsPoint(panelPos))
+            {
+                onSlotClicked(slot.slotIndex);
+                break;
+            }
+        }
+    };
+    _eventDispatcher->addEventListenerWithSceneGraphPriority(mouseListener, this);
+
     CCLOG("InventoryUI initialized");
 
     _selectionMode = false;
@@ -173,6 +193,7 @@ void InventoryUI::initSlots()
             auto listener = EventListenerTouchOneByOne::create();
             listener->setSwallowTouches(true);
             listener->onTouchBegan = [this, slotIndex](Touch* touch, Event* event) {
+                if (suppressTouch_) return false;
                 auto target = static_cast<Sprite*>(event->getCurrentTarget());
                 
                 // Debugging Click Issue: Revert to standard and Log EVERYTHING

@@ -141,8 +141,7 @@ bool InventoryManager::addItem(ItemType itemType, int count)
 
         int maxStack = getMaxStack(itemType);
         int addCount = std::min(maxStack, count);
-        slots_[emptySlot].type = itemType;
-        slots_[emptySlot].count = addCount;
+        setSlotData(emptySlot, itemType, addCount, -1, -1);
         count -= addCount;
 
         CCLOG("Added %d x %s to slot %d", addCount, getItemName(itemType).c_str(), emptySlot);
@@ -230,19 +229,49 @@ const InventoryManager::ItemSlot& InventoryManager::getSlot(int slotIndex) const
 
 void InventoryManager::setSlot(int slotIndex, ItemType itemType, int count)
 {
+    setSlotData(slotIndex, itemType, count, -1, -1);
+}
+
+void InventoryManager::setSlotData(int slotIndex, ItemType itemType, int count, int durability, int maxDurability)
+{
     if (slotIndex < 0 || slotIndex >= (int)slots_.size())
         return;
 
-    slots_[slotIndex].type = itemType;
-    slots_[slotIndex].count = count;
-    
-    // 如果是工具，初始化耐久度
-    if (isTool(itemType)) {
-        slots_[slotIndex].maxDurability = getDefaultMaxDurability(itemType);
-        slots_[slotIndex].durability = slots_[slotIndex].maxDurability;
-    } else {
-        slots_[slotIndex].maxDurability = -1;
-        slots_[slotIndex].durability = -1;
+    auto& slot = slots_[slotIndex];
+    if (itemType == ItemType::ITEM_NONE || count <= 0)
+    {
+        slot.clear();
+        return;
+    }
+
+    slot.type = itemType;
+    slot.count = count;
+
+    if (isTool(itemType))
+    {
+        int defaultMax = getDefaultMaxDurability(itemType);
+        int resolvedMax = maxDurability > 0 ? maxDurability : defaultMax;
+        if (resolvedMax <= 0)
+        {
+            slot.maxDurability = -1;
+            slot.durability = -1;
+            return;
+        }
+
+        slot.maxDurability = resolvedMax;
+        if (durability >= 0)
+        {
+            slot.durability = std::min(durability, resolvedMax);
+        }
+        else
+        {
+            slot.durability = resolvedMax;
+        }
+    }
+    else
+    {
+        slot.maxDurability = -1;
+        slot.durability = -1;
     }
 }
 

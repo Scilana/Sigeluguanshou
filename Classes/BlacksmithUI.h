@@ -24,11 +24,13 @@ private:
     void refreshList();
     void switchMode(Mode mode);
     void onRepairClicked(int slotIndex);
+    void onRepairAllClicked();
     void onBuyClicked(ItemType type, int price);
 
     cocos2d::LayerColor* background_;
     cocos2d::Sprite* panel_;
     cocos2d::Node* listNode_;
+    cocos2d::Label* goldLabel_{ nullptr };
 };
 
 #endif // __BLACKSMITH_UI_H__

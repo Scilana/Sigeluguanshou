@@ -757,6 +757,7 @@ void BeachScene::onMouseDown(Event* event)
         if (isFishing_) return;
         if (player_ && player_->isFishingAnimationPlaying()) return;
         fishingState_ = FishingState::CHARGING;
+        fishingRodSlotIndex_ = selectedItemIndex_;
         chargePower_ = 0.0f;
         CCLOG("Start Charging...");
     }
@@ -764,12 +765,14 @@ void BeachScene::onMouseDown(Event* event)
     {
         CCLOG("HOOKED!");
         if (exclamationMark_) exclamationMark_->setVisible(false);
+        fishingRodSlotIndex_ = selectedItemIndex_;
         startFishing();
     }
     else if (fishingState_ == FishingState::WAITING)
     {
         CCLOG("Pulled too early!");
         fishingState_ = FishingState::NONE;
+        fishingRodSlotIndex_ = -1;
         if (exclamationMark_) exclamationMark_->setVisible(false);
         if (player_) player_->startFishingReel();
         showActionMessage("Too early!", Color3B::RED);
@@ -824,6 +827,7 @@ void BeachScene::updateFishingState(float delta)
         if (biteTimer_ <= 0)
         {
             fishingState_ = FishingState::NONE;
+            fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
             CCLOG("Missed...");
@@ -843,6 +847,9 @@ void BeachScene::startFishing()
         player_->startFishingWait();
     }
 
+    int rodSlotIndex = fishingRodSlotIndex_;
+    fishingRodSlotIndex_ = -1;
+
     // 1. 根据环境随机生成一条鱼
     ItemType fishToCatch = ItemType::ITEM_Anchovy; // 默认
     std::vector<ItemType> seaFish = {
@@ -858,8 +865,8 @@ void BeachScene::startFishing()
 
     // 2. 创建钓鱼图层
     auto fishingLayer = FishingLayer::create(fishObj);
-    fishingLayer->setFinishCallback([this, fishObj](bool success) {
-        auto finish = [this, success, fishObj]() {
+    fishingLayer->setFinishCallback([this, fishObj, rodSlotIndex](bool success) {
+        auto finish = [this, success, fishObj, rodSlotIndex]() {
             this->isFishing_ = false;
             this->fishingState_ = FishingState::NONE;
 
@@ -889,6 +896,20 @@ void BeachScene::startFishing()
             }
             
             // 释放鱼对象
+            if (this->inventory_ && rodSlotIndex >= 0 && rodSlotIndex < this->inventory_->getSlotCount())
+            {
+                const auto& rodSlot = this->inventory_->getSlot(rodSlotIndex);
+                if (rodSlot.type == ItemType::FishingRod)
+                {
+                    if (this->inventory_->decreaseDurability(rodSlotIndex, 1))
+                    {
+                        showActionMessage("Fishing Rod broke!", Color3B::RED);
+                        refreshToolbarUI();
+                    }
+                    if (inventoryUI_) inventoryUI_->refresh();
+                }
+            }
+
             if (fishObj) delete fishObj;
         };
 

@@ -43,7 +43,8 @@ namespace
     const Color3B kToolbarSlotSelectedColor(170, 150, 95);
 
     // NPC Constants
-    const Vec2 kMerchantPos(500.0f, 400.0f);
+    const Vec2 kMerchantTile(35.0f, 9.0f);
+    const Vec2 kBlacksmithTile(5.0f, 9.0f);
     const float kInteractionRadius = 80.0f; // Slightly larger for better UX
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
@@ -601,8 +602,8 @@ void GameScene::initNpcs()
     // Wizard (Merchant)
     auto wizard = Npc::create("Wizard", "npcImages/wizard.png", Npc::NpcType::Merchant);
     if (wizard) {
-        // Place using Global Constant
-        wizard->setPosition(kMerchantPos);
+        // Place using tile coordinates (map-friendly)
+        wizard->setPosition(mapLayer_->tileCoordToPosition(kMerchantTile));
         wizard->setScale(0.5f); 
         mapLayer_->addChild(wizard, 10);
         npcs_.push_back(wizard);
@@ -611,7 +612,7 @@ void GameScene::initNpcs()
     // Blacksmith (Replaces Cleaner)
     auto blacksmith = Npc::create("Blacksmith", "npcImages/cleaner.png", Npc::NpcType::Blacksmith);
     if (blacksmith) {
-        blacksmith->setPosition(Vec2(600, 400));
+        blacksmith->setPosition(mapLayer_->tileCoordToPosition(kBlacksmithTile));
         blacksmith->setScale(0.5f); // Scale down
         mapLayer_->addChild(blacksmith, 10);
         npcs_.push_back(blacksmith);
@@ -1187,6 +1188,11 @@ void GameScene::handleFarmAction(bool waterOnly)
                             }
                         }
                         SkillManager::getInstance()->recordAction(SkillManager::SkillType::Agriculture);
+                        if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                            showActionMessage("Scythe broke!", Color3B::RED);
+                            refreshToolbarUI();
+                        }
+                        if (inventoryUI_) inventoryUI_->refresh();
                     }
                     break;
 
@@ -1320,6 +1326,11 @@ void GameScene::handleFarmAction(bool waterOnly)
                     player_->consumeEnergy(cost);
                     result = { true, "Rock broken!", -1 };
                     SkillManager::getInstance()->recordAction(SkillManager::SkillType::Mining);
+                    if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
+                        showActionMessage("Pickaxe broke!", Color3B::RED);
+                        refreshToolbarUI();
+                    }
+                    if (inventoryUI_) inventoryUI_->refresh();
                     break;
                 }
 
@@ -2406,6 +2417,7 @@ void GameScene::onMouseDown(Event* event)
                  if (isFishing_) return;
                  if (player_ && player_->isFishingAnimationPlaying()) return;
                  fishingState_ = FishingState::CHARGING;
+                 fishingRodSlotIndex_ = selectedItemIndex_;
                  chargePower_ = 0.0f;
                  CCLOG("Start Charging...");
             }
@@ -2413,12 +2425,14 @@ void GameScene::onMouseDown(Event* event)
             {
                  CCLOG("HOOKED!");
                  if (exclamationMark_) exclamationMark_->setVisible(false);
+                 fishingRodSlotIndex_ = selectedItemIndex_;
                  startFishing(); 
             }
             else if (fishingState_ == FishingState::WAITING)
             {
                  CCLOG("Pulled too early!");
                  fishingState_ = FishingState::NONE;
+                 fishingRodSlotIndex_ = -1;
                  if (exclamationMark_) exclamationMark_->setVisible(false);
                  if (player_) player_->startFishingReel();
                  showActionMessage("Too early!", Color3B::RED);
@@ -2492,6 +2506,7 @@ void GameScene::updateFishingState(float delta)
         if (biteTimer_ <= 0)
         {
             fishingState_ = FishingState::NONE;
+            fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
             CCLOG("Missed...");
@@ -2510,6 +2525,9 @@ void GameScene::startFishing()
         player_->startFishingWait();
     }
 
+    int rodSlotIndex = fishingRodSlotIndex_;
+    fishingRodSlotIndex_ = -1;
+
     // 1. 根据环境随机生成一条鱼（淡水鱼）
     std::vector<ItemType> freshFish = {
         ItemType::ITEM_Carp, ItemType::ITEM_Largemouth_Bass, ItemType::ITEM_Rainbow_Trout, ItemType::ITEM_Eel
@@ -2521,8 +2539,8 @@ void GameScene::startFishing()
 
     // 2. 创建钓鱼图层
     auto fishingLayer = FishingLayer::create(fishObj);
-    fishingLayer->setFinishCallback([this, fishObj](bool success) {
-        auto finish = [this, success, fishObj]() {
+    fishingLayer->setFinishCallback([this, fishObj, rodSlotIndex](bool success) {
+        auto finish = [this, success, fishObj, rodSlotIndex]() {
             this->isFishing_ = false;
             this->fishingState_ = FishingState::NONE;
 
@@ -2550,6 +2568,20 @@ void GameScene::startFishing()
             {
                 CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
+            }
+
+            if (this->inventory_ && rodSlotIndex >= 0 && rodSlotIndex < this->inventory_->getSlotCount())
+            {
+                const auto& rodSlot = this->inventory_->getSlot(rodSlotIndex);
+                if (rodSlot.type == ItemType::FishingRod)
+                {
+                    if (this->inventory_->decreaseDurability(rodSlotIndex, 1))
+                    {
+                        showActionMessage("Fishing Rod broke!", Color3B::RED);
+                        refreshToolbarUI();
+                    }
+                    if (inventoryUI_) inventoryUI_->refresh();
+                }
             }
 
             if (fishObj) delete fishObj;
@@ -3045,6 +3077,8 @@ SaveManager::SaveData GameScene::collectSaveData()
                 SaveManager::SaveData::InventoryData::ItemSlotData slotData;
                 slotData.type = static_cast<int>(slot.type);
                 slotData.count = slot.count;
+                slotData.durability = slot.durability;
+                slotData.maxDurability = slot.maxDurability;
                 data.inventory.slots.push_back(slotData);
                 CCLOG("  Slot %zu: Type=%d, Count=%d", i, slotData.type, slotData.count);
             }
@@ -3054,6 +3088,8 @@ SaveManager::SaveData GameScene::collectSaveData()
                 SaveManager::SaveData::InventoryData::ItemSlotData slotData;
                 slotData.type = static_cast<int>(ItemType::ITEM_NONE);
                 slotData.count = 0;
+                slotData.durability = -1;
+                slotData.maxDurability = -1;
                 data.inventory.slots.push_back(slotData);
             }
         }
@@ -3114,6 +3150,8 @@ SaveManager::SaveData GameScene::collectSaveData()
                 SaveManager::SaveData::StorageChestData::SlotData slotData;
                 slotData.type = (int)slot.type;
                 slotData.count = slot.count;
+                slotData.durability = slot.durability;
+                slotData.maxDurability = slot.maxDurability;
                 chestData.slots.push_back(slotData);
             }
             data.storageChests.push_back(chestData);
@@ -3188,7 +3226,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
             if (slotData.type != static_cast<int>(ItemType::ITEM_NONE) && slotData.count > 0)
             {
                 ItemType type = static_cast<ItemType>(slotData.type);
-                inventory_->setSlot(i, type, slotData.count);
+                inventory_->setSlotData(i, type, slotData.count, slotData.durability, slotData.maxDurability);
                 CCLOG("  Slot %zu restored: Type=%d, Count=%d", i, slotData.type, slotData.count);
             }
         }
@@ -3247,7 +3285,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
                 for (size_t i = 0; i < chestData.slots.size() && i < chest->getInventory()->getSlotCount(); ++i) {
                     const auto& slot = chestData.slots[i];
                     if (slot.type != (int)ItemType::ITEM_NONE && slot.count > 0) {
-                        chest->getInventory()->setSlot(i, (ItemType)slot.type, slot.count);
+                        chest->getInventory()->setSlotData(i, (ItemType)slot.type, slot.count, slot.durability, slot.maxDurability);
                     }
                 }
                 farmManager_->addStorageChest(chest);

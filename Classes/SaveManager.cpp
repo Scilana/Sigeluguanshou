@@ -71,6 +71,8 @@ rapidjson::Document SaveManager::serializeToJson(const SaveData& data)
         rapidjson::Value slotObj(rapidjson::kObjectType);
         slotObj.AddMember("type", slot.type, allocator);
         slotObj.AddMember("count", slot.count, allocator);
+        slotObj.AddMember("durability", slot.durability, allocator);
+        slotObj.AddMember("maxDurability", slot.maxDurability, allocator);
         slotsArray.PushBack(slotObj, allocator);
     }
     inventoryObj.AddMember("slots", slotsArray, allocator);
@@ -115,6 +117,8 @@ rapidjson::Document SaveManager::serializeToJson(const SaveData& data)
             rapidjson::Value slotObj(rapidjson::kObjectType);
             slotObj.AddMember("type", slot.type, allocator);
             slotObj.AddMember("count", slot.count, allocator);
+            slotObj.AddMember("durability", slot.durability, allocator);
+            slotObj.AddMember("maxDurability", slot.maxDurability, allocator);
             slotsArray.PushBack(slotObj, allocator);
         }
         chestObj.AddMember("slots", slotsArray, allocator);
@@ -172,6 +176,8 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
                     SaveData::InventoryData::ItemSlotData slot;
                     slot.type = slotObj["type"].GetInt();
                     slot.count = slotObj["count"].GetInt();
+                    slot.durability = slotObj.HasMember("durability") ? slotObj["durability"].GetInt() : -1;
+                    slot.maxDurability = slotObj.HasMember("maxDurability") ? slotObj["maxDurability"].GetInt() : -1;
                     data.inventory.slots.push_back(slot);
                 }
             }
@@ -235,6 +241,8 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
                         SaveData::StorageChestData::SlotData slot;
                         slot.type = slotObj["type"].GetInt();
                         slot.count = slotObj["count"].GetInt();
+                        slot.durability = slotObj.HasMember("durability") ? slotObj["durability"].GetInt() : -1;
+                        slot.maxDurability = slotObj.HasMember("maxDurability") ? slotObj["maxDurability"].GetInt() : -1;
                         chest.slots.push_back(slot);
                     }
                 }
