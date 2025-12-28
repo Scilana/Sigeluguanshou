@@ -7,6 +7,8 @@
 #include "Monster.h"
 #include "TreasureChest.h"
 #include "Weapon.h"
+#include "SaveManager.h"
+#include "SkillManager.h"
 #include "GameScene.h"
 #include "Slime.h"
 #include "Zombie.h"
@@ -44,6 +46,67 @@ namespace
         float scale = std::min(maxSize / size.width, maxSize / size.height);
         icon->setScale(scale);
         return icon;
+    }
+
+    bool syncSaveInventoryAndSkills(InventoryManager* inventory)
+    {
+        if (!inventory)
+            return false;
+
+        auto saveMgr = SaveManager::getInstance();
+        if (!saveMgr || !saveMgr->hasSaveFile())
+            return false;
+
+        SaveManager::SaveData data;
+        if (!saveMgr->loadGame(data))
+            return false;
+
+        data.inventory.slots.clear();
+        int slotCount = inventory->getSlotCount();
+        data.inventory.slots.reserve(slotCount);
+        for (int i = 0; i < slotCount; ++i)
+        {
+            const auto& slot = inventory->getSlot(i);
+            SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+            if (!slot.isEmpty())
+            {
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                slotData.durability = slot.durability;
+                slotData.maxDurability = slot.maxDurability;
+            }
+            else
+            {
+                slotData.type = static_cast<int>(ItemType::ITEM_NONE);
+                slotData.count = 0;
+                slotData.durability = -1;
+                slotData.maxDurability = -1;
+            }
+            data.inventory.slots.push_back(slotData);
+        }
+        data.inventory.money = inventory->getMoney();
+
+        if (auto tm = TimeManager::getInstance())
+        {
+            data.dayCount = tm->getDay();
+        }
+
+        if (auto skillMgr = SkillManager::getInstance())
+        {
+            data.skills.clear();
+            for (int i = 0; i < static_cast<int>(SkillManager::SkillType::Count); ++i)
+            {
+                auto type = static_cast<SkillManager::SkillType>(i);
+                const auto& sd = skillMgr->getSkillData(type);
+                SaveManager::SaveData::SkillData skillData;
+                skillData.type = i;
+                skillData.level = sd.level;
+                skillData.actionCount = sd.actionCount;
+                data.skills.push_back(skillData);
+            }
+        }
+
+        return saveMgr->saveGame(data);
     }
 }
 
@@ -1419,9 +1482,9 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
 void MineScene::backToFarm()
 {
-    CCLOG("Returning to farm, loading from save...");
-    // 
-    auto gameScene = GameScene::createScene(true);  // true = 
+    CCLOG("Returning to farm...");
+    bool saveSynced = syncSaveInventoryAndSkills(inventory_);
+    auto gameScene = GameScene::createScene(saveSynced);
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
 }
 
