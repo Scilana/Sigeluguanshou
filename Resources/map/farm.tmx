@@ -74,9 +74,9 @@
    eJztzksNwCAABNGVCq2WQrXwMYIq9l4BkDIvmftIAAAAAAD8TxhSdJe7x+qbr8dPyWX3bvhX/FRdc33DP5xlAjtnD8c=
   </data>
  </layer>
- <layer id="2" name="Collision" width="40" height="30" opacity="0.78">
+ <layer id="2" name="Collision" width="40" height="30" opacity="78">
   <data encoding="base64" compression="zlib">
-   eJzVlt0NwjAMhLszS/UNqcN0ACT24CniZPkcx8RxOMmCNlb84Z+Q41ij1/X9bPY4FwU31Bga3697RX4T5kQa+kTjtjXLT77HZxbby8fiIReTlRvsqUw+S9a+Hr6R/ov0VwUfGquX1uNafMvHu8+/SM6ENKbnxW2VLL77tNlm8XrOt1tZ7+UuK6dv2CtSX1xHvwx566tJ45O+I+eaNhNWfWdI+3/UGNjM7nLXqeazzjTPHSarviw+y1FF/kb4emuZTBHfXeajt5bZfz3tmD9vj2Xw9eZBPmMNm2XyadLudyN8lf0nVZG/qDL4sE4jdYn2H4uB7+X32XwsVhXfBy7zOrA=
+   eJzVlm0KwjAMhne03WmX6j9hh+kBBt5DRMJCSN6mtUn1haBrs+YxH5vblqPrvD/JjpIUHIgYiO/bs0Z+E8+JNO4zGpf2kJ9c59dWbC+fFY9zWUK54T0VyYeEzvXw9fTfSH+t4ONm1UvrcS0+8vGe8y+SMyHN0uO0LUuIrxbMNovX83yryn4rd1E5fbKzJPdePubl20tszRFfbcSmde4jfXuea9pMyPpyvhnS3o8agzWzKH9Z6uHLYpB76L63tPmdyYbWtFqje2frKHffkCGGDL7euZ1xTpRW919Lv5g/b49F8LXmVV7zGpJF8mnS/t/18K3sP6kV+RtVBB+vU09dRvvPisHX5ffZfFasVXwvqU5GeA==
   </data>
  </layer>
 </map>
