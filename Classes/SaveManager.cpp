@@ -240,7 +240,7 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc,
     // 树木存档已禁用（避免崩溃）
 
     return true;
-  } catch (const std::exception& e) {
+  } catch (const std::exception&) {
     return false;
   } catch (...) {
     return false;
@@ -274,7 +274,7 @@ bool SaveManager::saveGame(const SaveData& data) {
       return false;
     }
     return true;
-  } catch (const std::exception& e) {
+  } catch (const std::exception&) {
     return false;
   } catch (...) {
     return false;
@@ -309,7 +309,7 @@ bool SaveManager::loadGame(SaveData& data) {
     }
 
     return true;
-  } catch (const std::exception& e) {
+  } catch (const std::exception&) {
     return false;
   } catch (...) {
     return false;

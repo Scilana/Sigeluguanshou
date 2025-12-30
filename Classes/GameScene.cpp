@@ -2509,12 +2509,16 @@ SaveManager::SaveData GameScene::collectSaveData() {
   // 保存农作物数据
   if (farmManager_) {
     const auto& farmTiles = farmManager_->getAllTiles();
-    Size mapSize = farmManager_->getMapSize();
+    const Size mapSize = farmManager_->getMapSize();
+    const int width = static_cast<int>(mapSize.width);
+    const int height = static_cast<int>(mapSize.height);
 
-    for (int y = 0; y < mapSize.height; y++) {
-      for (int x = 0; x < mapSize.width; x++) {
-        int index = y * mapSize.width + x;
-        if (index >= farmTiles.size()) continue;
+    for (int y = 0; y < height; y++) {
+      for (int x = 0; x < width; x++) {
+        const int index = y * width + x;
+        if (index < 0 || static_cast<size_t>(index) >= farmTiles.size()) {
+          continue;
+        }
 
         const auto& tile = farmTiles[index];
 
@@ -2595,9 +2599,8 @@ void GameScene::applySaveData(const SaveManager::SaveData& data) {
     }
 
     // 恢复物品槽位
-    for (size_t i = 0;
-         i < data.inventory.slots.size() && i < inventory_->getSlotCount();
-         i++) {
+    const size_t slotCount = static_cast<size_t>(inventory_->getSlotCount());
+    for (size_t i = 0; i < data.inventory.slots.size() && i < slotCount; i++) {
       const auto& slotData = data.inventory.slots[i];
       if (slotData.type != static_cast<int>(ItemType::ITEM_NONE) &&
           slotData.count > 0) {
@@ -2618,13 +2621,15 @@ void GameScene::applySaveData(const SaveManager::SaveData& data) {
   // 恢复农作物数据
   if (farmManager_) {
     // 获取当前地图尺寸
-    Size mapSize = farmManager_->getMapSize();
-    std::vector<FarmManager::FarmTile> tiles(mapSize.width * mapSize.height);
+    const Size mapSize = farmManager_->getMapSize();
+    const int width = static_cast<int>(mapSize.width);
+    const int height = static_cast<int>(mapSize.height);
+    std::vector<FarmManager::FarmTile> tiles(width * height);
 
     // 应用保存的瓦片数据
     for (const auto& tileData : data.farmTiles) {
-      int index = tileData.y * mapSize.width + tileData.x;
-      if (index >= 0 && index < tiles.size()) {
+      const int index = tileData.y * width + tileData.x;
+      if (index >= 0 && static_cast<size_t>(index) < tiles.size()) {
         tiles[index].tilled = tileData.tilled;
         tiles[index].watered = tileData.watered;
         tiles[index].hasCrop = tileData.hasCrop;
@@ -2641,8 +2646,9 @@ void GameScene::applySaveData(const SaveManager::SaveData& data) {
       auto chest = StorageChest::create(Vec2(chestData.x, chestData.y));
       if (chest) {
         // 恢复箱子里的物品
-        for (size_t i = 0; i < chestData.slots.size() &&
-                           i < chest->getInventory()->getSlotCount();
+        const size_t chestSlotCount =
+            static_cast<size_t>(chest->getInventory()->getSlotCount());
+        for (size_t i = 0; i < chestData.slots.size() && i < chestSlotCount;
              ++i) {
           const auto& slot = chestData.slots[i];
           if (slot.type != static_cast<int>(ItemType::ITEM_NONE) &&

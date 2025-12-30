@@ -35,6 +35,7 @@ class HouseScene : public cocos2d::Scene {
   InventoryUI* inventoryUI_{nullptr};
   cocos2d::Label* timeLabel_{nullptr};
   bool isSleeping_{false};
+  bool passedMidnightDuringSleep_{false};
   bool isPassedOut_{false};  // 标记是否是因为晕倒/死亡送回来的
   cocos2d::Sprite* sleepSprite_{nullptr};
   void wakeUp();

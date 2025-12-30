@@ -69,16 +69,16 @@ void FishingLayer::initUI() {
   // 1. 钓鱼界面背景 (左侧长条)
   auto barBg = LayerColor::create(Color4B(50, 50, 50, 255));
   barBg->setContentSize(Size(40, barHeight_));
-  barBg->ignoreAnchorPointForPosition(false);
+  barBg->setIgnoreAnchorPointForPosition(false);
   barBg->setAnchorPoint(Vec2(0.5, 0.5));
   barBg->setPosition(center + Vec2(-30, 0));  // 偏左一点
   this->addChild(barBg, 1);
-  barBase_ = barBg;
+  barBase_ = barBg;  // 保存引用
 
   // 2. 绿条（玩家控制）
   auto green = LayerColor::create(Color4B(100, 255, 100, 200));
   green->setContentSize(Size(36, greenBarHeight_));
-  green->ignoreAnchorPointForPosition(false);
+  green->setIgnoreAnchorPointForPosition(false);
   green->setAnchorPoint(Vec2(0.5, 0));  // 底部对齐
   barBg->addChild(green, 2);
   greenBar_ = green;
@@ -96,7 +96,7 @@ void FishingLayer::initUI() {
   if (!fish) {
     auto fallbackFish = LayerColor::create(Color4B(255, 100, 100, 255));
     fallbackFish->setContentSize(Size(20, 20));
-    fallbackFish->ignoreAnchorPointForPosition(false);
+    fallbackFish->setIgnoreAnchorPointForPosition(false);
     fallbackFish->setAnchorPoint(Vec2(0.5, 0.5));
     barBg->addChild(fallbackFish, 3);
     fishSprite_ = fallbackFish;
@@ -113,7 +113,7 @@ void FishingLayer::initUI() {
   // 4. 右侧进度条（捕获进度）
   auto progressBg = LayerColor::create(Color4B(0, 0, 0, 255));
   progressBg->setContentSize(Size(15, barHeight_));
-  progressBg->ignoreAnchorPointForPosition(false);
+  progressBg->setIgnoreAnchorPointForPosition(false);
   progressBg->setAnchorPoint(Vec2(0.5, 0.5));
   progressBg->setPosition(center + Vec2(30, 0));
   this->addChild(progressBg, 1);  // 这里按中心点偏移，保持添加到当前层即可
@@ -133,13 +133,13 @@ void FishingLayer::initInput() {
   // 鼠标监听
   auto mouseListener = EventListenerMouse::create();
   mouseListener->onMouseDown = [this](Event* event) {
-    auto* e = static_cast<EventMouse*>(event);
+    EventMouse* e = (EventMouse*)event;
     if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT) {
       this->isHolding_ = true;
     }
   };
   mouseListener->onMouseUp = [this](Event* event) {
-    auto* e = static_cast<EventMouse*>(event);
+    EventMouse* e = (EventMouse*)event;
     if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT) {
       this->isHolding_ = false;
     }

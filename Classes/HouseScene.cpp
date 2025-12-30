@@ -40,6 +40,7 @@ bool HouseScene::init(bool isPassedOut) {
   if (isPassedOut_) {
     // 如果是晕倒模式，直接开始睡觉流程
     isSleeping_ = true;
+    passedMidnightDuringSleep_ = false;
     if (player_ && background_) {
       player_->setVisible(false);
       player_->disableKeyboardControl();
@@ -98,6 +99,7 @@ void HouseScene::wakeUp() {
 
   // 1. 标记状态为清醒
   isSleeping_ = false;
+  passedMidnightDuringSleep_ = false;
 
   // 2. 玩家角色：显示、恢复控制、回满体力
   if (player_) {
@@ -139,7 +141,7 @@ void HouseScene::showWeatherForecast() {
   auto tm = TimeManager::getInstance();
   int currentDay = tm->getDay();
 
-  std::string forecast = "未来一周天气预报：\n";
+  std::string forecast = u8"未来一周天气预报：\n";
   for (int i = 1; i <= 7; ++i) {
     int targetDay = currentDay + i;
     MarketState::Weather w = MarketState::predictWeather(targetDay);
@@ -148,13 +150,13 @@ void HouseScene::showWeatherForecast() {
     // 翻译
     std::string cnName;
     if (wName == "Sunny")
-      cnName = "晴天";
+      cnName = u8"晴天";
     else if (wName == "Light Rain")
-      cnName = "小雨";
+      cnName = u8"小雨";
     else if (wName == "Heavy Rain")
-      cnName = "大雨";
+      cnName = u8"大雨";
     else if (wName == "Snowy")
-      cnName = "下雪";
+      cnName = u8"下雪";
     else
       cnName = wName;
 
@@ -223,12 +225,17 @@ void HouseScene::update(float delta) {
     float speedMultiplier = isSleeping_ ? 40.0f : 1.0f;
     tm->update(delta * speedMultiplier);
 
-    if (isSleeping_ && tm->getHour() == 6) {
+    if (isSleeping_ && tm->isMidnight()) {
+      passedMidnightDuringSleep_ = true;
+    }
+
+    if (isSleeping_ && passedMidnightDuringSleep_ && tm->getHour() == 6) {
       wakeUp();
     }
 
     if (!isSleeping_ && tm->isMidnight()) {
       isSleeping_ = true;
+      passedMidnightDuringSleep_ = true;
       InventoryManager::getInstance()->removeMoney(200);
       if (player_) {
         player_->setVisible(false);
@@ -295,6 +302,7 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event) {
       // 3. 判定
       if (triggerArea.containsPoint(playerPosLocal)) {
         isSleeping_ = true;
+        passedMidnightDuringSleep_ = false;
         player_->disableKeyboardControl();
         player_->setVisible(false);  // 隐藏玩家
 
