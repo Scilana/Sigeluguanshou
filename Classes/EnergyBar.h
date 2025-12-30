@@ -11,23 +11,22 @@
 /**
  * @brief 能量条控件
  */
-class EnergyBar : public cocos2d::Node
-{
-public:
-    static EnergyBar* create(Player* player);
-    virtual bool init(Player* player);
-    virtual void update(float delta) override;
+class EnergyBar : public cocos2d::Node {
+ public:
+  static EnergyBar* create(Player* player);
+  virtual bool init(Player* player);
+  virtual void update(float delta) override;
 
-private:
-    Player* player_;
-    cocos2d::DrawNode* barNode_;
-    cocos2d::Label* energyLabel_;
-    cocos2d::Sprite* background_;
-    
-    float barWidth_;
-    float barHeight_;
+ private:
+  Player* player_;
+  cocos2d::DrawNode* barNode_;
+  cocos2d::Label* energyLabel_;
+  cocos2d::Sprite* background_;
 
-    void updateBar();
+  float barWidth_;
+  float barHeight_;
+
+  void updateBar();
 };
 
-#endif 
+#endif

@@ -2,10 +2,10 @@
 #ifndef __OBSERVER_H__
 #define __OBSERVER_H__
 
-#include <vector>
 #include <algorithm>
 #include <functional>
 #include <memory>
+#include <vector>
 
 /**
  * @brief 观察者接口模板
@@ -14,16 +14,16 @@
  *
  * 任何想要监听事件的类都应实现此接口
  */
-template<typename EventType>
+template <typename EventType>
 class IObserver {
-public:
-    virtual ~IObserver() = default;
+ public:
+  virtual ~IObserver() = default;
 
-    /**
-     * @brief 当事件发生时被调用
-     * @param event 事件数据
-     */
-    virtual void onNotify(const EventType& event) = 0;
+  /**
+   * @brief 当事件发生时被调用
+   * @param event 事件数据
+   */
+  virtual void onNotify(const EventType& event) = 0;
 };
 
 /**
@@ -35,70 +35,67 @@ public:
  *
  * 示例略
  */
-template<typename EventType>
+template <typename EventType>
 class Observable {
-public:
-    virtual ~Observable() = default;
+ public:
+  virtual ~Observable() = default;
 
-    /**
-     * @brief 添加观察者
-     * @param observer 观察者指针
-     */
-    void addObserver(IObserver<EventType>* observer) {
-        if (observer && std::find(observers_.begin(), observers_.end(), observer) == observers_.end()) {
-            observers_.push_back(observer);
+  /**
+   * @brief 添加观察者
+   * @param observer 观察者指针
+   */
+  void addObserver(IObserver<EventType>* observer) {
+    if (observer && std::find(observers_.begin(), observers_.end(), observer) ==
+                        observers_.end()) {
+      observers_.push_back(observer);
+    }
+  }
+
+  /**
+   * @brief 移除观察者
+   * @param observer 观察者指针
+   */
+  void removeObserver(IObserver<EventType>* observer) {
+    auto it = std::find(observers_.begin(), observers_.end(), observer);
+    if (it != observers_.end()) {
+      observers_.erase(it);
+    }
+  }
+
+  /**
+   * @brief 移除所有观察者
+   */
+  void clearObservers() { observers_.clear(); }
+
+  /**
+   * @brief 获取观察者数量
+   * @return size_t 观察者数量
+   */
+  size_t getObserverCount() const { return observers_.size(); }
+
+ protected:
+  /**
+   * @brief 通知所有观察者
+   * @param event 事件数据
+   */
+  void notifyObservers(const EventType& event) {
+    // 使用副本遍历，防止在通知过程中修改列表导致迭代器失效
+    auto observersCopy = observers_;
+    for (auto* observer : observersCopy) {
+      if (observer) {
+        try {
+          observer->onNotify(event);
+        } catch (const std::exception& e) {
+          // 捕获观察者中的异常，防止影响其他观察者
+          // 在实际项目中应该记录日志
+          static_cast<void>(e);
         }
+      }
     }
+  }
 
-    /**
-     * @brief 移除观察者
-     * @param observer 观察者指针
-     */
-    void removeObserver(IObserver<EventType>* observer) {
-        auto it = std::find(observers_.begin(), observers_.end(), observer);
-        if (it != observers_.end()) {
-            observers_.erase(it);
-        }
-    }
-
-    /**
-     * @brief 移除所有观察者
-     */
-    void clearObservers() {
-        observers_.clear();
-    }
-
-    /**
-     * @brief 获取观察者数量
-     * @return size_t 观察者数量
-     */
-    size_t getObserverCount() const {
-        return observers_.size();
-    }
-
-protected:
-    /**
-     * @brief 通知所有观察者
-     * @param event 事件数据
-     */
-    void notifyObservers(const EventType& event) {
-        // 使用副本遍历，防止在通知过程中修改列表导致迭代器失效
-        auto observersCopy = observers_;
-        for (auto* observer : observersCopy) {
-            if (observer) {
-                try {
-                    observer->onNotify(event);
-                } catch (const std::exception& e) {
-                    // 捕获观察者中的异常，防止影响其他观察者
-                    // 在实际项目中应该记录日志
-                    static_cast<void>(e); 
-                }
-            }
-        }
-    }
-
-private:
-    std::vector<IObserver<EventType>*> observers_;
+ private:
+  std::vector<IObserver<EventType>*> observers_;
 };
 
 /**
@@ -108,22 +105,22 @@ private:
  *
  * 允许使用匿名函数或函数对象作为观察者
  */
-template<typename EventType>
+template <typename EventType>
 class FunctionObserver : public IObserver<EventType> {
-public:
-    using CallbackType = std::function<void(const EventType&)>;
+ public:
+  using CallbackType = std::function<void(const EventType&)>;
 
-    explicit FunctionObserver(CallbackType callback)
-        : callback_(std::move(callback)) {}
+  explicit FunctionObserver(CallbackType callback)
+      : callback_(std::move(callback)) {}
 
-    void onNotify(const EventType& event) override {
-        if (callback_) {
-            callback_(event);
-        }
+  void onNotify(const EventType& event) override {
+    if (callback_) {
+      callback_(event);
     }
+  }
 
-private:
-    CallbackType callback_;
+ private:
+  CallbackType callback_;
 };
 
-#endif 
+#endif

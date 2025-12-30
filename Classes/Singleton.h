@@ -13,69 +13,69 @@
  *
  * 示例略
  */
-template<typename T>
+template <typename T>
 class Singleton {
-public:
-    // 禁止拷贝和赋值
-    Singleton(const Singleton&) = delete;
-    Singleton& operator=(const Singleton&) = delete;
+ public:
+  // 禁止拷贝和赋值
+  Singleton(const Singleton&) = delete;
+  Singleton& operator=(const Singleton&) = delete;
 
-    /**
-     * @brief 获取单例实例
-     * @return T& 单例引用
-     *
-     * 线程安全的懒汉式单例实现
-     */
-    static T& getInstance() {
-        std::call_once(init_flag_, &Singleton::initSingleton);
-        return *instance_;
+  /**
+   * @brief 获取单例实例
+   * @return T& 单例引用
+   *
+   * 线程安全的懒汉式单例实现
+   */
+  static T& getInstance() {
+    std::call_once(init_flag_, &Singleton::initSingleton);
+    return *instance_;
+  }
+
+  /**
+   * @brief 销毁单例实例
+   *
+   * 显式销毁单例，释放资源
+   * 主要用于程序退出时的清理
+   */
+  static void destroyInstance() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    instance_.reset();
+  }
+
+  /**
+   * @brief 检查单例是否已初始化
+   * @return bool 是否已初始化
+   */
+  static bool isInitialized() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return instance_ != nullptr;
+  }
+
+ protected:
+  Singleton() = default;
+  virtual ~Singleton() = default;
+
+ private:
+  static void initSingleton() {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (!instance_) {
+      instance_ = std::unique_ptr<T>(new T());
     }
+  }
 
-    /**
-     * @brief 销毁单例实例
-     *
-     * 显式销毁单例，释放资源
-     * 主要用于程序退出时的清理
-     */
-    static void destroyInstance() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        instance_.reset();
-    }
-
-    /**
-     * @brief 检查单例是否已初始化
-     * @return bool 是否已初始化
-     */
-    static bool isInitialized() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        return instance_ != nullptr;
-    }
-
-protected:
-    Singleton() = default;
-    virtual ~Singleton() = default;
-
-private:
-    static void initSingleton() {
-        std::lock_guard<std::mutex> lock(mutex_);
-        if (!instance_) {
-            instance_ = std::unique_ptr<T>(new T());
-        }
-    }
-
-    static std::unique_ptr<T> instance_;
-    static std::mutex mutex_;
-    static std::once_flag init_flag_;
+  static std::unique_ptr<T> instance_;
+  static std::mutex mutex_;
+  static std::once_flag init_flag_;
 };
 
 // 静态成员定义
-template<typename T>
+template <typename T>
 std::unique_ptr<T> Singleton<T>::instance_ = nullptr;
 
-template<typename T>
+template <typename T>
 std::mutex Singleton<T>::mutex_;
 
-template<typename T>
+template <typename T>
 std::once_flag Singleton<T>::init_flag_;
 
-#endif 
+#endif
