@@ -1,4 +1,4 @@
-#include "Slime.h"
+﻿#include "Slime.h"
 
 USING_NS_CC;
 
@@ -56,21 +56,12 @@ void Slime::initDisplay()
     {
         if (this->initWithFile(spritePath))
         {
-            // Close anti-aliasing for pixel art
             this->getTexture()->setAliasTexParameters();
             
-            // Adjust scale if needed
-            // Removed forced 2x scaling based on user feedback "Too big"
-            // if (this->getContentSize().height <= 16) {
-            //    this->setScale(2.0f);
             // }
             
             spriteLoaded = true;
 
-            // Make it move (Squash and Stretch animation)
-            // Base scale is 1.0 (since we resized image). 
-            // Stretch Y, Squash X -> Squash Y, Stretch X
-            // Note: ScaleTo takes absolute scale.
             float duration = 0.6f;
             auto contrast = ScaleTo::create(duration, 0.9f, 1.1f);
             auto expand = ScaleTo::create(duration, 1.1f, 0.9f);

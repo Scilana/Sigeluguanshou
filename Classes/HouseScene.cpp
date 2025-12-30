@@ -1,4 +1,4 @@
-#include "HouseScene.h"
+﻿#include "HouseScene.h"
 #include "FarmManager.h"
 #include "Player.h"
 #include "GameScene.h"
@@ -35,7 +35,6 @@ bool HouseScene::init(bool isPassedOut)
         return false;
 
     isPassedOut_ = isPassedOut;
-    // ... rest of init
 
     initBackground();
     initPlayer();
@@ -129,21 +128,7 @@ void HouseScene::wakeUp()
         sleepSprite_->setVisible(false);  // ★ 去除睡觉图
     }
 
-    // 4. Advance Day
     TimeManager::getInstance()->advanceToNextDay();
-    // Also trigger farm update?
-    // Since GameScene is destroyed, FarmManager is destroyed.
-    // When GameScene restarts, TimeManager will be at 6 AM next day.
-    // FarmManager (re-created) should match this.
-    // BUT FarmManager needs to process crop growth.
-    // Since we don't have FarmManager instance here, we can't call progressDay().
-    // We assume saving/loading handles this OR we rely on a static/global FarmManager.
-    // Given the constraints, I will assume saving happens or is separate.
-    // Wait, requirement 2: "Restore 12:00 AM forced sleep and 200g penalty".
-    // I handled penalty in GameScene/MineScene before passing out.
-    // If sleeping normally?
-    // User didn't ask for save/load.
-    // Stardew logic: Sleep -> Save -> New Day.
     
 
 }
@@ -162,7 +147,7 @@ void HouseScene::toggleInventory()
     if (inventoryUI_)
     {
         inventoryUI_->setCloseCallback(CC_CALLBACK_0(HouseScene::onInventoryClosed, this));
-        this->addChild(inventoryUI_, 100); // High Z-order
+        this->addChild(inventoryUI_, 100); 
         inventoryUI_->show();
     }
 }
@@ -228,7 +213,7 @@ void HouseScene::initBackground()
         // 1. 设置中心点位置
         sleepSprite_->setPosition(Vec2(180.5f, 77.5f));
 
-        // 2. (可选) 如果你的图片尺寸不是 53x55，可以强制缩放适应这个框
+        // 2. 可选：如果图片尺寸不是 53乘55，可以强制缩放适配这个框
          float targetW = 53.0f;
          float targetH = 55.0f;
          sleepSprite_->setScaleX(targetW / sleepSprite_->getContentSize().width);
@@ -266,25 +251,18 @@ void HouseScene::update(float delta)
     if (!player_ || !background_)
         return;
 
-    // Handle time passing
     auto tm = TimeManager::getInstance();
     if (tm) {
-        float speedMultiplier = isSleeping_ ? 40.0f : 1.0f; // Fast forward if sleeping
+        float speedMultiplier = isSleeping_ ? 40.0f : 1.0f; 
         tm->update(delta * speedMultiplier);
 
-        // Auto Wake Up at 6:00 AM
         if (isSleeping_ && tm->getHour() == 6)
         {
             wakeUp(); 
         }
         
-        // Forced Sleep check in house (if not already sleeping)
         if (!isSleeping_ && tm->isMidnight()) {
-             // Pass out logic
              isSleeping_ = true;
-             // Penalty? Maybe less in house? Or same?
-             // Usually just sleep where you allow.
-             // If passed out, 200g.
              InventoryManager::getInstance()->removeMoney(200);
              if (player_) {
                  player_->setVisible(false);
@@ -297,7 +275,7 @@ void HouseScene::update(float delta)
     
     updateUI();
 
-    if (isSleeping_) return; // Lock movement when sleeping
+    if (isSleeping_) return; 
 
     Rect bounds = background_->getBoundingBox();
     float margin = 6.0f;
@@ -326,7 +304,7 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
     // 如果正在睡觉
     if (isSleeping_) {
-        // 按 K 键手动起床
+        // 按起床键手动起床
         if (keyCode == EventKeyboard::KeyCode::KEY_K) {
             wakeUp(); // 直接调用我们刚才写的函数
         }
@@ -342,9 +320,9 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         // 1. 获取玩家在背景图内的坐标
         Vec2 playerPosLocal = background_->convertToNodeSpace(player_->getPosition());
 
-        // 2. 定义触发区域 (Trigger Area)
-        // 只在 X: 154~177 范围内触发
-        // Y范围保持和床一样: 50~105
+        // 2. 定义触发区域
+        // 只在横坐标 154~177 范围内触发
+        // 纵坐标范围与床一致：50~105
         float triggerX = 154.0f;
         float triggerY = 50.0f;
         float triggerW = 177.0f - 154.0f; // 23 像素宽
@@ -367,10 +345,9 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         else
         {
             // 2. 定义电视机触发区域
-            // 用户输入坐标（Top-Left）: (160, 64) 到 (196, 79)
-            // 转换后（Cocos Bottom-Left）:
-            // X: 160 ~ 196
-            // Y: 192 - 79 = 113 到 192 - 64 = 128
+            // 用户输入坐标（左上角）：(160, 64) 到 (196, 79)
+            // 转换后（引擎左下角）:
+            // 纵坐标：192 - 79 = 113 到 192 - 64 = 128
             Rect tvArea(160.0f, 113.0f, 36.0f, 15.0f);
 
             if (tvArea.containsPoint(playerPosLocal))
@@ -392,14 +369,9 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         Vec2 playerPosLocal = background_->convertToNodeSpace(player_->getPosition());
 
         // 2. 定义区域
-        // 原坐标(画图软件): x[61, 97], y[170, 190]
-        // 转换后(Cocos):   x[61, 97], y[2, 22]   <-- 也就是图片的最底端
+        // 原坐标（画图软件）：横坐标[61, 97]，纵坐标[170, 190]
+        // 转换后（引擎）：横坐标[61, 97]，纵坐标[2, 22]，即图片底边
 
-        // Rect(x, y, width, height)
-        // x = 61
-        // y = 2
-        // width = 97 - 61 = 36
-        // height = 22 - 2 = 20
         Rect doorArea(61.0f, 2.0f, 36.0f, 20.0f);
 
         // 3. 判定
@@ -416,7 +388,7 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         else
         {
-            // 调试日志：显示玩家当前坐标 vs 门的位置
+            // 调试日志：显示玩家当前坐标与门的位置
         }
     }
     break;
@@ -424,11 +396,9 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
         auto tm = TimeManager::getInstance();
         if (tm) {
-             // Stop updating THIS scene so we don't trigger wakeUp() here
              this->unscheduleUpdate();
              
              tm->skipToNextMorning();
-             // Reload scene (as passed out/sleeping)
              Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
         }
         break;

@@ -1,4 +1,4 @@
-#ifndef __FISH_H__
+﻿#ifndef __FISH_H__
 #define __FISH_H__
 
 #include "InventoryManager.h"
@@ -12,8 +12,8 @@ public:
     virtual ItemType getType() const = 0;
     virtual std::string getName() const = 0;
     virtual int getBasePrice() const = 0;
-    virtual float getDifficulty() const = 0; // 0.1 (easy) to 1.0 (hard)
-    virtual float getMovementFrequency() const = 0; // How fast it changes target
+    virtual float getDifficulty() const = 0; 
+    virtual float getMovementFrequency() const = 0; 
     virtual bool isSaltwater() const = 0;
     
     // 环境检查
@@ -24,7 +24,7 @@ public:
     static Fish* createByType(ItemType type);
 };
 
-// 鳀鱼 - Anchovy (海水, 简单)
+// 鳀鱼（海水，简单）
 class AnchovyFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Anchovy; }
@@ -35,7 +35,7 @@ public:
     bool isSaltwater() const override { return true; }
 };
 
-// 鲤鱼 - Carp (淡水, 极易)
+// 鲤鱼（淡水，极易）
 class CarpFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Carp; }
@@ -46,7 +46,7 @@ public:
     bool isSaltwater() const override { return false; }
 };
 
-// 鳗鱼 - Eel (海水/淡水雨夜, 困难)
+// 鳗鱼（海水/淡水雨夜，困难）
 class EelFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Eel; }
@@ -61,7 +61,7 @@ public:
     }
 };
 
-// 比目鱼 - Flounder (海水, 中等)
+// 比目鱼（海水，中等）
 class FlounderFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Flounder; }
@@ -72,7 +72,7 @@ public:
     bool isSaltwater() const override { return true; }
 };
 
-// 大口黑鲈 - Largemouth Bass (淡水, 中等)
+// 大口黑鲈（淡水，中等）
 class LargemouthBassFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Largemouth_Bass; }
@@ -83,7 +83,7 @@ public:
     bool isSaltwater() const override { return false; }
 };
 
-// 河豚 - Pufferfish (海水晴午, 极难)
+// 河豚（海水晴午，极难）
 class PufferfishFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Pufferfish; }
@@ -97,7 +97,7 @@ public:
     }
 };
 
-// 虹鳟鱼 - Rainbow Trout (淡水晴, 困难)
+// 虹鳟鱼（淡水晴，困难）
 class RainbowTroutFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Rainbow_Trout; }
@@ -111,7 +111,7 @@ public:
     }
 };
 
-// 鲟鱼 - Sturgeon (湖泊/海水冬, 史诗)
+// 鲟鱼（湖泊/海水冬，史诗）
 class SturgeonFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Sturgeon; }
@@ -122,7 +122,7 @@ public:
     bool isSaltwater() const override { return true; } 
 };
 
-// 罗非鱼 - Tilapia (海水, 中等)
+// 罗非鱼（海水，中等）
 class TilapiaFish : public Fish {
 public:
     ItemType getType() const override { return ItemType::ITEM_Tilapia; }
@@ -133,4 +133,4 @@ public:
     bool isSaltwater() const override { return true; }
 };
 
-#endif // __FISH_H__
+#endif 

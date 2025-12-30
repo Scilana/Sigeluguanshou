@@ -1,4 +1,4 @@
-#include "FarmManager.h"
+﻿#include "FarmManager.h"
 #include "MapLayer.h"
 #include "TimeManager.h"
 #include "SaveManager.h"
@@ -9,7 +9,7 @@ namespace
 {
     Color4F kTilledColor(0.55f, 0.35f, 0.22f, 0.55f);
     Color4F kWaterColor(0.25f, 0.45f, 0.85f, 0.35f);
-} // namespace
+} 
 
 FarmManager* FarmManager::create(MapLayer* mapLayer)
 {
@@ -65,8 +65,6 @@ bool FarmManager::init(MapLayer* mapLayer)
 
     this->scheduleUpdate();
     
-    // Attempt to load saved farm state
-    // This is crucial when reloading the scene (e.g. after sleeping/passing out)
     SaveManager::SaveData saveData;
     if (SaveManager::getInstance()->hasSaveFile() && SaveManager::getInstance()->loadGame(saveData))
     {
@@ -106,7 +104,6 @@ void FarmManager::initCropDefs()
 
 void FarmManager::progressDay()
 {
-    // Update TimeManager's record first
     auto tm = TimeManager::getInstance();
     if (tm) {
         tm->setLastFarmUpdateDay(tm->getDay());
@@ -148,26 +145,18 @@ void FarmManager::progressDay()
 
 void FarmManager::update(float delta)
 {
-    // Catch-up logic for saved games or scene transitions
     auto tm = TimeManager::getInstance();
     if (tm) {
         int currentDay = tm->getDay();
         int lastUpdate = tm->getLastFarmUpdateDay();
         
-        // If this is the very first run (lastUpdate == 0), just sync it
         if (lastUpdate == 0) {
             tm->setLastFarmUpdateDay(currentDay);
         }
-            // Missed some days! Catch up.
             int daysMissed = currentDay - lastUpdate;
             
-            // Prevent recursive updates to LastFarmUpdateDay inside the loop
-            // We just want to run the logic N times.
             for (int i = 0; i < daysMissed; ++i) {
-                // Manually run the logic usually found in progressDay
-                // But without the TimeManager update part which ruins the loop
                 
-                // 1. Shipping Bin
                 if (shippingBin_ && priceFunction_) {
                     int totalEarnings = 0;
                     auto inv = shippingBin_->getInventory();
@@ -182,7 +171,6 @@ void FarmManager::update(float delta)
                     if (totalEarnings > 0 && earningsCallback_) earningsCallback_(totalEarnings);
                 }
 
-                // 2. Crop Growth
                 for (auto& tile : tiles_)
                 {
                     if (tile.hasCrop && tile.watered)
@@ -200,11 +188,10 @@ void FarmManager::update(float delta)
                     }
                     else if (tile.hasCrop) {
                     }
-                    tile.watered = false; // Reset water daily
+                    tile.watered = false; 
                 }
             }
             
-            // Finally update the timestamp to current
             tm->setLastFarmUpdateDay(currentDay);
             redrawOverlay();
     }

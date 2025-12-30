@@ -1,4 +1,4 @@
-#ifndef __WEATHER_MANAGER_H__
+﻿#ifndef __WEATHER_MANAGER_H__
 #define __WEATHER_MANAGER_H__
 
 #include "cocos2d.h"
@@ -18,4 +18,4 @@ private:
     cocos2d::LayerColor* backgroundMask_;
 };
 
-#endif // __WEATHER_MANAGER_H__
+#endif 

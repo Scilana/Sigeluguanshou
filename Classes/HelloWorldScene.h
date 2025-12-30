@@ -1,4 +1,4 @@
-/****************************************************************************
+﻿/****************************************************************************
  Copyright (c) 2017-2018 Xiamen Yaji Software Co., Ltd.
  
  http://www.cocos2d-x.org
@@ -34,11 +34,9 @@ public:
 
     virtual bool init();
     
-    // a selector callback
     void menuCloseCallback(cocos2d::Ref* pSender);
     
-    // implement the "static create()" method manually
     CREATE_FUNC(HelloWorld);
 };
 
-#endif // __HELLOWORLD_SCENE_H__
+#endif 

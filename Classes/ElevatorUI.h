@@ -1,11 +1,11 @@
-#ifndef __ELEVATOR_UI_H__
+﻿#ifndef __ELEVATOR_UI_H__
 #define __ELEVATOR_UI_H__
 
 #include "cocos2d.h"
 #include <functional>
 
 /**
- * @brief 电梯楼层选择UI
+ * @brief 电梯楼层选择界面
  *
  * 职责：
  * - 显示可选楼层列表
@@ -16,7 +16,7 @@ class ElevatorUI : public cocos2d::Layer
 {
 public:
     /**
-     * @brief 创建电梯UI
+     * @brief 创建电梯界面
      */
     static ElevatorUI* create();
 
@@ -37,12 +37,12 @@ public:
     void setCloseCallback(const std::function<void()>& callback);
 
     /**
-     * @brief 显示UI
+     * @brief 显示界面
      */
     void show();
 
     /**
-     * @brief 关闭UI
+     * @brief 关闭界面
      */
     void close();
 
@@ -90,4 +90,4 @@ private:
     std::string inputText_;
 };
 
-#endif // __ELEVATOR_UI_H__
+#endif 

@@ -10,22 +10,19 @@ public:
     virtual bool init(Npc* npc);
     void setNpc(Npc* npc);
 
-    // Choice Callback
-    typedef std::function<void(int)> ChoiceCallback; // 0 for left option, 1 for right option
+    typedef std::function<void(int)> ChoiceCallback; 
 
-    // Callback for general click (to advance text)
     void setOnClickCallback(const std::function<void()>& cb) { on_click_callback_ = cb; }
 
     void showDialogue(const std::string& text);
-    void showDialogue(); // Overload for default/compatibility
+    void showDialogue(); 
     void showChoices(const std::string& option1, const std::string& option2, const ChoiceCallback& callback);
     void showNextLine();
     void hideChoices();
     void closeDialogue();
 
-    void onMouseDown(cocos2d::Event* event); // Mouse Handler
+    void onMouseDown(cocos2d::Event* event); 
 
-    // Check if dialogue is currently visible
     bool isVisible() const { return is_visible_; }
     bool isWaitingForChoice() const { return waiting_for_choice_; }
 
@@ -38,7 +35,6 @@ private:
     bool is_visible_;
     bool waiting_for_choice_;
 
-    // Choice UI
     cocos2d::Node* choice_node_;
     cocos2d::Label* option1_label_;
     cocos2d::Label* option2_label_;
@@ -50,4 +46,4 @@ private:
 
 };
 
-#endif // __DIALOGUE_BOX_H__
+#endif 

@@ -1,4 +1,4 @@
-#ifndef __MENU_SCENE_H__
+ï»¿#ifndef __MENU_SCENE_H__
 #define __MENU_SCENE_H__
 
 #include "cocos2d.h"
@@ -9,7 +9,7 @@ public:
     static cocos2d::Scene* createScene();
     virtual bool init();
 
-    // °´Å¥»Øµ÷
+    // Å¥Øµ
     void startGameCallback(cocos2d::Ref* sender);
     void continueGameCallback(cocos2d::Ref* sender);
     void coopCallback(cocos2d::Ref* sender);
@@ -18,14 +18,14 @@ public:
     CREATE_FUNC(MenuScene);
 
 private:
-    // ´´½¨×é¼þ
+    // 
     void createBackground();
     void createLogo();
     void createMenuButtons();
     void createDecorations();
     void addAnimations();
 
-    // ¸¨Öúº¯Êý
+    // 
     bool checkImageExists(const std::string& path);
     cocos2d::MenuItemImage* createImageButton(
         const std::string& normalImage,
@@ -34,4 +34,4 @@ private:
     );
 };
 
-#endif // __MENU_SCENE_H__
+#endif 

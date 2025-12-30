@@ -1,4 +1,4 @@
-#ifndef __MARKET_STATE_H__
+﻿#ifndef __MARKET_STATE_H__
 #define __MARKET_STATE_H__
 
 #include "InventoryManager.h"
@@ -43,4 +43,4 @@ private:
     Weather weather_ = Weather::Sunny;
 };
 
-#endif // __MARKET_STATE_H__
+#endif 

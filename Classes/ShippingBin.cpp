@@ -1,4 +1,4 @@
-#include "ShippingBin.h"
+﻿#include "ShippingBin.h"
 
 USING_NS_CC;
 
@@ -16,7 +16,7 @@ ShippingBin* ShippingBin::create(const Vec2& tileCoord)
 
 bool ShippingBin::init(const Vec2& tileCoord)
 {
-    // 调用父类 init (创建背包等)
+    // 调用父类初始化（创建背包等）
     if (!StorageChest::init(tileCoord))
         return false;
     

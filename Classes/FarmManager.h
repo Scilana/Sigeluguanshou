@@ -1,4 +1,4 @@
-#ifndef __FARM_MANAGER_H__
+﻿#ifndef __FARM_MANAGER_H__
 #define __FARM_MANAGER_H__
 
 #include "cocos2d.h"
@@ -8,14 +8,14 @@
 #include "StorageChest.h"
 #include "ShippingBin.h"
 #include <functional>
-#include "InventoryManager.h" // Needed for ItemType
+#include "InventoryManager.h" 
 
 class MapLayer;
 
 /**
  * @brief 管理农田状态（耕地、浇水、作物生长）并绘制覆盖层
  *
- * - 使用 TMX 地图尺寸自动匹配瓦片
+ * - 使用地图尺寸自动匹配瓦片
  * - 简单的时间推进：默认每 5 秒+1 天，浇水的作物会前进生长阶段
  * - 提供耕地、种植、浇水、收获的动作接口
  */
@@ -114,9 +114,6 @@ private:
     cocos2d::DrawNode* overlay_;
     cocos2d::Node* cropLayer_;
 
-    // float dayTimer_; // Removed
-    // float secondsPerDay_; // Removed
-    // int dayCount_; // Removed, use TimeManager
 
 
     std::vector<FarmTile> tiles_;
@@ -130,4 +127,4 @@ private:
     std::string getCropTextureName(int cropId, int stage) const;
 };
 
-#endif // __FARM_MANAGER_H__
+#endif 

@@ -1,4 +1,4 @@
-#ifndef __SLIME_H__
+﻿#ifndef __SLIME_H__
 #define __SLIME_H__
 
 #include "Monster.h"
@@ -42,4 +42,4 @@ protected:
     void initDisplay() override;
 };
 
-#endif // __SLIME_H__
+#endif 

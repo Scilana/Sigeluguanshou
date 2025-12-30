@@ -1,4 +1,4 @@
-#ifndef __HOUSE_SCENE_H__
+﻿#ifndef __HOUSE_SCENE_H__
 #define __HOUSE_SCENE_H__
 
 #include "cocos2d.h"
@@ -45,4 +45,4 @@ private:
     DialogueBox* dialogueBox_{ nullptr };
 };
 
-#endif // __HOUSE_SCENE_H__
+#endif 

@@ -1,4 +1,4 @@
-#include "BarnScene.h"
+﻿#include "BarnScene.h"
 #include "MapLayer.h"
 #include "Player.h"
 #include "InventoryManager.h"

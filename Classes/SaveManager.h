@@ -1,4 +1,4 @@
-#ifndef __SAVE_MANAGER_H__
+﻿#ifndef __SAVE_MANAGER_H__
 #define __SAVE_MANAGER_H__
 
 #include "cocos2d.h"
@@ -31,7 +31,7 @@ public:
         {
             struct ItemSlotData
             {
-                int type;  // ItemType 枚举值
+                int type;  // 物品类型枚举值
                 int count;
                 int durability;
                 int maxDurability;
@@ -125,14 +125,14 @@ private:
     std::string getSaveFilePath() const;
 
     /**
-     * @brief 序列化存档数据为 JSON
+     * @brief 序列化存档数据为文本
      */
     rapidjson::Document serializeToJson(const SaveData& data);
 
     /**
-     * @brief 从 JSON 反序列化存档数据
+     * @brief 从文本反序列化存档数据
      */
     bool deserializeFromJson(const rapidjson::Document& doc, SaveData& data);
 };
 
-#endif // __SAVE_MANAGER_H__
+#endif 

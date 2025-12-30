@@ -1,4 +1,4 @@
-#include "MapLayer.h"
+﻿#include "MapLayer.h"
 
 USING_NS_CC;
 
@@ -39,7 +39,7 @@ bool MapLayer::init(const std::string& tmxFile)
 
 bool MapLayer::loadTMXMap(const std::string& tmxFile)
 {
-    // 1. 创建 TiledMap 对象
+    // 1. 创建地图对象
     tmxMap_ = TMXTiledMap::create(tmxFile);
     if (!tmxMap_)
     {
@@ -49,7 +49,7 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
     // 2. 将地图添加到场景 (注意：只添加这一次)
     this->addChild(tmxMap_, 0);
 
-    // 3. 获取 Ground 层 (底图)
+    // 3. 获取底图层
     baseLayer_ = tmxMap_->getLayer("Ground");
     if (!baseLayer_)
     {
@@ -59,7 +59,7 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
             }
         }
 
-        // 如果没有固定名称，取第一个 TMXLayer 作为底图
+        // 若无固定名称，取第一个图层作为底图
         auto children = tmxMap_->getChildren();
         for (auto child : children)
         {
@@ -72,7 +72,7 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
         }
     }
 
-    // 4. [新增] 获取 Tree 层
+    // 4. [新增] 获取树木层
     treeLayer_ = tmxMap_->getLayer("Tree");
     if (!treeLayer_)
     {
@@ -93,7 +93,7 @@ void MapLayer::initCollisionLayer()
     if (!tmxMap_)
         return;
 
-    // 1. 尝试查找名为 "Collision" 的层
+    // 1. 尝试查找碰撞层
     collisionLayer_ = tmxMap_->getLayer("Collision");
 
     if (collisionLayer_)
@@ -143,7 +143,7 @@ bool MapLayer::isWalkable(const Vec2& position) const
         return true;
     }
 
-    // 将世界坐标转换为 tile 坐标
+    // 将世界坐标转换为瓦片坐标
     Vec2 tileCoord = positionToTileCoord(position);
     Size mapSize = tmxMap_->getMapSize();
 
@@ -155,19 +155,19 @@ bool MapLayer::isWalkable(const Vec2& position) const
     }
 
     // ==========================================
-    // 方式1：检查专门的 Collision 层
+    // 方式一：检查专门的碰撞层
     // ==========================================
     if (collisionLayer_)
     {
         int tileGID = collisionLayer_->getTileGIDAt(tileCoord);
         if (tileGID != 0)
         {
-            return false; // Collision 层有 tile = 不可行走
+            return false; // 碰撞层有瓦片则不可行走
         }
     }
 
     // ==========================================
-    // 方式2：检查所有层的 tile 属性
+    // 方式二：检查所有层的瓦片属性
     // ==========================================
     auto children = tmxMap_->getChildren();
     for (auto child : children)
@@ -185,13 +185,13 @@ bool MapLayer::isWalkable(const Vec2& position) const
                 {
                     auto propMap = properties.asValueMap();
 
-                    // 检查 Collidable 属性（注意：TMX 中是大写 C）
+                    // 检查可碰撞属性（注意：属性名首字母大写）
                     if (propMap.find("Collidable") != propMap.end())
                     {
                         if (propMap["Collidable"].asBool()) return false;
                     }
 
-                    // 兼容小写 collidable
+                    // 兼容小写键名
                     if (propMap.find("collidable") != propMap.end())
                     {
                         if (propMap["collidable"].asBool()) return false;
@@ -202,7 +202,7 @@ bool MapLayer::isWalkable(const Vec2& position) const
     }
 
     // ==========================================
-    // 方式3：检查 Water 层（水域）
+    // 方式三：检查水域层
     // ==========================================
     if (waterLayer_)
     {
@@ -332,7 +332,7 @@ Vec2 MapLayer::tileCoordToPosition(const Vec2& tileCoord) const
 }
 
 // =======================================================
-// [新增] Tree 层专用接口
+// [新增] 树木层专用接口
 // =======================================================
 
 int MapLayer::getTreeGIDAt(const cocos2d::Vec2& tileCoord) const

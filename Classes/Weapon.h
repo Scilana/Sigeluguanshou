@@ -1,4 +1,4 @@
-#ifndef __WEAPON_H__
+﻿#ifndef __WEAPON_H__
 #define __WEAPON_H__
 
 #include "cocos2d.h"
@@ -105,4 +105,4 @@ public:
     std::string getSpritePath() const override { return "weapons/diamond_sword.png"; }
 };
 
-#endif // __WEAPON_H__
+#endif 

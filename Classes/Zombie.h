@@ -1,4 +1,4 @@
-#ifndef __ZOMBIE_H__
+﻿#ifndef __ZOMBIE_H__
 #define __ZOMBIE_H__
 
 #include "Monster.h"
@@ -42,4 +42,4 @@ protected:
     void initDisplay() override;
 };
 
-#endif // __ZOMBIE_H__
+#endif 

@@ -1,4 +1,4 @@
-#include "InventoryManager.h"
+﻿#include "InventoryManager.h"
 
 USING_NS_CC;
 
@@ -23,7 +23,7 @@ InventoryManager* InventoryManager::getInstance()
         s_instance = new (std::nothrow) InventoryManager();
         if (s_instance && s_instance->init(30))
         {
-            // 不调用 autorelease，保持引用计数为 1
+            // 不调用自动释放，保持引用计数为 1
         }
         else
         {
@@ -77,10 +77,10 @@ void InventoryManager::initDefaultItems()
     setSlot(3, ItemType::Axe, 1);
     setSlot(4, ItemType::Pickaxe, 1);
     setSlot(5, ItemType::FishingRod, 1);
-    setSlot(6, ItemType::ITEM_WoodenSword, 1); // Added Wooden Sword
+    setSlot(6, ItemType::ITEM_WoodenSword, 1); 
 
     // 为工具设置初始满耐久
-    for (int i = 0; i <= 6; ++i) { // Adjusted loop to include the new sword
+    for (int i = 0; i <= 6; ++i) { 
         slots_[i].maxDurability = getDefaultMaxDurability(slots_[i].type);
         slots_[i].durability = slots_[i].maxDurability;
     }
@@ -144,7 +144,7 @@ bool InventoryManager::addItem(ItemType itemType, int count)
     return true;
 }
 
-bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
+bool InventoryManager::removeItem(ItemType itemType, int count)
 {
     if (itemType == ItemType::ITEM_NONE || count <= 0)
         return false;
@@ -311,14 +311,13 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
     auto& slot = slots_[slotIndex];
     if (slot.isEmpty()) return false;
 
-    // Check if it should be a tool but has invalid durability (Legacy Save Fix)
     if (!slot.isTool()) {
         int defMax = getDefaultMaxDurability(slot.type);
         if (defMax > 0) {
             slot.maxDurability = defMax;
             slot.durability = defMax;
         } else {
-            return false; // Not a tool
+            return false; 
         }
     }
 
@@ -327,7 +326,7 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
     if (slot.durability <= 0)
     {
         slot.clear();
-        return true; // Broke
+        return true; 
     }
     return false;
 }

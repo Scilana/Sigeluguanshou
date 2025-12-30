@@ -1,4 +1,4 @@
-#include "TreasureChest.h"
+﻿#include "TreasureChest.h"
 #include "Weapon.h"
 #include <cstdlib>
 
@@ -45,7 +45,7 @@ void TreasureChest::initDisplay()
         Vec2(14, 6),
         Vec2(-14, 6)
     };
-    Color4F bodyColor(0.55f, 0.27f, 0.07f, 1.0f); // Sattelbrown
+    Color4F bodyColor(0.55f, 0.27f, 0.07f, 1.0f); 
     displayNode_->drawPolygon(bodyVertices, 4, bodyColor, 1, Color4F(0.3f, 0.15f, 0.05f, 1.0f));
 
     // 绘制盖子 -稍亮的棕色

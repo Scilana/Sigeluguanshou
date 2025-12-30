@@ -1,4 +1,4 @@
-#include "MineScene.h"
+﻿#include "MineScene.h"
 #include "MineLayer.h"
 #include "Player.h"
 #include "InventoryManager.h"
@@ -134,9 +134,6 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     inventory_ = inventory;
     currentFloor_ = currentFloor;
 
-    CCLOG("========================================");
-    CCLOG("Initializing Mine Scene (Floor %d)", currentFloor);
-    CCLOG("========================================");
 
     // 
     mineLayer_ = nullptr;
@@ -172,7 +169,7 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     initControls();
     initMonsters();
     initChests();
-    initElevator(); // [New]
+    initElevator(); 
     initWishingWell();
     initToolbar();
     initToolbarUI(); // 
@@ -180,74 +177,49 @@ bool MineScene::init(InventoryManager* inventory, int currentFloor)
     // 
     this->scheduleUpdate();
 
-    CCLOG("Mine Scene initialized successfully!");
     return true;
 }
 
 void MineScene::initMap()
 {
-    CCLOG("Initializing mine map...");
 
-    //  Mines 
     std::string mapFile = StringUtils::format("map/Mines/%d.tmx", currentFloor_);
 
     mineLayer_ = MineLayer::create(mapFile);
     if (mineLayer_)
     {
         this->addChild(mineLayer_, 0);
-        CCLOG("Mine layer added to scene (Floor %d)", currentFloor_);
 
-        //  Z-order
-        // Front -> Back -> Buildings -> (Z=10) -> mine1
         auto tmxMap = mineLayer_->getTMXMap();
         if (tmxMap)
         {
             Size mapSize = tmxMap->getMapSize();
             Size tileSize = tmxMap->getTileSize();
-            CCLOG("TMX Map info:");
-            CCLOG("  - Position: (%.2f, %.2f)", tmxMap->getPosition().x, tmxMap->getPosition().y);
-            CCLOG("  - Z-order: %d", tmxMap->getLocalZOrder());
-            CCLOG("  - Map size: %.0f x %.0f tiles", mapSize.width, mapSize.height);
-            CCLOG("  - Tile size: %.0f x %.0f px", tileSize.width, tileSize.height);
-            CCLOG("  - Total size: %.0f x %.0f px", mapSize.width * tileSize.width, mapSize.height * tileSize.height);
 
             // 
-            CCLOG("--- Layer List ---");
             for (const auto& child : tmxMap->getChildren())
             {
                 auto layer = dynamic_cast<TMXLayer*>(child);
                 if (layer)
                 {
-                    CCLOG("Layer Name: %s, Z: %d, Visible: %d", layer->getLayerName().c_str(), layer->getLocalZOrder(), layer->isVisible());
                 }
             }
-            CCLOG("------------------");
 
-            //  Front  (/)
             auto frontLayer = tmxMap->getLayer("Front");
             if (frontLayer)
             {
-                CCLOG(" Front layer found!");
-                // Front  (Roof/TreeTop)
-                //  20 (Player is 10)
                 frontLayer->setLocalZOrder(20);
                 frontLayer->setVisible(true);
                 frontLayer->setOpacity(255);
-                CCLOG(" Front layer set to Z-order 20 (Above Player)");
             }
             else
             {
                 CCLOG(" WARNING: Front layer not found in TMX map");
             }
 
-            //  Back  Front 
-            //  Back 
             auto backLayer = tmxMap->getLayer("Back");
             if (backLayer)
             {
-                CCLOG(" Back layer found - keeping in tmxMap");
-                CCLOG("  - Original opacity: %d", backLayer->getOpacity());
-                CCLOG("  - Layer size: %.0f x %.0f tiles", backLayer->getLayerSize().width, backLayer->getLayerSize().height);
 
                 // 
                 int sampleCount = 0;
@@ -263,56 +235,37 @@ void MineScene::initMap()
                             nonZeroCount++;
                             if (nonZeroCount <= 3)  // 3
                             {
-                                CCLOG("    Sample tile at (%d,%d): GID=%d", x, y, gid);
                             }
                         }
                     }
                 }
-                CCLOG("  - Tile sampling: %d/%d tiles are non-zero in top-left area", nonZeroCount, sampleCount);
 
-                backLayer->setLocalZOrder(-100);  //  Front 
+                backLayer->setLocalZOrder(-100);  
                 backLayer->setVisible(true);
                 backLayer->setOpacity(255);  // 
 
-                CCLOG("  - Back layer visible: %s, opacity: %d",
-                    backLayer->isVisible() ? "YES" : "NO",
-                    backLayer->getOpacity());
             }
 
-            //  Buildings / Back 
             auto buildingsLayer = tmxMap->getLayer("Buildings");
             if (buildingsLayer)
             {
-                CCLOG(" Buildings layer found!");
-                CCLOG("  - Visible: %s", buildingsLayer->isVisible() ? "YES" : "NO");
-                CCLOG("  - Original opacity: %d", buildingsLayer->getOpacity());
-                CCLOG("  - Layer Size: (%.0f, %.0f)", buildingsLayer->getLayerSize().width, buildingsLayer->getLayerSize().height);
 
-                buildingsLayer->setLocalZOrder(-50);  //  Back 
+                buildingsLayer->setLocalZOrder(-50);  
                 buildingsLayer->setVisible(true);  // 
                 buildingsLayer->setOpacity(255);  // 
-                CCLOG(" Buildings layer set to Z-order -50, forced visible, opacity: 255");
             }
             else
             {
                 CCLOG(" WARNING: Buildings layer not found in TMX map");
             }
 
-            //  mine1 
             auto mine1Layer = tmxMap->getLayer("mine1");
             if (mine1Layer)
             {
-                CCLOG(" mine1 layer found!");
-                CCLOG("  - Position: (%.2f, %.2f)", mine1Layer->getPosition().x, mine1Layer->getPosition().y);
-                CCLOG("  - Visible: %s", mine1Layer->isVisible() ? "YES" : "NO");
-                CCLOG("  - Original opacity: %d", mine1Layer->getOpacity());
-                CCLOG("  - Layer Size: (%.0f, %.0f)", mine1Layer->getLayerSize().width, mine1Layer->getLayerSize().height);
 
-                // mine1  tmxMap  Buildings 
-                mine1Layer->setLocalZOrder(-25);  //  Buildings(-50) (10)
+                mine1Layer->setLocalZOrder(-25);  
                 mine1Layer->setVisible(true);
                 mine1Layer->setOpacity(255);  // 
-                CCLOG(" mine1 layer set to Z-order -25 (above Buildings, below Player), opacity: 255");
             }
             else
             {
@@ -327,13 +280,11 @@ void MineScene::initMap()
     else
     {
         CCLOG("ERROR: Failed to create mine layer!");
-        CCLOG("Please ensure %s exists in Resources/", mapFile.c_str());
     }
 }
 
 void MineScene::initPlayer()
 {
-    CCLOG("Initializing player in mine...");
 
     if (!mineLayer_)
     {
@@ -345,17 +296,14 @@ void MineScene::initPlayer()
     player_ = Player::create();
     if (player_)
     {
-        CCLOG("Initializing player in mine...");
 
         if (mineLayer_)
         {
             // 
             Size mapSize = mineLayer_->getMapSize();
-            CCLOG("Map size: (%.2f, %.2f) pixels", mapSize.width, mapSize.height);
 
             // 
             Vec2 mapCenter = Vec2(mapSize.width / 2, mapSize.height / 2);
-            CCLOG("Map center: (%.2f, %.2f)", mapCenter.x, mapCenter.y);
 
             // 
             Vec2 startPos = mapCenter;
@@ -366,11 +314,9 @@ void MineScene::initPlayer()
             {
                 foundWalkable = true;
                 startPos = mapCenter;
-                CCLOG(" Center position is walkable");
             }
             else
             {
-                CCLOG("Center position not walkable, searching nearby...");
 
                 // 
                 for (int radius = 16; radius < 320 && !foundWalkable; radius += 16)
@@ -389,8 +335,6 @@ void MineScene::initPlayer()
                             {
                                 startPos = testPos;
                                 foundWalkable = true;
-                                CCLOG(" Found walkable position at (%.2f, %.2f), radius: %d",
-                                    testPos.x, testPos.y, radius);
                             }
                         }
                     }
@@ -404,7 +348,6 @@ void MineScene::initPlayer()
             }
 
             player_->setPosition(startPos);
-            CCLOG(" Player positioned at (%.2f, %.2f)", startPos.x, startPos.y);
         }
         else
         {
@@ -420,7 +363,6 @@ void MineScene::initPlayer()
         }
 
         this->addChild(player_, 10);
-        CCLOG(" Player added to scene");
     }
     else
     {
@@ -465,14 +407,13 @@ void MineScene::initUI()
     floorLabel_->setColor(Color3B::YELLOW);
     uiLayer_->addChild(floorLabel_, 1);
     
-    // Time Label in Mine
     auto tm = TimeManager::getInstance();
     std::string timeStr = "Day ?, ??:??";
     if (tm) {
          timeStr = StringUtils::format("Day %d, %02d:%02d", tm->getDay(), tm->getHour(), tm->getMinute());
     }
     auto timeLabel = Label::createWithSystemFont(timeStr, "Arial", 20);
-    timeLabel->setName("TimeLabel"); // Give it a name to find update later
+    timeLabel->setName("TimeLabel"); 
     timeLabel->setPosition(Vec2(origin.x + visibleSize.width / 2, origin.y + visibleSize.height - 20));
     timeLabel->setColor(Color3B::WHITE);
     uiLayer_->addChild(timeLabel, 1);
@@ -529,7 +470,7 @@ void MineScene::initMonsters()
     monsters_.clear();
 
     // 
-    int initialCount = 1 + (rand() % 2); // 1 or 2
+    int initialCount = 1 + (rand() % 2); 
     if (currentFloor_ > 5) initialCount = 2; // 2
 
     for (int i = 0; i < initialCount; ++i)
@@ -547,15 +488,12 @@ void MineScene::initElevator()
     Size mapSize = map->getContentSize();
     Vec2 centerPos = Vec2(mapSize.width / 2, mapSize.height / 2);
 
-    // Create Mine Shaft Elevator () - 
     elevatorSprite_ = Sprite::create("myhouse/elevator.png");
     if (!elevatorSprite_) {
-        // Create a compact and refined mine shaft entrance
         elevatorSprite_ = Sprite::create();
         auto draw = DrawNode::create();
 
-        // 48x48 (70x70)
-        const float size = 24.0f;  // 24px48px
+        const float size = 24.0f;  
         const float frameWidth = 4.0f;  // 
         const float innerSize = size - frameWidth;
 
@@ -596,7 +534,6 @@ void MineScene::initElevator()
         draw->drawSolidRect(Vec2(12, -14), Vec2(14, 14),
                            Color4F(0.55f, 0.45f, 0.30f, 0.7f));
 
-        // "M"MINE
         auto label = Label::createWithSystemFont("M", "Arial", 10, Size::ZERO,
                                                  TextHAlignment::CENTER, TextVAlignment::CENTER);
         label->setPosition(Vec2(0, size + 8));
@@ -662,7 +599,6 @@ void MineScene::update(float delta)
     Scene::update(delta);
     updateCamera();
     updateUI();
-    // updateChopping removed as it belongs in GameScene
 
     // 
     auto energyBar = this->getChildByName("EnergyBar");
@@ -680,7 +616,6 @@ void MineScene::update(float delta)
     if (tm) {
         tm->update(delta);
         
-        // Update Time Label
         if (uiLayer_) {
             auto label = dynamic_cast<Label*>(uiLayer_->getChildByName("TimeLabel"));
             if (label) {
@@ -691,7 +626,6 @@ void MineScene::update(float delta)
         // 2. 
         if (tm->isMidnight())
         {
-            CCLOG("It's midnight! Passing out...");
             if (inventory_) inventory_->removeMoney(200);
             showActionMessage("Passed out...", Color3B::RED);
             Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
@@ -703,7 +637,6 @@ void MineScene::update(float delta)
     // 3.  ()
     if (player_ && player_->getHp() <= 0)
     {
-        CCLOG("Player died in mine!");
         if (inventory_) inventory_->removeMoney(200);
         showActionMessage("You died...", Color3B::RED);
         Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
@@ -763,7 +696,6 @@ void MineScene::updateCamera()
 
     camera->setPosition3D(newPos);
 
-    // UI
     if (uiLayer_)
     {
         Vec2 uiPos = Vec2(
@@ -783,21 +715,12 @@ void MineScene::updateUI()
         std::string name = InventoryManager::getItemName(type);
         if (type == ItemType::ITEM_NONE) name = "Empty";
 
-        //  [1] Pickaxe
         int num = (selectedItemIndex_ + 1) % 10;
         if (num == 0) num = 10; //  1-0
 
         itemLabel_->setString(StringUtils::format("[%d] %s", selectedItemIndex_ == 9 ? 0 : selectedItemIndex_ + 1, name.c_str()));
     }
 
-    //  ( uiLayer  healthLabel_,  initUI )
-    //  initUI  floorLabel_  healthLabel_ 
-    //  initUI  healthLabel_ .
-    //  initUI 
-    //  positionLabel_ ?
-    //  initUI floorLabel_, itemLabel_, actionLabel_
-    //  initUI chunk  healthLabel_ 
-    //  MineScene.h  healthLabel_ cpp initUI 
 
     if (!healthLabel_ && uiLayer_)
     {
@@ -813,7 +736,7 @@ void MineScene::updateUI()
 
     if (healthLabel_ && player_)
     {
-        healthLabel_->setString(StringUtils::format("HP: %d/%d", player_->getHp(), 100)); //  getMaxHp()
+        healthLabel_->setString(StringUtils::format("HP: %d/%d", player_->getHp(), 100)); 
     }
     refreshToolbarUI();
 }
@@ -826,23 +749,17 @@ void MineScene::updateMonsters(float delta)
         Monster* monster = *it;
         if (monster->isDead())
         {
-            // MonsterFadeOutRemoveSelf
             // 
-            // TODO: 
             int dropChance = 30 + currentFloor_ * 5;
             if (rand() % 100 < dropChance)
             {
                 // 
-                // GameScene::spawnItem(ItemType::Coal, monster->getPosition(), 1); 
-                // GameScene
-                //  ItemNode 
             }
 
             it = monsters_.erase(it);
         }
         else
         {
-            // AI  Monster::update 
             // 
             if (player_ && !player_->isInvulnerable())
             {
@@ -852,7 +769,6 @@ void MineScene::updateMonsters(float delta)
                     // 
                     player_->takeDamage(monster->getAttackPower()); // 
 
-                    // UI
                     updateUI();
                     // 
                     Vec2 pushDir = player_->getPosition() - monster->getPosition();
@@ -870,7 +786,6 @@ void MineScene::updateMonsters(float delta)
 
 void MineScene::initToolbar()
 {
-    //  ( ID 0-7)
     toolbarItems_.clear();
 
     // 
@@ -888,11 +803,9 @@ void MineScene::initToolbar()
 
         if (!hasSword) {
             inventory_->addItem(ItemType::ITEM_WoodenSword, 1);
-            CCLOG("Starter Kit: Added Sword");
         }
         if (!hasPickaxe) {
             inventory_->addItem(ItemType::Pickaxe, 1);
-            CCLOG("Starter Kit: Added Pickaxe");
         }
         
         for (int i = 0; i < 8; ++i)
@@ -903,7 +816,6 @@ void MineScene::initToolbar()
     }
     else
     {
-        // Fallback if no inventory
         for (int i = 0; i < 8; ++i) toolbarItems_.push_back(ItemType::ITEM_NONE);
     }
 
@@ -921,7 +833,6 @@ void MineScene::initToolbar()
         selectedItemIndex_ = 0;
     }
 
-    // UI
     this->selectItemByIndex(selectedItemIndex_);
 }
 
@@ -1094,7 +1005,6 @@ void MineScene::selectItemByIndex(int idx)
     // 
     if (inventory_) {
         toolbarItems_[idx] = inventory_->getSlot(idx).type;
-        //  InventoryManager
         inventory_->setSelectedSlotIndex(idx);
     }
 
@@ -1113,12 +1023,10 @@ void MineScene::toggleInventory()
 {
     if (inventoryUI_)
     {
-        inventoryUI_->close(); //  onInventoryClosed 
-        //  onInventoryClosed 
+        inventoryUI_->close(); 
         return;
     }
 
-    // UI
     inventoryUI_ = InventoryUI::create(inventory_);
     if (!inventoryUI_) return;
 
@@ -1127,17 +1035,11 @@ void MineScene::toggleInventory()
         onInventoryClosed();
         });
 
-    //  uiLayer_  Scene
-    // uiLayer_  ZOrder  1000
-    //  uiLayer_ InventoryUI 
-    //  InventoryUI  TOP
-    //  uiLayer_ 
     if (uiLayer_) {
-         inventoryUI_->setPosition(Vec2::ZERO); // Local to uiLayer
+         inventoryUI_->setPosition(Vec2::ZERO); 
          uiLayer_->addChild(inventoryUI_, 9999); 
     }
     else {
-        // Fallback: Add to scene but won't follow camera without extra code
         this->addChild(inventoryUI_, 9999);
     }
 
@@ -1178,7 +1080,6 @@ void MineScene::handleMiningAction()
         return;
     }
 
-    // 3.  ( Pickaxe)
     ItemType currentTool = inventory_->getSlot(selectedItemIndex_).type;
     if (currentTool != ItemType::Pickaxe)
     {
@@ -1188,7 +1089,6 @@ void MineScene::handleMiningAction()
     }
 
     // 4. 
-    //  (Tile Coordinate)
     Vec2 playerPos = player_->getPosition();
     Vec2 playerTileCoord = mineLayer_->positionToTileCoord(playerPos);
 
@@ -1203,7 +1103,7 @@ void MineScene::handleMiningAction()
         Vec2(0, 0),   // 
         Vec2(1, 0),   // 
         Vec2(-1, 0),  // 
-        Vec2(0, 1),   //  (TiledY)
+        Vec2(0, 1),   
         Vec2(0, -1),  // 
         Vec2(1, 1),   // 
         Vec2(1, -1),  // 
@@ -1233,9 +1133,8 @@ void MineScene::handleMiningAction()
                         // 
                         if (inventory_->decreaseDurability(selectedItemIndex_, 1)) {
                              showActionMessage("Pickaxe broke!", Color3B::RED);
-                             //  UI
-                             if (inventoryUI_) inventoryUI_->refresh(); // Force refresh if open
-                             initToolbarUI(); // Refresh toolbar
+                             if (inventoryUI_) inventoryUI_->refresh(); 
+                             initToolbarUI(); 
                         }
                         }),
                     nullptr
@@ -1252,7 +1151,6 @@ void MineScene::handleMiningAction()
                 }
             }
 
-            //  ( break)
             break;
         }
     }
@@ -1284,12 +1182,9 @@ void MineScene::handleAttackAction()
     {
         item = inventory_->getSlot(selectedItemIndex_).type;
         shouldDecreaseDurability = InventoryManager::isTool(item);
-        //  ( ItemType )
-        //  Sword 
         if (item == ItemType::ITEM_WoodenSword || item == ItemType::ITEM_IronSword ||
             item == ItemType::ITEM_GoldSword || item == ItemType::ITEM_DiamondSword)
         {
-            //  Weapon 
             attackDamage = Weapon::getWeaponAttackPower(item);
             attackRange = Weapon::getWeaponAttackRange(item);
         }
@@ -1302,7 +1197,6 @@ void MineScene::handleAttackAction()
         else
         {
             // 
-            // J
             // 
             // 1
         }
@@ -1400,7 +1294,6 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_J:
-        CCLOG(">>> Key 'J' pressed in MineScene::onKeyPressed");
         handleMiningAction();
         break;
 
@@ -1421,7 +1314,6 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
 
     case EventKeyboard::KeyCode::KEY_M:
-        // [Optimization 4] 
         if (elevatorSprite_)
         {
             float dist = player_->getPosition().distance(elevatorSprite_->getPosition());
@@ -1436,24 +1328,13 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         else
         {
-            //  (Fallback)
             backToFarm();
         }
         break;
 
-        /* [Removed Shortcuts]
-        case EventKeyboard::KeyCode::KEY_Q:
-            goToPreviousFloor();
-            break;
-
-        case EventKeyboard::KeyCode::KEY_E:
-            goToNextFloor();
-            break;
-        */
 
     case EventKeyboard::KeyCode::KEY_TAB:
     {
-        CCLOG("Cheat: Skipping Day from Mine...");
         auto tm = TimeManager::getInstance();
         if (tm) {
              tm->skipToNextMorning();
@@ -1482,7 +1363,6 @@ void MineScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 
 void MineScene::backToFarm()
 {
-    CCLOG("Returning to farm...");
     bool saveSynced = syncSaveInventoryAndSkills(inventory_);
     auto gameScene = GameScene::createScene(saveSynced);
     Director::getInstance()->replaceScene(TransitionFade::create(1.0f, gameScene));
@@ -1495,10 +1375,9 @@ void MineScene::goToPreviousFloor()
     //  1-5 
     if (prevFloor < 1)
     {
-        prevFloor = 5;  //  1  Q  5 
+        prevFloor = 5;  
     }
 
-    CCLOG("Switching to previous floor: %d -> %d", currentFloor_, prevFloor);
     auto prevScene = MineScene::createScene(inventory_, prevFloor);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, prevScene));
 
@@ -1511,10 +1390,9 @@ void MineScene::goToNextFloor()
     //  1-5 
     if (nextFloor > 5)
     {
-        nextFloor = 1;  //  5  E  1 
+        nextFloor = 1;  
     }
 
-    CCLOG("Switching to next floor: %d -> %d", currentFloor_, nextFloor);
     auto nextScene = MineScene::createScene(inventory_, nextFloor);
     Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
 
@@ -1566,7 +1444,6 @@ void MineScene::spawnMonster()
         this->addChild(monster, 10);
         monsters_.push_back(monster);
 
-        CCLOG("Spawned %s at (%.1f, %.1f)", monster->getMonsterName().c_str(), pos.x, pos.y);
     }
 }
 
@@ -1637,7 +1514,6 @@ void MineScene::initWishingWell()
     label->setAlignment(TextHAlignment::CENTER);
     wishingWell_->addChild(label);
 
-    CCLOG("Wishing Well initialized at (%.1f, %.1f)", pos.x, pos.y);
 }
 
 void MineScene::handleWishAction()
@@ -1720,12 +1596,10 @@ void MineScene::handleWishAction()
             }
         }
 
-        // UI
         updateUI();
     }
 }
 
-// Elevator Helpers
 void MineScene::showElevatorUI()
 {
     if (elevatorUI_) {
@@ -1739,7 +1613,6 @@ void MineScene::showElevatorUI()
         elevatorUI_->setFloorSelectCallback(CC_CALLBACK_1(MineScene::onElevatorFloorSelected, this));
         elevatorUI_->setCloseCallback(CC_CALLBACK_0(MineScene::onElevatorClosed, this));
 
-        //  uiLayer_ 
         if (uiLayer_) {
             uiLayer_->addChild(elevatorUI_, 2000);
             elevatorUI_->setPosition(Vec2::ZERO);
@@ -1763,9 +1636,8 @@ void MineScene::onElevatorFloorSelected(int floor)
     {
         backToFarm();
     }
-    else if (floor >= 1 && floor <= 5) // Limits could be dynamic
+    else if (floor >= 1 && floor <= 5) 
     {
-        CCLOG("Elevator to floor %d", floor);
         auto nextScene = MineScene::createScene(inventory_, floor);
         Director::getInstance()->replaceScene(TransitionFade::create(0.5f, nextScene));
 

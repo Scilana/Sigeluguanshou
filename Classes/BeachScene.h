@@ -1,4 +1,4 @@
-#ifndef __BEACH_SCENE_H__
+﻿#ifndef __BEACH_SCENE_H__
 #define __BEACH_SCENE_H__
 
 #include "cocos2d.h"
@@ -80,4 +80,4 @@ private:
     cocos2d::Sprite* exclamationMark_ = nullptr;
 };
 
-#endif // __BEACH_SCENE_H__
+#endif 

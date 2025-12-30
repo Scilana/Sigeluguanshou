@@ -1,4 +1,4 @@
-#ifndef __MINE_SCENE_H__
+﻿#ifndef __MINE_SCENE_H__
 #define __MINE_SCENE_H__
 
 #include "cocos2d.h"
@@ -70,7 +70,7 @@ private:
     InventoryUI* inventoryUI_;
     MiningManager* miningManager_;
 
-    // 物品栏（使用 InventoryManager 中定义的 ItemType）
+    // 物品栏（使用背包管理器中定义的物品类型）
     std::vector<ItemType> toolbarItems_;
     int selectedItemIndex_;
     void initToolbar();
@@ -82,10 +82,10 @@ private:
     void toggleInventory();
     void onInventoryClosed();
 
-    // UI层
+    // 界面层
     cocos2d::Layer* uiLayer_;
 
-    // UI元素
+    // 界面元素
     cocos2d::Label* infoLabel_;                      // 物品信息显示
 
     int selectedSlotIndex_;                          // 当前选中的槽位索引
@@ -93,17 +93,17 @@ private:
 
     cocos2d::Label* floorLabel_;      // 矿洞层数显示
     cocos2d::Label* positionLabel_;   // 位置显示（调试）
-    cocos2d::Label* itemLabel_;       // current tool label
+    cocos2d::Label* itemLabel_;       
     cocos2d::LayerColor* toolbarUI_ = nullptr;
     std::vector<cocos2d::Sprite*> toolbarSlots_;
     std::vector<cocos2d::Sprite*> toolbarIcons_;
     std::vector<cocos2d::Label*> toolbarCounts_;
     std::vector<int> toolbarCountCache_;
     int toolbarSelectedCache_ = -1;
-    cocos2d::Label* actionLabel_;     // action hint label
-    cocos2d::Label* healthLabel_;     // health label
-    cocos2d::Sprite* elevatorSprite_{ nullptr }; // [New] Elevator
-    ElevatorUI* elevatorUI_{ nullptr };          // [New] UI
+    cocos2d::Label* actionLabel_;     
+    cocos2d::Label* healthLabel_;     
+    cocos2d::Sprite* elevatorSprite_{ nullptr }; 
+    ElevatorUI* elevatorUI_{ nullptr };          
 
     // 电梯相关方法
     void initElevator();
@@ -113,7 +113,6 @@ private:
 
     // 场景状态
     int currentFloor_;             // 当前矿洞层数
-    // int dayCount_;                 // Removed, use TimeManager
 
     // ========== 怪物系统 ==========
     std::vector<Monster*> monsters_;
@@ -121,8 +120,6 @@ private:
 
     // ========== 时间系统 ==========
     // ========== 时间系统 ==========
-    // float accumulatedSeconds_;     // Removed
-    // float secondsPerDay_ = 120.0f; // Removed
 
     // ========== 宝箱系统 ==========
     std::vector<TreasureChest*> chests_;
@@ -151,7 +148,7 @@ private:
     void initCamera();
 
     /**
-     * @brief 初始化UI
+     * @brief 初始化界面
      */
     void initUI();
 
@@ -176,7 +173,7 @@ private:
     void updateCamera();
 
     /**
-     * @brief 更新UI显示
+     * @brief 更新界面显示
      */
     void updateUI();
 
@@ -262,8 +259,7 @@ private:
     cocos2d::Vec2 getRandomWalkablePosition() const;
 
     // 静态持久化数据：记录每一层宝箱最后一次被开启的周数
-    // key: floor, value: week
     static std::map<int, int> openedChestsPerWeek_;
 };
 
-#endif // __MINE_SCENE_H__
+#endif 

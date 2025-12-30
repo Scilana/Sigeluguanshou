@@ -1,4 +1,4 @@
-#ifndef __ENERGY_BAR_H__
+﻿#ifndef __ENERGY_BAR_H__
 #define __ENERGY_BAR_H__
 
 #ifndef NOMINMAX
@@ -9,7 +9,7 @@
 #include "Player.h"
 
 /**
- * @brief 能量条 UI 组件
+ * @brief 能量条控件
  */
 class EnergyBar : public cocos2d::Node
 {
@@ -30,4 +30,4 @@ private:
     void updateBar();
 };
 
-#endif // __ENERGY_BAR_H__
+#endif 

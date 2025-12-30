@@ -1,4 +1,4 @@
-#ifndef __MARKET_UI_H__
+﻿#ifndef __MARKET_UI_H__
 #define __MARKET_UI_H__
 
 #include "cocos2d.h"
@@ -61,4 +61,4 @@ private:
     void executeTrade();
 };
 
-#endif // __MARKET_UI_H__
+#endif 

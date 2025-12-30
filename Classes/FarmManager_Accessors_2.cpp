@@ -1,4 +1,4 @@
-
+﻿
 float FarmManager::getDayProgress() const
 {
     auto tm = TimeManager::getInstance();

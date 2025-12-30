@@ -1,4 +1,4 @@
-#include "Monster.h"
+﻿#include "Monster.h"
 #include "Player.h"
 #include "MineLayer.h"
 
@@ -117,7 +117,7 @@ void Monster::update(float delta)
         currentAttackCooldown_ -= delta;
     }
 
-    // AI逻辑
+    // 行为逻辑
     updateAI(delta);
 
     // 更新血条
@@ -177,7 +177,7 @@ void Monster::moveTowards(const Vec2& targetPos, float delta)
         }
         else
         {
-            // 简单的滑墙处理：尝试只移动 X 或 Y
+            // 简单的滑墙处理：尝试只移动水平或垂直方向
             Vec2 newPosX = myPos + Vec2(direction.x * moveSpeed_ * delta, 0);
             if (mapLayer_->isWalkable(newPosX))
             {

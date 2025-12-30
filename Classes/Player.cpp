@@ -1,11 +1,11 @@
-#include "Player.h"
+﻿#include "Player.h"
 #include "MapLayer.h"
 #include "FarmManager.h" 
 
 USING_NS_CC;
 
 // 【配置区域】
-// 图片尺寸：70x120
+// 图片尺寸：70乘120
 const float FRAME_WIDTH = 70.0f;
 const float FRAME_HEIGHT = 120.0f;
 
@@ -85,7 +85,7 @@ Player* Player::create()
 }
 
 // 析构函数：非常重要！
-// 释放我们手动 retain 的动画对象，防止内存泄漏
+// 释放手动保留的动画对象，防止内存泄漏
 Player::~Player()
 {
     CC_SAFE_RELEASE(walkUpAnimation_);
@@ -141,7 +141,6 @@ bool Player::init()
     this->setScale(0.3f);
 
     // 保持像素清晰，不模糊 (可选)
-    // this->getTexture()->setAliasTexParameters();
 
     // 4. 初始化移动相关数值
     baseMoveSpeed_ = 150.0f;
@@ -176,7 +175,7 @@ bool Player::init()
 
 void Player::onEnter()
 {
-    // 1. 必须调用父类的 onEnter
+    // 1. 必须先调用父类的进入回调
     Sprite::onEnter();
 
     // 2. 场景恢复显示时，强制重置按键状态
@@ -214,7 +213,7 @@ void Player::loadAnimations()
     usePickaxeLeftAnimation_ = nullptr;
     usePickaxeRightAnimation_ = nullptr;
 
-    // 2. 修正后的 Lambda 函数：区分走路和工具的命名格式
+    // 2. 修正后的闭包：区分走路与工具的命名格式
     auto createAnim = [](std::string actionName, std::string direction, int frameCount) -> Animation* {
         Vector<SpriteFrame*> frames;
         for (int i = 1; i <= frameCount; i++) {
@@ -222,12 +221,12 @@ void Player::loadAnimations()
 
             // 【关键修复】如果是走路动画，使用原版命名格式
             if (actionName == "walk") {
-                // 格式：characters/player_walk_down_1.png
+                // 例：角色行走下方向帧序列
                 filename = StringUtils::format("characters/player_walk_%s_%d.png", direction.c_str(), i);
             }
-            // 如果是工具动画 (UseAxe 或 UseHoe)，使用新版命名格式
+            // 工具动画使用新版命名格式
             else {
-                // 格式：characters/downUseHoe1.png
+                // 例：角色工具下方向帧序列
                 filename = StringUtils::format("characters/%s%s%d.png", direction.c_str(), actionName.c_str(), i);
             }
 
@@ -241,12 +240,12 @@ void Player::loadAnimations()
             if (frame) frames.pushBack(frame);
         }
 
-        // 走路速度 0.15f，挥动工具速度 0.1f (稍微快点)
+// 走路速度 0.15，挥动工具速度 0.1（稍微快点）
         float delay = (actionName == "walk") ? 0.15f : 0.1f;
         return Animation::createWithSpriteFrames(frames, delay);
         };
 
-    // 3. 加载走路动画 (这里 actionName 传 "walk"，会触发上面的 if 分支)
+    // 3. 加载走路动画
     walkDownAnimation_ = createAnim("walk", "down", 4);
     if (walkDownAnimation_) walkDownAnimation_->retain();
 
@@ -259,7 +258,7 @@ void Player::loadAnimations()
     walkRightAnimation_ = createAnim("walk", "right", 3);
     if (walkRightAnimation_) walkRightAnimation_->retain();
 
-    // 4. 加载斧头动画 (actionName 传 "UseAxe"，触发 else 分支)
+    // 4. 加载斧头动画
     useAxeDownAnimation_ = createAnim("UseAxe", "down", 3);
     if (useAxeDownAnimation_) useAxeDownAnimation_->retain();
 
@@ -272,8 +271,8 @@ void Player::loadAnimations()
     useAxeRightAnimation_ = createAnim("UseAxe", "right", 3);
     if (useAxeRightAnimation_) useAxeRightAnimation_->retain();
 
-    // 5. 加载锄头动画 (actionName 传 "UseHoe"，触发 else 分支)
-    // 注意：根据你的截图，down 只有 2 帧，其他是 3 帧
+    // 5. 加载锄头动画
+    // 注意：向下只有 2 帧，其余为 3 帧
     useHoeDownAnimation_ = createAnim("UseHoe", "down", 2);
     if (useHoeDownAnimation_) useHoeDownAnimation_->retain();
 
@@ -380,7 +379,7 @@ void Player::playAnimation(PlayerState state)
         else
         {
             // === 默认/斧头动画 ===
-            // (如果以后有镐子 Pickaxe，也可以在这里加 else if)
+            //（以后如果加入镐子，可在这里增加分支）
             if (isVertical) {
                 targetAnim = isUp ? useAxeUpAnimation_ : useAxeDownAnimation_;
             }
@@ -441,7 +440,7 @@ void Player::onAttackAnimationFinished()
     playAnimation(stateBeforeAttack_);
 }
 
-// 播放挥斧动画（按下J键时调用）
+// 播放挥斧动画（触发攻击时调用）
 void Player::playSwingAnimation()
 {
     if (isAttacking_) return; // 如果正在攻击，不重复触发
@@ -648,7 +647,7 @@ void Player::update(float delta)
     }
     else
     {
-        // 没有按键时，播放待机（会根据 facingDirection_ 显示对应的站立图）
+        // 没有按键时，播放待机（根据朝向显示对应站立图）
         playAnimation(PlayerState::IDLE);
     }
 }
@@ -697,8 +696,8 @@ void Player::updateMovement(float delta)
         }
         else
         {
-            // 2. 滑墙逻辑 (Slide along wall)
-            // 如果斜着走被挡住了，尝试只保留 X 轴移动
+            // 2. 贴墙滑动逻辑
+            // 如果斜着走被挡住了，尝试只保留水平移动
             Vec2 nextPosX = currentPos + Vec2(direction.x * moveSpeed_ * delta, 0);
             if (checkCollision(nextPosX) && std::abs(direction.x) > 0.1f)
             {
@@ -706,7 +705,7 @@ void Player::updateMovement(float delta)
             }
             else
             {
-                // 3. 尝试只保留 Y 轴移动
+                // 3. 尝试只保留垂直移动
                 Vec2 nextPosY = currentPos + Vec2(0, direction.y * moveSpeed_ * delta);
                 if (checkCollision(nextPosY) && std::abs(direction.y) > 0.1f)
                 {

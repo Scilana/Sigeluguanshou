@@ -1,4 +1,4 @@
-#ifndef __SKILL_MANAGER_H__
+﻿#ifndef __SKILL_MANAGER_H__
 #define __SKILL_MANAGER_H__
 
 #include "cocos2d.h"
@@ -36,7 +36,7 @@ public:
     virtual bool init() override;
 
     void recordAction(SkillType type, int count = 1);
-    void setSkillData(SkillType type, int level, int actionCount); // For loading
+    void setSkillData(SkillType type, int level, int actionCount); 
     const SkillData& getSkillData(SkillType type) const;
     int getSkillLevel(SkillType type) const;
     int getActionCount(SkillType type) const;
@@ -61,4 +61,4 @@ private:
     static size_t toIndex(SkillType type);
 };
 
-#endif // __SKILL_MANAGER_H__
+#endif 

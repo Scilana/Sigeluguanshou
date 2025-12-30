@@ -1,4 +1,4 @@
-#ifndef __MONSTER_H__
+﻿#ifndef __MONSTER_H__
 #define __MONSTER_H__
 
 #include "cocos2d.h"
@@ -13,7 +13,7 @@ class MineLayer;
  *
  * 职责：
  * - 怪物的基础属性和行为
- * - AI：追踪玩家、攻击
+ * - 行为：追踪玩家、攻击
  * - 受伤和死亡逻辑
  *
  * 注意：
@@ -65,7 +65,7 @@ public:
     float getAttackRange() const { return attackRange_; }
     std::string getMonsterName() const { return name_; }
 
-    // ========== AI相关 ==========
+    // ========== 行为相关 ==========
 
     /**
      * @brief 设置目标玩家
@@ -99,7 +99,7 @@ protected:
     // 楼层等级（影响属性）
     int floorLevel_;
 
-    // AI相关
+    // 行为相关
     Player* targetPlayer_;
     MineLayer* mapLayer_;
 
@@ -118,7 +118,7 @@ protected:
     virtual void initDisplay();
 
     /**
-     * @brief AI逻辑：追踪玩家
+     * @brief 行为逻辑：追踪玩家
      */
     virtual void updateAI(float delta);
 
@@ -138,4 +138,4 @@ protected:
     virtual void onDeath();
 };
 
-#endif // __MONSTER_H__
+#endif 

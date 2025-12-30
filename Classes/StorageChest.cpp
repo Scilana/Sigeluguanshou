@@ -1,4 +1,4 @@
-#include "StorageChest.h"
+﻿#include "StorageChest.h"
 
 USING_NS_CC;
 
@@ -36,7 +36,7 @@ void StorageChest::initDisplay()
 {
     displayNode_ = DrawNode::create();
 
-    // 参考 TreasureChest 的视觉表现，但可以用稍微不同的颜色
+    // 参考宝箱的视觉表现，颜色略有区分
     // 绘制箱体 (底座) - 棕色
     Vec2 bodyVertices[] = {
         Vec2(-14, -10),
@@ -57,7 +57,7 @@ void StorageChest::initDisplay()
     Color4F lidColor(0.55f, 0.3f, 0.1f, 1.0f);
     displayNode_->drawPolygon(lidVertices, 4, lidColor, 1, Color4F(0.3f, 0.15f, 0.05f, 1.0f));
     
-    // 银色边框 (Storage Chest 区别于 Mine Chest 的金色边框)
+    // 银色边框（区分于矿洞宝箱的金色边框）
     displayNode_->drawSolidRect(Vec2(-10, -10), Vec2(-8, 14), Color4F(0.7f, 0.7f, 0.7f, 1.0f)); // 左
     displayNode_->drawSolidRect(Vec2(8, -10), Vec2(10, 14), Color4F(0.7f, 0.7f, 0.7f, 1.0f));   // 右
 

@@ -1,4 +1,4 @@
-#include "MarketUI.h"
+﻿#include "MarketUI.h"
 #include "FarmManager.h"
 #include "InventoryManager.h"
 #include "MarketState.h"
@@ -132,13 +132,11 @@ void MarketUI::initLists()
     buyTitle_->setColor(Color3B(220, 220, 220));
     panel_->addChild(buyTitle_, 1);
     
-    // REMOVED Sell Title
 
     const auto& buyGoods = marketState_->getBuyGoods();
-    // const auto& sellGoods = marketState_->getSellGoods(); // Not showing sell goods in market anymore
 
     buyLabels_.clear();
-    sellLabels_.clear(); // Keep empty
+    sellLabels_.clear(); 
 
     for (size_t i = 0; i < buyGoods.size(); ++i)
     {
@@ -149,7 +147,6 @@ void MarketUI::initLists()
         buyLabels_.push_back(label);
     }
     
-    // REMOVED Sell Labels Loop
 }
 
 void MarketUI::initControls()
@@ -188,7 +185,6 @@ void MarketUI::refresh()
         buyLabels_[i]->setString(StringUtils::format("%s - %dG", name.c_str(), buyGoods[i].currentPrice));
     }
 
-    // Sell labels refresh removed
 
     updateHighlight();
     updateInfo();
@@ -202,10 +198,8 @@ void MarketUI::updateHighlight()
         buyLabels_[i]->setColor(selected ? Color3B(255, 215, 0) : Color3B(210, 210, 210));
     }
 
-    // Sell highlight removed
 
     buyTitle_->setColor(Color3B(255, 235, 200));
-    // sellTitle_ removed
 }
 
 void MarketUI::updateInfo()

@@ -1,4 +1,4 @@
-#include "BlacksmithUI.h"
+﻿#include "BlacksmithUI.h"
 #include "InventoryManager.h"
 
 USING_NS_CC;
@@ -82,9 +82,8 @@ bool BlacksmithUI::init()
     goldLabel_->setColor(Color3B(255, 215, 0));
     panel_->addChild(goldLabel_, 2);
 
-    // --- TABS ---
     auto btnRepair = MenuItemLabel::create(Label::createWithSystemFont("Repair", "Arial", 20), [this](Ref*){ switchMode(Mode::Repair); });
-    btnRepair->setPosition(Vec2(80, panelH - 60)); // Moved left
+    btnRepair->setPosition(Vec2(80, panelH - 60)); 
     auto btnShop = MenuItemLabel::create(Label::createWithSystemFont("Shop", "Arial", 20), [this](Ref*){ switchMode(Mode::Shop); });
     btnShop->setPosition(Vec2(160, panelH - 60));
     
@@ -144,7 +143,6 @@ void BlacksmithUI::refreshList()
             itemNode->setPosition(Vec2(0, -yOffset));
             listNode_->addChild(itemNode);
 
-             // Icon
             std::string iconPath = InventoryManager::getItemIconPath(item.type);
              Sprite* icon = nullptr;
             if (!iconPath.empty() && FileUtils::getInstance()->isFileExist(iconPath)) {
@@ -160,20 +158,17 @@ void BlacksmithUI::refreshList()
                 itemNode->addChild(icon);
             }
             
-            // Name
             auto nameLabel = Label::createWithSystemFont(item.name, "Arial", 18);
             nameLabel->setAnchorPoint(Vec2(0, 0.5f));
             nameLabel->setPosition(Vec2(70, -20));
             itemNode->addChild(nameLabel);
             
-            // Price
             auto priceLabel = Label::createWithSystemFont(StringUtils::format("%d G", item.price), "Arial", 14);
             priceLabel->setAnchorPoint(Vec2(0, 0.5f));
             priceLabel->setPosition(Vec2(70, -40));
             priceLabel->setColor(Color3B::YELLOW);
             itemNode->addChild(priceLabel);
             
-            // Buy Button
             auto buyLabel = Label::createWithSystemFont("Buy", "Arial", 16);
             auto buyBtn = MenuItemLabel::create(buyLabel, [this, item](Ref*){
                  this->onBuyClicked(item.type, item.price);
@@ -319,11 +314,10 @@ void BlacksmithUI::onBuyClicked(ItemType type, int price)
     if (!inventory) return;
 
     if (inventory->getMoney() >= price) {
-        if (inventory->addItem(type, 1)) { // Check if added
+        if (inventory->addItem(type, 1)) { 
             inventory->removeMoney(price);
-            review_alert_label(panel_, "Purchased!", Vec2(250, -320)); // Temp feedback
-            refreshList(); // Refresh money display if we had one (we don't currently show money in UI except implicitly)
-            // Ideally update title with money
+            review_alert_label(panel_, "Purchased!", Vec2(250, -320)); 
+            refreshList(); 
         } else {
              review_alert_label(panel_, "Inventory Full", Vec2(250, -320));
         }

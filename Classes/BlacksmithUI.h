@@ -1,4 +1,4 @@
-#ifndef __BLACKSMITH_UI_H__
+﻿#ifndef __BLACKSMITH_UI_H__
 #define __BLACKSMITH_UI_H__
 
 #include "cocos2d.h"
@@ -11,7 +11,7 @@ public:
     virtual bool init();
 
     /**
-     * @brief 显示 UI
+     * @brief 显示界面
      */
     void show();
     void close();
@@ -33,4 +33,4 @@ private:
     cocos2d::Label* goldLabel_{ nullptr };
 };
 
-#endif // __BLACKSMITH_UI_H__
+#endif 

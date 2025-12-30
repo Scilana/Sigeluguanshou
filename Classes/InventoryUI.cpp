@@ -1,4 +1,4 @@
-#include "InventoryUI.h"
+﻿#include "InventoryUI.h"
 #include "InventoryManager.h"
 #include "QuantityPopup.h"
 #include "MarketState.h"
@@ -39,7 +39,7 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
         return false;
     }
 
-    // 初始化UI组件
+    // 初始化界面组件
     initBackground();
     initPanel();
     initSlots();
@@ -47,7 +47,7 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
 
     selectedSlotIndex_ = -1; // -1 表示未选中
 
-    // 键盘监听（ESC 和 B 关闭）
+    // 键盘监听（退出键和快捷键关闭）
     auto keyListener = EventListenerKeyboard::create();
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
@@ -173,7 +173,6 @@ void InventoryUI::initSlots()
             listener->onTouchBegan = [this, slotIndex](Touch* touch, Event* event) {
                 auto target = static_cast<Sprite*>(event->getCurrentTarget());
                 
-                // Debugging Click Issue: Revert to standard and Log EVERYTHING
                 Vec2 locationInNode = target->convertTouchToNodeSpace(touch);
                 Size size = target->getContentSize();
                 Rect rect = Rect(0, 0, size.width, size.height);
@@ -324,7 +323,6 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
 
     if (!icon)
     {
-        // Fallback colored placeholder.
         icon = Sprite::create();
         icon->setTextureRect(Rect(0, 0, iconSize, iconSize));
         Color3B color = getItemColor(itemType);
@@ -352,49 +350,32 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
         icon->addChild(label, 1);
     }
 
-    // === Durability Bar ===
     if (slot.isTool() && slot.maxDurability > 0)
     {
         const float percent = static_cast<float>(slot.durability) / slot.maxDurability;
-        float barWidth = iconSize; // Full width of icon
+        float barWidth = iconSize; 
         float barHeight = 4.0f;
         
-        // Background (Black)
         auto barBg = LayerColor::create(Color4B::BLACK, barWidth, barHeight);
-        barBg->setPosition(Vec2(0, 0)); // Bottom of icon
-        // LayerColor anchor is usually (0,0), but strictly it's a layer. 
-        // Best to use DrawNode for small bars or just LayerColor.
-        // Since icon is a Sprite, (0,0) is bottom-left relative to its texture RECT if anchor is (0.5, 0.5) UNLESS it's a child.
-        // Sprites have anchor (0.5, 0.5) by default. Children are placed relative to (0,0) of the parent's content size space.
-        // Sprite content space (0,0) is bottom-left.
+        barBg->setPosition(Vec2(0, 0)); 
         float contentW = icon->getContentSize().width;
         float contentH = icon->getContentSize().height;
         
-        // We need to scale the bar to match the visual size, but the icon might be scaled.
-        // Providing a consistent overlay is easier if we attach it to a Node that isn't scaled, OR we handle scale.
-        // Actually, let's attach to the icon and inverse scale? No, that's complex.
-        // Let's attach to the icon but position at bottom.
         
-        // Using DrawNode is safer for dynamic sizing
         auto draw = DrawNode::create();
         
-        // Local coordinates on the icon
         Vec2 start(0, 0);
-        Vec2 end(contentW, contentH * 0.1f); // 10% height bar? Or fixed pixels?
-        // Let's use fixed logic assuming the icon roughly fills the slot visually
+        Vec2 end(contentW, contentH * 0.1f); 
         
         float w = contentW;
         float h = 5.0f; 
         
-        // Bg
         draw->drawSolidRect(Vec2(0, 0), Vec2(w, h), Color4F(0, 0, 0, 1));
         
-        // Fg color
         Color4F color = Color4F::GREEN;
         if (percent < 0.2f) color = Color4F::RED;
-        else if (percent < 0.5f) color = Color4F(1.0f, 0.8f, 0.0f, 1.0f); // Yellow/Orange
+        else if (percent < 0.5f) color = Color4F(1.0f, 0.8f, 0.0f, 1.0f); 
         
-        // Fg
         draw->drawSolidRect(Vec2(0, 0), Vec2(w * percent, h), color);
         
         icon->addChild(draw, 10);
@@ -406,13 +387,11 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
 void InventoryUI::onSlotClicked(int slotIndex)
 {
     
-    // Selection Mode Logic (For Merchant Sell)
     if (_selectionMode) {
         if (_onItemSelected) {
             const auto& slot = inventory_->getSlot(slotIndex);
             if (!slot.isEmpty()) { 
                 _onItemSelected(slotIndex, slot.type, slot.count);
-                // Note: We don't change internal selection or swap in this mode
             }
         }
         return;
@@ -496,7 +475,7 @@ void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
     {
         const int num = static_cast<int>(keyCode) - static_cast<int>(EventKeyboard::KeyCode::KEY_0);
-        int targetSlotIndex = (num == 0) ? 9 : num - 1; // 1->0, 2->1 ... 0->9
+        int targetSlotIndex = (num == 0) ? 9 : num - 1; // 数字键映射：1→0，2→1，…，0→9
 
         // 如果当前有选中的物品，交换
         if (selectedSlotIndex_ != -1)
@@ -523,7 +502,7 @@ void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
     }
 
-    // J 键转移物品
+    // 快捷键转移物品
     if (keyCode == EventKeyboard::KeyCode::KEY_J)
     {
         handleTransfer();
@@ -624,11 +603,11 @@ cocos2d::Color3B InventoryUI::getItemColor(ItemType itemType) const
         return Color3B(192, 192, 192);
 
     // 矿石
-    case ItemType::CopperOre: return Color3B(210, 105, 30);  // Chocolate orange
-    case ItemType::IronOre: return Color3B(112, 128, 144);    // Slate grey
-    case ItemType::SilverOre: return Color3B(224, 224, 224);  // Bright silver
-    case ItemType::GoldOre: return Color3B(255, 215, 0);     // Gold
-    case ItemType::DiamondOre: return Color3B(0, 255, 255);  // Cyan/Aqua
+    case ItemType::CopperOre: return Color3B(210, 105, 30);  
+    case ItemType::IronOre: return Color3B(112, 128, 144);    
+    case ItemType::SilverOre: return Color3B(224, 224, 224);  
+    case ItemType::GoldOre: return Color3B(255, 215, 0);     
+    case ItemType::DiamondOre: return Color3B(0, 255, 255);  
 
     default:
         return Color3B(128, 128, 128);
@@ -642,10 +621,8 @@ void InventoryUI::handleTransfer()
     const auto& slot = inventory_->getSlot(selectedSlotIndex_);
     if (slot.isEmpty()) return;
 
-    // --- Shipping Bin Logic ---
     if (partnerIsShippingBin_)
     {
-        // 1. Check if sellable
         int price = 0;
         if (marketState_) {
             price = marketState_->getSellPrice(slot.type);
@@ -653,13 +630,10 @@ void InventoryUI::handleTransfer()
 
         if (price <= 0) {
             infoLabel_->setString("Cannot sell this item!");
-            // Shake effect or red flash could be added here
             return;
         }
 
-        // 2. Transfer logic (similar to normal, but with feedback)
         
-        // Helper to perform transfer and show message
         auto doTransfer = [this, price](int count) {
             if (this->partnerInventory_->addItem(this->inventory_->getSlot(this->selectedSlotIndex_).type, count)) {
                 
@@ -677,18 +651,9 @@ void InventoryUI::handleTransfer()
 
         if (slot.count > 1) {
             int currentIndex = selectedSlotIndex_;
-            // 注意：这里需要重新获取 slot 信息或者传递捕获，因为 QuantityPopup 是异步的
-            // 为了简化，我们直接用 currentIndex 重新获取
-            // 修正：QuantityPopup 的回调里不能依赖 slot 引用，必须拷贝或者重新获取
+            // 数量弹窗回调是异步的，不能依赖旧引用。
+            // 回调中重新读取索引，避免选中项变化导致错位。
             auto popup = QuantityPopup::create(slot.count, [this, currentIndex, price, doTransfer](int count) {
-                 // 重新检查 slot
-                 // 由于 doTransfer 捕获了 this 和 selectedSlotIndex_ (隐式?) 
-                 // 我们需要确保 selectedSlotIndex_ 没变，或者我们在 doTransfer 里用 currentIndex
-                 // 简单的做法：直接把逻辑写在这里
-                 
-                 // 上面的 doTransfer 用了 `this->selectedSlotIndex_`，这可能是不安全的如果用户改选了
-                 // 真正安全的做法是重新检查 inventory_->getSlot(currentIndex)
-                 
                  const auto& verifySlot = this->inventory_->getSlot(currentIndex);
                  if (verifySlot.isEmpty()) return; 
                  
@@ -711,11 +676,10 @@ void InventoryUI::handleTransfer()
     }
     // --------------------------
 
-    // Normal Transfer (Storage Chest)
     if (slot.count > 1) {
         int currentIndex = selectedSlotIndex_; 
-        auto popup = QuantityPopup::create(slot.count, [this, currentIndex](int count) { // Remove 'slot' capture to avoid stale ref
-            const auto& currentSlot = this->inventory_->getSlot(currentIndex); // Re-fetch
+        auto popup = QuantityPopup::create(slot.count, [this, currentIndex](int count) { 
+            const auto& currentSlot = this->inventory_->getSlot(currentIndex); 
             if (currentSlot.isEmpty()) return;
 
             if (this->partnerInventory_->addItem(currentSlot.type, count)) {

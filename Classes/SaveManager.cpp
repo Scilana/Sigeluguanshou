@@ -1,4 +1,4 @@
-#include "SaveManager.h"
+﻿#include "SaveManager.h"
 #include "json/writer.h"
 #include "json/stringbuffer.h"
 #include "json/prettywriter.h"
@@ -286,7 +286,7 @@ bool SaveManager::saveGame(const SaveData& data)
     {
         std::string path = getSaveFilePath();
 
-        // 序列化为 JSON
+        // 序列化为存档文本
         rapidjson::Document doc = serializeToJson(data);
 
         // 转换为字符串
@@ -340,7 +340,7 @@ bool SaveManager::loadGame(SaveData& data)
             return false;
         }
 
-        // 解析 JSON
+        // 解析存档文本
         rapidjson::Document doc;
         doc.Parse(jsonStr.c_str());
 

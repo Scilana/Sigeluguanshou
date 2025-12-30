@@ -1,4 +1,4 @@
-#ifndef NOMINMAX
+﻿#ifndef NOMINMAX
 #define NOMINMAX
 #endif
 #include "cocos2d.h"
@@ -37,7 +37,6 @@ bool EnergyBar::init(Player* player)
     barNode_ = DrawNode::create();
     this->addChild(barNode_, 1);
 
-    // 标签 (E)
     auto label = Label::createWithSystemFont("E", "Arial", 16);
     label->setPosition(Vec2(0, -15));
     this->addChild(label, 2);
@@ -79,7 +78,7 @@ void EnergyBar::updateBar()
         barNode_->drawSolidRect(Vec2(-barWidth_/2, 0), Vec2(barWidth_/2, currentHeight), color);
     }
     
-    // 如果力竭，可以加个特殊效果，比如闪烁或者画个 X
+    // 如果力竭，可以加个特殊效果，比如闪烁或者画个叉
     if (player_->isExhausted())
     {
         // 可以在这里加点视觉提示

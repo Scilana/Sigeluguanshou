@@ -1,4 +1,4 @@
-#include "MarketState.h"
+﻿#include "MarketState.h"
 #include <algorithm>
 
 namespace {
@@ -19,7 +19,6 @@ void MarketState::buildDefaultGoods()
     buyGoods_.clear();
     sellGoods_.clear();
 
-    // Seeds (buy)
     buyGoods_.push_back({ItemType::SeedTurnip, 20, 20});
     buyGoods_.push_back({ItemType::SeedPotato, 30, 30});
     buyGoods_.push_back({ItemType::SeedCorn, 40, 40});
@@ -27,7 +26,6 @@ void MarketState::buildDefaultGoods()
     buyGoods_.push_back({ItemType::SeedPumpkin, 60, 60});
     buyGoods_.push_back({ItemType::SeedBlueberry, 45, 45});
 
-    // Crops (sell)
     sellGoods_.push_back({ItemType::Turnip, 60, 60});
     sellGoods_.push_back({ItemType::Potato, 80, 80});
     sellGoods_.push_back({ItemType::Corn, 120, 120});
@@ -35,7 +33,6 @@ void MarketState::buildDefaultGoods()
     sellGoods_.push_back({ItemType::Pumpkin, 180, 180});
     sellGoods_.push_back({ItemType::Blueberry, 110, 110});
 
-    // Fish
     sellGoods_.push_back({ItemType::Fish, 50, 50});
     sellGoods_.push_back({ItemType::ITEM_Anchovy, 30, 30});
     sellGoods_.push_back({ItemType::ITEM_Carp, 30, 30});
@@ -47,7 +44,6 @@ void MarketState::buildDefaultGoods()
     sellGoods_.push_back({ItemType::ITEM_Sturgeon, 200, 200});
     sellGoods_.push_back({ItemType::ITEM_Tilapia, 75, 75});
 
-    // Ores (Fixed Prices)
     sellGoods_.push_back({ItemType::CopperOre, 20, 20});
     sellGoods_.push_back({ItemType::IronOre, 50, 50});
     sellGoods_.push_back({ItemType::SilverOre, 100, 100});
@@ -96,7 +92,6 @@ void MarketState::adjustGoodPrice(MarketGood& good) const
 {
     int price = good.basePrice;
 
-    // Fixed price items (Ores) - do not fluctuate
     if (good.itemType == ItemType::CopperOre ||
         good.itemType == ItemType::IronOre ||
         good.itemType == ItemType::SilverOre ||

@@ -1,4 +1,4 @@
-#include "FishingLayer.h"
+﻿#include "FishingLayer.h"
 #include "SkillManager.h"
 #include "Fish.h"
 #include "InventoryManager.h"
@@ -42,13 +42,13 @@ bool FishingLayer::init(Fish* fish)
     
     // 物理参数
     barSpeed_ = 0.0f;
-    // 之前调整过的参数: gravity -5.0f, thrust 10.0f
+    // 之前调整的参数：重力 -5.0、推力 10.0
     gravity_ = -5.0f;     // 重力下坠
     thrust_ = 10.0f;       // 按住上升加速度
     bounce_ = -0.5f;       // 触底轻微反弹
     isHolding_ = false;
 
-    // 鱼 AI
+    // 鱼的行为
     fishSpeed_ = 0.0f;
     fishTargetPos_ = 0.5f;
     moveTimer_ = 0.0f;
@@ -79,7 +79,7 @@ void FishingLayer::initUI()
     this->addChild(barBg, 1);
     barBase_ = (Sprite*)barBg; // 强转保存引用
 
-    // 2. 绿条 (Player control)
+    // 2. 绿条（玩家控制）
     auto green = LayerColor::create(Color4B(100, 255, 100, 200));
     green->setContentSize(Size(36, greenBarHeight_));
     green->ignoreAnchorPointForPosition(false);
@@ -87,8 +87,8 @@ void FishingLayer::initUI()
     barBg->addChild(green, 2);
     greenBar_ = (Sprite*)green;
 
-    // 3. 鱼 (Target)
-    std::string fishIcon = "fish/Carp.png"; // Default
+    // 3. 鱼（目标）
+    std::string fishIcon = "fish/Carp.png"; 
     if (currentFish_) {
         fishIcon = InventoryManager::getItemIconPath(currentFish_->getType());
     }
@@ -98,7 +98,6 @@ void FishingLayer::initUI()
 
     auto fish = Sprite::create(fishIcon);
     if (!fish) {
-        // Fallback to red box if icon missing
         auto fallbackFish = LayerColor::create(Color4B(255, 100, 100, 255));
         fallbackFish->setContentSize(Size(20, 20));
         fallbackFish->ignoreAnchorPointForPosition(false);
@@ -106,7 +105,6 @@ void FishingLayer::initUI()
         barBg->addChild(fallbackFish, 3);
         fishSprite_ = (Sprite*)fallbackFish;
     } else {
-        // Adjust fish icon size
         float targetSize = 24.0f;
         float scale = std::min(targetSize / fish->getContentSize().width, targetSize / fish->getContentSize().height);
         fish->setScale(scale);
@@ -115,13 +113,13 @@ void FishingLayer::initUI()
         fishSprite_ = fish;
     }
 
-    // 4. 右侧进度条 (Catch progress)
+    // 4. 右侧进度条（捕获进度）
     auto progressBg = LayerColor::create(Color4B(0, 0, 0, 255));
     progressBg->setContentSize(Size(15, barHeight_));
     progressBg->ignoreAnchorPointForPosition(false);
     progressBg->setAnchorPoint(Vec2(0.5, 0.5));
     progressBg->setPosition(center + Vec2(30, 0));
-    this->addChild(progressBg, 1); // 修正为 add 到 this, 否则位置不对? 不, 这里是相对 center 偏移
+    this->addChild(progressBg, 1); // 这里按中心点偏移，保持添加到当前层即可
 
     // 前景
     auto progressFg = LayerColor::create(Color4B(255, 215, 0, 255)); // 金色

@@ -1,11 +1,11 @@
-#pragma once
+﻿#pragma once
 #ifndef __MAP_LAYER_H__
 #define __MAP_LAYER_H__
 
 #include "cocos2d.h"
 
 /**
- * TMX 地图包装层：提供碰撞查询、坐标转换和清理瓦片的接口。
+ * 地图包装层：提供碰撞查询、坐标转换和清理瓦片的接口。
  */
 class MapLayer : public cocos2d::Layer
 {
@@ -42,4 +42,4 @@ private:
     void initCollisionLayer();
 };
 
-#endif // __MAP_LAYER_H__
+#endif 

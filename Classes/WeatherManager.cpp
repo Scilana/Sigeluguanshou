@@ -1,4 +1,4 @@
-#include "WeatherManager.h"
+﻿#include "WeatherManager.h"
 
 USING_NS_CC;
 

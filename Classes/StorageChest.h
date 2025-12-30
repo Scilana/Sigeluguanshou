@@ -1,4 +1,4 @@
-#ifndef __STORAGE_CHEST_H__
+﻿#ifndef __STORAGE_CHEST_H__
 #define __STORAGE_CHEST_H__
 
 #include "cocos2d.h"
@@ -8,8 +8,8 @@
  * @brief 储物箱类
  * 
  * 职责：
- * - 维护自己的 InventoryManager (32格)
- * - 记录地理坐标 (TileCoord)
+ * - 维护自己的物品管理器（32 格）
+ * - 记录地理坐标
  * - 处理交互
  */
 class StorageChest : public cocos2d::Node
@@ -35,4 +35,4 @@ protected:
     cocos2d::DrawNode* displayNode_;
 };
 
-#endif // __STORAGE_CHEST_H__
+#endif 

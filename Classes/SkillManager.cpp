@@ -1,4 +1,4 @@
-#include "SkillManager.h"
+﻿#include "SkillManager.h"
 #include <algorithm>
 
 USING_NS_CC;

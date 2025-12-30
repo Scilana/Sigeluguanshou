@@ -1,4 +1,4 @@
-#ifndef __GAME_SCENE_H__
+﻿#ifndef __GAME_SCENE_H__
 #define __GAME_SCENE_H__
 
 #include "cocos2d.h"
@@ -8,7 +8,7 @@
 #include "Player.h"
 #include "FarmManager.h"
 #include "FishingLayer.h"
-#include "InventoryManager.h" // 包含 ItemType 定义
+#include "InventoryManager.h" // 物品类型定义
 #include "InventoryUI.h"
 #include "MarketState.h"
 #include "MineScene.h"
@@ -96,7 +96,7 @@ private:
     SkillTreeUI* skillUI_;
 
     // ==========================================
-    // UI层与元素
+    // 界面层与元素
     // ==========================================
     cocos2d::Layer* uiLayer_;
     cocos2d::LayerColor* dayNightLayer_;
@@ -131,7 +131,7 @@ private:
     // 更新循环函数
     // ==========================================
     void updateCamera(); // 更新摄像机位置（跟随玩家）
-    void updateUI();     // 更新UI显示
+    void updateUI();     // 更新界面显示
     void updateWeather();
     void updateDayNightLighting();
 
@@ -144,11 +144,11 @@ private:
         None,
         Greeting,
         Choice,
-        BuyTransition, // New State
-        BuyPre, // Actually this might be redundant, let's just use BuyTransition as the pre-state
-        Buy,    // In Market
+        BuyTransition, 
+        BuyPre, 
+        Buy,    
         SellPre,
-        Sell,   // In Inventory Selection
+        Sell,   
         TradeConfirm,
         End,
         Reject
@@ -156,16 +156,14 @@ private:
     MerchantState merchantState_;
     Npc* activeNpc_;
     
-    // For selling details
     ItemType pendingSellItem_;
     int pendingSellCount_;
     
     void startMerchantInteraction(Npc* npc);
     void advanceMerchantDialogue();
     void endMerchantInteraction();
-    void onMerchantChoice(int choiceIndex); // 0: Buy, 1: Sell
+    void onMerchantChoice(int choiceIndex); 
     
-    // Callbacks
     void handleSellSelection(int slotIndex, ItemType type, int count);
     void onQuantityConfirmed(int quantity);
     void onTradeConfirmResult(bool confirmed);
@@ -197,18 +195,18 @@ private:
     const cocos2d::Vec2 ELEVATOR_POS = cocos2d::Vec2(1202, 226);
 
     /**
-     * @brief ESC键回调
+     * @brief 退出键回调
      */
 
 
     /**
-     * @brief 处理农田动作（J: till/plant/harvest，K: water）
-     * @param waterOnly true=仅浇水，false=按顺序收获/种植/耕地
+     * @brief 处理农田动作（耕地/播种/收获；浇水）
+     * @param waterOnly 为真仅浇水，为假按顺序收获/种植/耕地
      */
     void handleFarmAction(bool waterOnly);
 
     /**
-     * @brief 处理储物箱放置 (K键)
+     * @brief 处理储物箱放置
      */
     void handleChestPlacement();
 
@@ -223,7 +221,7 @@ private:
     void showActionMessage(const std::string& text, const cocos2d::Color3B& color);
 
     /**
-     * @brief ESC键回调
+     * @brief 退出键回调
      */
     void onKeyPressed(cocos2d::EventKeyboard::KeyCode keyCode, cocos2d::Event* event);
     
@@ -232,7 +230,7 @@ private:
     void onMouseUp(cocos2d::Event* event);
 
     // ==========================================
-    // 钓鱼系统 (Fishing Logic)
+    // 钓鱼系统（逻辑）
     // ==========================================
     void startFishing();
     void updateFishingState(float delta);
@@ -251,7 +249,6 @@ private:
     cocos2d::Sprite* exclamationMark_ = nullptr;
     
     // ==========================================
-    // NPC System
     // ==========================================
     DialogueBox* dialogueBox_ = nullptr;
     std::vector<Npc*> npcs_;
@@ -272,7 +269,7 @@ private:
     int lastWeatherDay_ = 0;
 
     // ==========================================
-    // 砍树系统 (New Architecture from GameScene1)
+    // 砍树系统（沿用旧结构）
     // ==========================================
     
     /**
@@ -310,7 +307,7 @@ private:
     bool findNearbyCollisionTile(const cocos2d::Vec2& centerTile, cocos2d::Vec2& outTile) const;
 
     /**
-     * @brief 创建树木精灵（清除瓦片并在原位生成Sprite）
+     * @brief 创建树木精灵（清除瓦片并在原位生成精灵）
      */
     cocos2d::Sprite* createTreeSprite(const std::vector<cocos2d::Vec2>& tiles);
 
@@ -359,4 +356,4 @@ private:
     void applySaveData(const SaveManager::SaveData& data);
 };
 
-#endif // __GAME_SCENE_H__
+#endif 

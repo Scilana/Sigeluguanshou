@@ -5,7 +5,7 @@
 #include <string>
 #include <vector>
 
-class GameScene; // Forward declaration
+class GameScene; 
 
 class Npc : public cocos2d::Sprite {
 public:
@@ -33,4 +33,4 @@ private:
     NpcType type_;
 };
 
-#endif // __NPC_H__
+#endif 

@@ -1,4 +1,4 @@
-#include "MineLayer.h"
+﻿#include "MineLayer.h"
 
 USING_NS_CC;
 
@@ -16,7 +16,7 @@ MineLayer* MineLayer::create(const std::string& tmxFile)
 
 bool MineLayer::init(const std::string& tmxFile)
 {
-    // 调用父类的 init 来加载 TMX 地图
+    // 调用父类初始化加载地图
     if (!MapLayer::init(tmxFile))
     {
         return false;
@@ -26,7 +26,7 @@ bool MineLayer::init(const std::string& tmxFile)
     stairsLayer_ = nullptr;
 
 
-    // 新的矿洞地图使用 "Buildings" 层作为碰撞层
+    // 新的矿洞地图使用建筑层作为碰撞层
     auto tmxMap = getTMXMap();
     if (tmxMap)
     {
@@ -106,18 +106,18 @@ bool MineLayer::isStairsAt(const Vec2& tileCoord) const
 
 bool MineLayer::isWalkable(const Vec2& position) const
 {
-    // 1. 检查障碍物 (Buildings 层，通过父类 MapLayer 检查)
+    // 1. 检查障碍物（建筑层，通过父类检查）
     if (!MapLayer::isWalkable(position)) return false;
 
-    // 2. 检查地面 (Back 层)
-    // 只有 Back 层有图块的地方才是地面，没有图块的地方是虚空/墙壁
+    // 2. 检查地面（背景层）
+    // 只有背景层有图块的地方才是地面，没有图块则为虚空或墙壁
     auto tmxMap = getTMXMap();
     if (!tmxMap) return false;
 
     auto backLayer = tmxMap->getLayer("Back");
     if (!backLayer) 
     {
-        // 如果没有 Back 层，尝试找 baseLayer
+        // 如果没有背景层，尝试找基础层
         // 或者直接信任父类的判断
         return true; 
     }
@@ -132,7 +132,7 @@ bool MineLayer::isWalkable(const Vec2& position) const
         return false;
     }
 
-    // 检查 Back 层是否有图块
+    // 检查背景层是否有图块
     int gid = backLayer->getTileGIDAt(tileCoord);
     return gid != 0;
 }

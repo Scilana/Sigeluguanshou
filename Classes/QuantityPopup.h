@@ -1,4 +1,4 @@
-#ifndef __QUANTITY_POPUP_H__
+﻿#ifndef __QUANTITY_POPUP_H__
 #define __QUANTITY_POPUP_H__
 
 #include "cocos2d.h"
@@ -30,4 +30,4 @@ private:
     void createUI();
 };
 
-#endif // __QUANTITY_POPUP_H__
+#endif 

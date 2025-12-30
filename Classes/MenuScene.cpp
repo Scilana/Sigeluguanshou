@@ -1,4 +1,4 @@
-#include "MenuScene.h"
+﻿#include "MenuScene.h"
 #include "GameScene.h"
 #include "SaveManager.h"
 #include "SimpleAudioEngine.h"
@@ -52,7 +52,6 @@ cocos2d::MenuItemImage* MenuScene::createImageButton(
     return button;
 }
 
-// ========== Background ==========
 
 void MenuScene::createBackground()
 {
@@ -102,7 +101,6 @@ void MenuScene::createBackground()
     }
 }
 
-// ========== Logo ==========
 
 void MenuScene::createLogo()
 {
@@ -128,7 +126,6 @@ void MenuScene::createLogo()
     this->addChild(logo, 10);
 }
 
-// ========== Menu Buttons ==========
 
 void MenuScene::createMenuButtons()
 {
@@ -196,7 +193,6 @@ void MenuScene::createMenuButtons()
     }
 }
 
-// ========== Decorations ==========
 
 void MenuScene::createDecorations()
 {
@@ -228,7 +224,6 @@ void MenuScene::createDecorations()
     }
 }
 
-// ========== Animations ==========
 
 void MenuScene::addAnimations()
 {
@@ -262,7 +257,6 @@ void MenuScene::addAnimations()
     }
 }
 
-// ========== Callbacks ==========
 
 void MenuScene::startGameCallback(Ref* sender)
 {
@@ -271,7 +265,6 @@ void MenuScene::startGameCallback(Ref* sender)
     if (SaveManager::getInstance()->hasSaveFile())
     {
         // 可以选择删除旧存档或提示用户
-        // SaveManager::getInstance()->deleteSaveFile();
     }
 
     // 创建新游戏（不加载存档）
@@ -315,7 +308,7 @@ void MenuScene::continueGameCallback(Ref* sender)
     }
 
     // 有存档，加载游戏
-    auto scene = GameScene::createScene(true);  // true 表示从存档加载
+    auto scene = GameScene::createScene(true);  // 为真表示从存档加载
     Director::getInstance()->replaceScene(
         TransitionFade::create(1.0f, scene)
     );

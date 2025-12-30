@@ -1,4 +1,4 @@
-#include "ElevatorUI.h"
+﻿#include "ElevatorUI.h"
 
 USING_NS_CC;
 
@@ -23,18 +23,18 @@ bool ElevatorUI::init()
     if (!Layer::init())
         return false;
 
-    // 设置全局 Z-order
+    // 设置全局层级
     this->setGlobalZOrder(2000);
 
     inputText_ = "";
 
-    // 创建UI组件
+    // 创建界面组件
     createBackground();
     createPanel();
     
     // 隐藏原来的点击按钮，只显示列表信息
     // 我们可以直接禁用它们或者改变显示方式。
-    // 为了满足需求 "锁定一切其他操作"，我们将 swallow touches。
+    // 为满足“锁定其他操作”，启用触摸吞噬。
     createFloorButtons();
 
     // 键盘监听（高优先级）
@@ -186,14 +186,14 @@ void ElevatorUI::onCloseButtonClicked(Ref* sender)
 
 void ElevatorUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
 {
-    // ESC 退出
+    // 退出键关闭
     if (keyCode == EventKeyboard::KeyCode::KEY_ESCAPE)
     {
         close();
         return;
     }
 
-    // Enter 确认
+    // 回车确认
     if (keyCode == EventKeyboard::KeyCode::KEY_ENTER)
     {
         if (inputText_.empty()) return;
@@ -225,7 +225,7 @@ void ElevatorUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         return;
     }
 
-    // Backspace 删除
+    // 退格删除
     if (keyCode == EventKeyboard::KeyCode::KEY_BACKSPACE || 
         keyCode == EventKeyboard::KeyCode::KEY_DELETE)
     {
@@ -244,13 +244,8 @@ void ElevatorUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
         number = static_cast<int>(keyCode) - static_cast<int>(EventKeyboard::KeyCode::KEY_0);
     }
-    // 注意：部分 Cocos2d-x 版本可能使用不同的枚举名（如 KEY_NUMPAD0），
-    // 或者根本没有定义小键盘枚举。为避免编译错误，暂时移除小键盘支持，
-    // 或者如果确实需要，可以尝试 KEY_KP_ENTER (已确认有报错吗？图片只显示 KP_0/9)
-    // 根据报错，KEY_KP_ENTER 可能也被报错，检查图片...
-    // 图片显示 KEY_KP_0, KEY_KP_9 未定义。KEY_KP_ENTER 我们在上面用到了，
-    // 需要检查是否也报错。虽然图片里没红线，但最好一起处理。
-    // 为了安全，我们暂时只用主键盘数字键。
+    // 注意：不同版本的小键盘枚举名可能不同，先移除小键盘支持。
+    // 需要时再补充对应枚举。
     
     if (number != -1)
     {

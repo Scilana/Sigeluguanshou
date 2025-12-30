@@ -1,4 +1,4 @@
-#ifndef __INVENTORY_MANAGER_H__
+﻿#ifndef __INVENTORY_MANAGER_H__
 #define __INVENTORY_MANAGER_H__
 
 #include "cocos2d.h"
@@ -7,7 +7,7 @@
 #include <string>
 
 /**
- * @brief 物品类型枚举（与 GameScene 中保持一致）
+ * @brief 物品类型枚举（与主场景保持一致）
  */
 enum class ItemType
 {
@@ -43,7 +43,7 @@ enum class ItemType
     ITEM_IronSword,      // 铁剑
     ITEM_GoldSword,      // 金剑
     ITEM_DiamondSword,   // 钻石剑
-    // 鱼类 [New]
+    // 鱼类（新增）
     ITEM_Anchovy,        // 鳀鱼
     ITEM_Carp,           // 鲤鱼
     ITEM_Eel,            // 鳗鱼
@@ -74,7 +74,7 @@ public:
     {
         ItemType type = ItemType::ITEM_NONE;
         int count = 0;
-        int durability = -1;    // -1 means no durability (e.g. materials/crops)
+        int durability = -1;    
         int maxDurability = -1;
 
         bool isEmpty() const { return type == ItemType::ITEM_NONE || count <= 0; }
@@ -210,7 +210,7 @@ public:
     static std::string getItemDescription(ItemType itemType);
 
     /**
-     * @brief Get item icon resource path (empty if unavailable).
+     * @brief 获取物品图标资源路径（不可用则返回空）
      */
     static std::string getItemIconPath(ItemType itemType);
 
@@ -288,4 +288,4 @@ public:
     int findItemSlot(ItemType itemType) const;
 };
 
-#endif // __INVENTORY_MANAGER_H__
+#endif 

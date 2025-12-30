@@ -1,11 +1,11 @@
-#ifndef __PLAYER_H__
+﻿#ifndef __PLAYER_H__
 #define __PLAYER_H__
 
 #include "cocos2d.h"
 #include "InventoryManager.h"
 #include <functional>
 
-// 前向声明，告诉编译器 MapLayer 类的存在
+// 前向声明，声明地图层类型
 class MapLayer;
 class FarmManager;
 
@@ -19,7 +19,7 @@ public:
     static Player* create();
     virtual bool init();
 
-    // 析构函数：用于清理 retain 的动画对象
+    // 析构函数：清理保留的动画对象
     virtual ~Player();
 
     // 每帧更新
@@ -64,7 +64,6 @@ public:
     // 触发挥舞动作（对外接口）
     void playSwingAnimation();
 
-    // Fishing animation helpers
     void startFishingCast();
     void startFishingWait();
     void startFishingReel(const std::function<void()>& onFinished = nullptr);
@@ -102,7 +101,7 @@ private:
     PlayerState stateBeforeAttack_;         // 保存攻击前的状态，用于攻击结束后恢复
     cocos2d::Action* currentAnimAction_;    // 当前正在播放的动作（用于停止它）
 
-    // 缓存的行走动画数据（使用 retain 保持引用）
+    // 缓存的行走动画数据（保持引用）
     cocos2d::Animation* walkUpAnimation_;
     cocos2d::Animation* walkDownAnimation_;
     cocos2d::Animation* walkLeftAnimation_;
@@ -158,7 +157,7 @@ private:
 
     // 动作状态标志
     bool isAttacking_;      // 是否正在播放攻击动画（此时锁定移动）
-    bool isAttackPressed_;  // 是否按下了攻击键（J键）
+    bool isAttackPressed_;  // 是否按下攻击键
 
     // 按键状态标志
     bool isFishingAnim_ = false;
@@ -194,4 +193,4 @@ private:
     void updateMovement(float delta);
 };
 
-#endif // __PLAYER_H__
+#endif 

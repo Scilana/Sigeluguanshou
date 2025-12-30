@@ -1,4 +1,4 @@
-#ifndef __TREASURE_CHEST_H__
+﻿#ifndef __TREASURE_CHEST_H__
 #define __TREASURE_CHEST_H__
 
 #include "cocos2d.h"
@@ -75,4 +75,4 @@ private:
     void playOpenAnimation();
 };
 
-#endif // __TREASURE_CHEST_H__
+#endif 

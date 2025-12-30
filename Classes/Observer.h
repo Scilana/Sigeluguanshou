@@ -1,7 +1,4 @@
-// Observer.h
-// Generic Observer Pattern Template
-// Provides type-safe event notification system
-
+﻿
 #ifndef __OBSERVER_H__
 #define __OBSERVER_H__
 
@@ -30,35 +27,13 @@ public:
 };
 
 /**
- * @brief 被观察者(Subject)模板类
+ * @brief 被观察者模板类
  *
  * @tparam EventType 事件数据类型
  *
  * 维护观察者列表并通知它们事件
  *
- * 用法示例:
- * @code
- * struct HealthChangedEvent {
- *     int oldHealth;
- *     int newHealth;
- * };
- *
- * class Player : public Observable<HealthChangedEvent> {
- * public:
- *     void takeDamage(int damage) {
- *         int oldHp = hp_;
- *         hp_ -= damage;
- *         notifyObservers({oldHp, hp_});
- *     }
- * };
- *
- * class HealthBar : public IObserver<HealthChangedEvent> {
- * public:
- *     void onNotify(const HealthChangedEvent& event) override {
- *         updateDisplay(event.newHealth);
- *     }
- * };
- * @endcode
+ * 示例略
  */
 template<typename EventType>
 class Observable {
@@ -116,7 +91,7 @@ protected:
                 } catch (const std::exception& e) {
                     // 捕获观察者中的异常，防止影响其他观察者
                     // 在实际项目中应该记录日志
-                    static_cast<void>(e); // Suppress unused variable warning
+                    static_cast<void>(e); 
                 }
             }
         }
@@ -131,7 +106,7 @@ private:
  *
  * @tparam EventType 事件数据类型
  *
- * 允许使用lambda或函数对象作为观察者
+ * 允许使用匿名函数或函数对象作为观察者
  */
 template<typename EventType>
 class FunctionObserver : public IObserver<EventType> {
@@ -151,4 +126,4 @@ private:
     CallbackType callback_;
 };
 
-#endif // __OBSERVER_H__
+#endif 

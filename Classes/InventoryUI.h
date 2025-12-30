@@ -1,4 +1,4 @@
-#ifndef __INVENTORY_UI_H__
+﻿#ifndef __INVENTORY_UI_H__
 #define __INVENTORY_UI_H__
 
 #include "cocos2d.h"
@@ -9,7 +9,7 @@ class MarketState;
 class StorageChest;
 
 /**
- * @brief 背包UI层
+ * @brief 背包界面层
  *
  * 职责：
  * - 显示背包界面
@@ -21,7 +21,7 @@ class InventoryUI : public cocos2d::Layer
 {
 public:
     /**
-     * @brief 创建背包UI
+     * @brief 创建背包界面
      * @param inventory 背包管理器引用
      */
     static InventoryUI* create(InventoryManager* inventory, MarketState* marketState = nullptr);
@@ -64,7 +64,6 @@ public:
     void setInventoryManager(InventoryManager* inventoryManager);
     void updateSlot(int index);
     
-    // Selection Mode
     typedef std::function<void(int slotIndex, ItemType type, int count)> ItemSelectCallback;
     void setSelectionMode(bool enabled);
     void setOnItemSelectedCallback(const ItemSelectCallback& callback);
@@ -76,7 +75,6 @@ private:
     std::vector<cocos2d::Label*> _countLabels;
     std::vector<cocos2d::Sprite*> _iconSprites;
     
-    // Selection
     bool _selectionMode;
     ItemSelectCallback _onItemSelected;
     MarketState* marketState_{ nullptr };            // 市场状态，用于查询价格
@@ -92,7 +90,7 @@ private:
     int selectedSlotIndex_;                          // 当前选中的槽位索引
     void updateSelection();                          // 更新选中状态显示
 
-    static const int ROWS = 4;                       // 行数 (4x8=32)
+    static const int ROWS = 4;                       // 行数（4乘8，共32）
     static const int COLS = 8;                       // 列数
     static const float SLOT_SIZE;                    // 格子大小
     static const float SLOT_SPACING;                 // 格子间距
@@ -132,7 +130,6 @@ private:
      * @param slotIndex 槽位索引
      */
 
-    // Removed duplicate updateSlot declaration
 
     /**
      * @brief 创建格子背景
@@ -170,4 +167,4 @@ private:
     void handleTransfer();
 };
 
-#endif // __INVENTORY_UI_H__
+#endif 

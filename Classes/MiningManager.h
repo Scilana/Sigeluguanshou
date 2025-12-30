@@ -1,4 +1,4 @@
-#ifndef __MINING_MANAGER_H__
+﻿#ifndef __MINING_MANAGER_H__
 #define __MINING_MANAGER_H__
 
 #include "cocos2d.h"
@@ -23,7 +23,7 @@ public:
      */
     struct MineralDef
     {
-        int id;                    // 矿物ID
+        int id;                    // 矿物编号
         std::string name;          // 名称
         int hitPoints;             // 需要敲击次数
         ItemType dropItem;         // 掉落物品类型
@@ -61,7 +61,7 @@ public:
 
     /**
      * @brief 获取矿物信息
-     * @param gid 矿物 GID
+     * @param gid 矿物编号
      */
     const MineralDef* getMineralDef(int gid) const;
 
@@ -109,4 +109,4 @@ private:
     std::string dropItems(const cocos2d::Vec2& tileCoord, const MineralDef& mineralDef);
 };
 
-#endif // __MINING_MANAGER_H__
+#endif 

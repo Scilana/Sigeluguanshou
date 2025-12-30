@@ -1,4 +1,4 @@
-#include "Zombie.h"
+﻿#include "Zombie.h"
 
 USING_NS_CC;
 
@@ -58,11 +58,8 @@ void Zombie::initDisplay()
         {
             spriteLoaded = true;
 
-            // Pixel art settings
             this->getTexture()->setAliasTexParameters();
             
-            // "Sway" animation (Idle)
-            // Rotate slightly left and right to simulate breathing/standing
             float duration = 1.0f;
             float angle = 5.0f;
             auto swayRight = RotateBy::create(duration, angle);

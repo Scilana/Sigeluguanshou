@@ -1,4 +1,4 @@
-#include "Weapon.h"
+﻿#include "Weapon.h"
 
 int Weapon::getWeaponAttackPower(ItemType type)
 {

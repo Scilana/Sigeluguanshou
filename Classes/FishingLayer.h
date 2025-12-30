@@ -1,4 +1,4 @@
-#ifndef __FISHING_LAYER_H__
+﻿#ifndef __FISHING_LAYER_H__
 #define __FISHING_LAYER_H__
 
 #include "cocos2d.h"
@@ -32,24 +32,20 @@ private:
     Sprite* fishSprite_;
     ui::LoadingBar* progressBar_;
 
-    // Parameters
     float barHeight_;
     float greenBarHeight_;
     
-    // Physics
-    float barPosition_; // 0.0 - 1.0 (relative to barBottom)
+    float barPosition_; 
     float barSpeed_;
     float gravity_;
     float thrust_;
     float bounce_;
     
-    // Fish
     float fishPosition_; // 0.0 - 1.0
     float fishSpeed_;
     float fishTargetPos_;
     float moveTimer_;
 
-    // Game State
     float catchProgress_; // 0.0 - 1.0
     bool isHolding_;
     bool isGameOver_;
@@ -58,4 +54,4 @@ private:
     std::function<void(bool)> finishCallback_;
 };
 
-#endif // __FISHING_LAYER_H__
+#endif 

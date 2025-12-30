@@ -1,4 +1,4 @@
-#include "MiningManager.h"
+﻿#include "MiningManager.h"
 #include "SkillManager.h"
 #include <algorithm>
 
@@ -42,10 +42,10 @@ bool MiningManager::init(MineLayer* mineLayer, InventoryManager* inventory)
 
 void MiningManager::initMineralDefs()
 {
-    // 注意：这里的 GID 需要根据你的 tileset 实际情况调整
-    // 这里使用示例 GID，你需要在 Tiled 中查看实际的 GID 值
+    // 注意：这里的图块编号需根据图块集实际情况调整
+    // 当前是示例编号，可在地图编辑器中查看实际值
 
-    // 石头（普通）- GID 138-141 (mine.tmx) 以及 1001 (旧定义)
+    // 普通石头：编号 138-141（矿洞地图文件）以及 1001（旧定义）
     std::vector<int> stoneGids = { 138, 139, 140, 141, 1001 };
     for (int gid : stoneGids) {
         mineralDefs_[gid] = MineralDef{
@@ -58,7 +58,7 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    // 铜矿石 - 覆盖 289 偏移后的范围 (例如 local 586 -> gid 875)
+    // 铜矿石：289 偏移后的范围（如本地 586 -> 编号 875）
     // 同时也保留之前的 521-555 兼容老地图
     for (int gid = 870; gid <= 880; ++gid) {
         mineralDefs_[gid] = MineralDef{
@@ -103,7 +103,7 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    // 银矿石 - 289 偏移范围 (local 620-630 -> gid 900-920 约略)
+    // 银矿石：289 偏移范围（本地 620-630 -> 编号 900-920，约略）
     for (int gid = 900; gid <= 920; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
@@ -125,7 +125,7 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    // 金矿石 - GID 649-723
+    // 金矿石：编号 649-723
     for (int gid = 649; gid <= 723; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
@@ -137,7 +137,7 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    // 钻石矿 - GID 800-810
+    // 钻石矿：编号 800-810
     for (int gid = 800; gid <= 810; ++gid) {
         mineralDefs_[gid] = MineralDef{
             gid,
@@ -159,7 +159,7 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
         return { false, "No mineral here" };
     }
 
-    // 获取矿物 GID
+    // 获取矿物编号
     int gid = mineLayer_->getMineralGID(tileCoord);
 
     // 查找矿物定义

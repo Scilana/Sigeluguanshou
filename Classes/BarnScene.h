@@ -1,4 +1,4 @@
-#ifndef __BARN_SCENE_H__
+﻿#ifndef __BARN_SCENE_H__
 #define __BARN_SCENE_H__
 
 #include "cocos2d.h"
@@ -61,4 +61,4 @@ private:
     void exitBarn();
 };
 
-#endif // __BARN_SCENE_H__
+#endif 

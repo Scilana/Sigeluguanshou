@@ -1,7 +1,4 @@
-// Singleton.h
-// Generic Singleton Template for Game Managers
-// Provides thread-safe singleton pattern with RAII
-
+﻿
 #ifndef __SINGLETON_H__
 #define __SINGLETON_H__
 
@@ -11,22 +8,10 @@
 /**
  * @brief 单例模板基类
  *
- * 使用CRTP (Curiously Recurring Template Pattern) 实现通用单例
+ * 使用奇异递归模板模式实现通用单例
  * 线程安全，使用智能指针管理内存
  *
- * 用法示例:
- * @code
- * class MyManager : public Singleton<MyManager> {
- *     friend class Singleton<MyManager>;
- * private:
- *     MyManager() = default;
- * public:
- *     void doSomething();
- * };
- *
- * // 使用:
- * MyManager::getInstance().doSomething();
- * @endcode
+ * 示例略
  */
 template<typename T>
 class Singleton {
@@ -93,4 +78,4 @@ std::mutex Singleton<T>::mutex_;
 template<typename T>
 std::once_flag Singleton<T>::init_flag_;
 
-#endif // __SINGLETON_H__
+#endif 

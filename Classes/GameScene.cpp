@@ -42,10 +42,9 @@ namespace
     const Color3B kToolbarSlotColor(70, 60, 50);
     const Color3B kToolbarSlotSelectedColor(170, 150, 95);
 
-    // NPC Constants
     const Vec2 kMerchantTile(35.0f, 9.0f);
     const Vec2 kBlacksmithTile(6.0f, 4.0f);
-    const float kInteractionRadius = 80.0f; // Slightly larger for better UX
+    const float kInteractionRadius = 80.0f; 
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
     {
@@ -110,7 +109,6 @@ bool GameScene::init()
 {
 
     // ...
-    // Note: Doing this in init() is safer usually
     merchantState_ = MerchantState::None;
     activeNpc_ = nullptr;
     
@@ -147,17 +145,14 @@ bool GameScene::init()
     if (inventory_)
     {
         // 不再添加到场景，避免随场景销毁
-        // this->addChild(inventory_, 0);
     }
     SkillManager::getInstance();
     marketState_.init();
     initWeather();
     initNpcs();
 
-    // Initialize TimeManager (ensure it exists)
     TimeManager::getInstance();
 
-    // --- 【Fishing Inputs】 ---
 
     auto mouseListener = EventListenerMouse::create();
     mouseListener->onMouseDown = CC_CALLBACK_1(GameScene::onMouseDown, this);
@@ -358,7 +353,7 @@ void GameScene::initCamera()
 
 }
 
-// ========== 初始化UI ==========
+// ========== 初始化界面 ==========
 
 void GameScene::initUI()
 
@@ -368,16 +363,15 @@ void GameScene::initUI()
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
 
-    // 创建UI层（独立于摄像机移动）
+    // 创建界面层（独立于摄像机移动）
 
     uiLayer_ = Layer::create();
 
-    uiLayer_->setGlobalZOrder(1000);  // 设置很高的z-order，确保在最上层
+    uiLayer_->setGlobalZOrder(1000);  // 设为较高层级，确保显示在最上层
 
     this->addChild(uiLayer_, 1000);
 
 
-    // Day/night lighting overlay (tints world, UI drawn above it).
     dayNightLayer_ = LayerColor::create(Color4B(0, 0, 0, 0), visibleSize.width, visibleSize.height);
     dayNightLayer_->setPosition(Vec2(origin.x, origin.y));
     uiLayer_->addChild(dayNightLayer_, -2);
@@ -492,7 +486,7 @@ void GameScene::initUI()
     initToolbar();
     initToolbarUI();
 
-    // ===== 钓鱼 UI 初始化 (跟随玩家) =====
+    // ===== 钓鱼界面初始化（跟随玩家） =====
     if (player_)
     {
         chargeBarBg_ = Sprite::create();
@@ -532,7 +526,6 @@ void GameScene::initUI()
 }
 }
 
-// ========== Weather Init ==========
 
 void GameScene::initWeather()
 
@@ -571,22 +564,19 @@ void GameScene::initWeather()
 
 }
 
-// ========== 初始化 NPCs ==========
+// ========== 初始化非玩家角色 ==========
 void GameScene::initNpcs()
 {
 
     if (!mapLayer_ || !uiLayer_) return;
 
-    // Wizard (Merchant)
     auto wizard = Npc::create("Wizard", "NPC/bussiness_person_processed.png", Npc::NpcType::Merchant);
     if (wizard) {
-        // Place using tile coordinates (map-friendly)
         wizard->setPosition(mapLayer_->tileCoordToPosition(kMerchantTile));
         mapLayer_->addChild(wizard, 10);
         npcs_.push_back(wizard);
     }
 
-    // Blacksmith (Replaces Cleaner)
     auto blacksmith = Npc::create("Blacksmith", "NPC/blacksmith_processed.png", Npc::NpcType::Blacksmith);
     if (blacksmith) {
         blacksmith->setPosition(mapLayer_->tileCoordToPosition(kBlacksmithTile));
@@ -594,11 +584,9 @@ void GameScene::initNpcs()
         npcs_.push_back(blacksmith);
     }
 
-    // DialogueBox
     dialogueBox_ = DialogueBox::create(nullptr);
     if (dialogueBox_) {
-        // Add to UI layer
-        uiLayer_->addChild(dialogueBox_, 2000); // Very high Z
+        uiLayer_->addChild(dialogueBox_, 2000); 
         dialogueBox_->setVisible(false);
     }
     
@@ -611,7 +599,7 @@ void GameScene::initControls()
 {
 
 
-    // ESC键监听（返回菜单）
+    // 退出键监听（返回菜单）
 
     auto keyListener = EventListenerKeyboard::create();
 
@@ -636,9 +624,7 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     case EventKeyboard::KeyCode::KEY_B:
         if (merchantState_ != MerchantState::None) {
             if (merchantState_ == MerchantState::Buy && marketUI_) {
-                // Close Market, return to choice
-                marketUI_->close(); // Assuming close() calls onMarketClosed which sets nullptr
-                // onMarketClosed needs to handle state transition back to Choice
+                marketUI_->close(); 
                 merchantState_ = MerchantState::Choice;
                 if (dialogueBox_) {
                     dialogueBox_->setVisible(true);
@@ -649,14 +635,12 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 }
             }
             else if ( (merchantState_ == MerchantState::SellPre || merchantState_ == MerchantState::Sell) && inventoryUI_) {
-                // Close Inventory, return to choice
                 inventoryUI_->close();
-                inventoryUI_ = nullptr; // Fix: Prevent dangling pointer crash
+                inventoryUI_ = nullptr; 
                 
                 merchantState_ = MerchantState::Choice;
                 if (dialogueBox_) {
                     dialogueBox_->setVisible(true);
-                    // Reset dialogue internal state if needed
                     dialogueBox_->showDialogue("Is there anything else you need?");
                     dialogueBox_->showChoices("Buy", "Sell", [this](int choice) {
                         this->onMerchantChoice(choice);
@@ -664,7 +648,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 }
             }
             else {
-                // Default fallback
                 endMerchantInteraction();
             }
         } else {
@@ -705,17 +688,15 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         }
         break;
     case EventKeyboard::KeyCode::KEY_J:
-        handleFarmAction(false);  // till / plant / harvest
+        handleFarmAction(false);  
         break;
     case EventKeyboard::KeyCode::KEY_K:
         handleChestPlacement();
         break;
     case EventKeyboard::KeyCode::KEY_SPACE:
     {
-        // 1. Check for Merchant Interaction First
         if (npcs_.size() > 0 && farmManager_ && player_) {
              Npc* merchant = nullptr;
-             // Find Merchant
              for (auto npc : npcs_) {
                  if (npc->isMerchant()) {
                      merchant = npc;
@@ -727,14 +708,13 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                  float dist = player_->getPosition().distance(merchant->getPosition());
                  if (dist < kInteractionRadius) {
                      startMerchantInteraction(merchant);
-                     break; // Interaction started, skip chest check
+                     break; 
                  }
              }
              
-             // Find Blacksmith
              Npc* blacksmith = nullptr;
              for (auto npc : npcs_) {
-                 if (npc->getNpcName() == "Blacksmith") { // Or Check Type
+                 if (npc->getNpcName() == "Blacksmith") { 
                      blacksmith = npc;
                      break;
                  }
@@ -743,7 +723,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
              if (blacksmith) {
                  float dist = player_->getPosition().distance(blacksmith->getPosition());
                  if (dist < kInteractionRadius) {
-                     // Open Blacksmith UI
                      auto ui = BlacksmithUI::create();
                      ui->show();
                      uiLayer_->addChild(ui, 200);
@@ -752,7 +731,7 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
              }
         }
 
-        // 2. 查找附近的箱子并打开 (Existing logic)
+        // 2. 查找附近箱子并打开（沿用现有逻辑）
         if (farmManager_ && mapLayer_ && player_) {
             Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
             tileCoord.x = std::round(tileCoord.x);
@@ -802,13 +781,10 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     {
         auto tm = TimeManager::getInstance();
         if (tm) {
-             // 1. Save current state (including farm)
              saveGame();
             
-             // 2. Skip to just before wake up
              tm->skipToNextMorning();
              
-             // 3. Transition to House (Wake Up)
              Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
         }
         break;
@@ -824,10 +800,10 @@ void GameScene::update(float delta)
     // 更新摄像机（跟随玩家）
     updateCamera();
 
-    // 更新UI显示
+    // 更新界面显示
     updateUI();
 
-    // updateWeather();  // 天气系统已删除
+    // 天气系统已移除
 
     updateDayNightLighting();
 
@@ -839,13 +815,11 @@ void GameScene::update(float delta)
 
     checkBeachEntrance();
 
-    // [New] Time / Fatigue Check
     auto tm = TimeManager::getInstance();
-    tm->update(delta); // Update global time
+    tm->update(delta); 
 
-    if (tm->isMidnight()) // Midnight
+    if (tm->isMidnight()) 
     {
-         // Prevent multiple triggers if already passing out (scene replacement stops update anyway)
          if (inventory_) inventory_->removeMoney(200);
          showActionMessage("Passed out...", Color3B::RED);
          Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
@@ -922,7 +896,6 @@ void GameScene::updateCamera()
 
     }
 
-    // Update UI layer position so it stays with the camera (screen-space)
 
     if (uiLayer_)
 
@@ -932,7 +905,7 @@ void GameScene::updateCamera()
 
         auto visibleSize = Director::getInstance()->getVisibleSize();
 
-        // UI层的位置 = 摄像机位置 - 屏幕中心偏移
+        // 界面层的位置 = 摄像机位置 - 屏幕中心偏移
 
         Vec2 uiPos = Vec2(
 
@@ -1053,7 +1026,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     if (!mapLayer_ || !farmManager_ || !player_) return;
 
     // 1. 立即播放玩家动画
-    // (Player 类内部会根据当前 set 的 ItemType 自动决定播放 挥锄头 还是 挥斧头)
+    //（角色类会根据当前物品类型自动决定播放挥锄或挥斧）
     player_->playSwingAnimation();
 
     // 计算玩家当前脚下的瓦片坐标
@@ -1065,14 +1038,14 @@ void GameScene::handleFarmAction(bool waterOnly)
     ItemType current = toolbarItems_.empty() ? ItemType::Hoe : toolbarItems_[selectedItemIndex_];
 
     // ======================================================================================
-    // 2. 定义核心业务逻辑 Lambda
+    // 2. 定义核心逻辑闭包
     //    将所有“改变游戏数据”的代码封装在这里，方便放入延迟回调中执行
     // ======================================================================================
     auto executeAction = [this, current, tileCoord, waterOnly]()
         {
             FarmManager::ActionResult result{ false, "Unavailable", -1 };
 
-            // --- 分支 A: 仅浇水模式 (按K键) ---
+            // --- 分支一：仅浇水模式（按浇水键） ---
             if (waterOnly)
             {
                 if (current == ItemType::WateringCan) {
@@ -1090,12 +1063,12 @@ void GameScene::handleFarmAction(bool waterOnly)
                     result = { false, "Need watering can to water", -1 };
                 }
             }
-            // --- 分支 B: 通用工具模式 (按J键) ---
+            // --- 分支二：通用工具模式（按工具键） ---
             else
             {
                 switch (current)
                 {
-                    // Case 1: 锄头 (耕地)
+                    // 情况一：锄头（耕地）
                 case ItemType::Hoe:
                     result = farmManager_->tillTile(tileCoord);
                     if (result.success) {
@@ -1108,7 +1081,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     }
                     break;
 
-                    // Case 2: 水壶 (也可以按J浇水)
+                    // 情况二：水壶（也可用工具键浇水）
                 case ItemType::WateringCan:
                     result = farmManager_->waterTile(tileCoord);
                     if (result.success) {
@@ -1121,7 +1094,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     }
                     break;
 
-                    // Case 3: 镰刀 (收获)
+                    // 情况三：镰刀（收获）
                 case ItemType::Scythe:
                     result = farmManager_->harvestTile(tileCoord);
                     if (result.success && inventory_)
@@ -1164,7 +1137,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     }
                     break;
 
-                    // Case 4: 斧头 (砍树 - 复杂逻辑)
+                    // 情况四：斧头（砍树，逻辑较复杂）
                 case ItemType::Axe:
                 {
                     Vec2 target = tileCoord;
@@ -1189,14 +1162,14 @@ void GameScene::handleFarmAction(bool waterOnly)
                         }
                     }
 
-                    const int REPLACE_THRESHOLD = 3; // 第3刀替换为Sprite
+                    const int REPLACE_THRESHOLD = 3; // 第 3 刀替换为精灵
 
                     if (existingChop) {
                         // --- 已经在砍了 (第 2, 3, 4... 刀) ---
                         existingChop->chopCount++;
                         existingChop->chopTimer = 0.0f;
 
-                        // 第3刀：替换瓦片为Sprite
+                        // 第 3 刀：瓦片替换为精灵
                         if (existingChop->chopCount == REPLACE_THRESHOLD && existingChop->treeSprite == nullptr) {
                             existingChop->treeSprite = createTreeSprite(existingChop->tiles);
                             showActionMessage("Tree is loose!", Color3B::YELLOW);
@@ -1236,7 +1209,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                         newChop.tiles = component;
                         newChop.chopCount = 1;
                         newChop.chopTimer = 0.0f;
-                        newChop.treeSprite = nullptr; // 第1刀不生成Sprite
+                        newChop.treeSprite = nullptr; // 第 1 刀不生成精灵
 
                         activeChops_.push_back(newChop);
 
@@ -1252,7 +1225,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     break;
                 }
 
-                // Case 5: 镐子 (碎石)
+                // 情况五：镐子（碎石）
                 case ItemType::Pickaxe:
                 {
                     Vec2 target = tileCoord;
@@ -1261,18 +1234,17 @@ void GameScene::handleFarmAction(bool waterOnly)
                         break;
                     }
 
-                    // 石头 GID 列表 (请确保这里的 ID 与你的地图一致)
+                    // 石头图块编号列表（请确保编号与地图一致）
                     static const std::unordered_set<int> rockGids = {
                         45019, 45020, 45021, 45025, 45026, 45027, 45028, 45030,
                         45069, 45070, 45071, 45072, 45073, 45170, 45171, 45172
-                        // ... 如果你有更多石头ID请补全 ...
+                        // 如果还有更多石头编号，请补全
                     };
 
                     int baseGid = mapLayer_->getBaseTileGID(target);
 
-                    // 简单的宽容判断：只要有碰撞且看起来像石头（或者你可以直接去掉 rockGids 检查，只信赖碰撞）
-                    // 这里保留你的逻辑，如果 rockGids 不全可能导致敲不碎
-                    // if (rockGids.find(baseGid) == rockGids.end()) ... 
+                    // 宽容判断：只要有碰撞且像石头（也可去掉石头编号检查，只依赖碰撞）
+                    // 这里保留你的逻辑，石头编号不全可能导致敲不碎
 
                     std::vector<Vec2> component = collectCollisionComponent(target);
                     if (component.empty()) {
@@ -1286,7 +1258,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     }
 
                     int reduction = SkillManager::getInstance()->getMiningHitReduction();
-                    // 每级减少 0.4 体力消耗 (max 5级 = 减少2.0)
+                    // 每级减少 0.4 体力消耗（最高 5 级，共减少 2.0）
                     float cost = 4.0f - (reduction * 0.4f);
                     cost = std::max(1.0f, cost);
                     
@@ -1301,7 +1273,7 @@ void GameScene::handleFarmAction(bool waterOnly)
                     break;
                 }
 
-                // Case 6: 各种种子 (播种)
+                // 情况六：各种种子（播种）
                 case ItemType::SeedTurnip:
                 case ItemType::SeedPotato:
                 case ItemType::SeedCorn:
@@ -1339,7 +1311,7 @@ void GameScene::handleFarmAction(bool waterOnly)
         };
 
     // ======================================================================================
-    // 3. 动作执行策略：延迟 vs 立即
+    // 3. 动作执行策略：延迟或立即
     // ======================================================================================
 
     float energyPercent = player_->getCurrentEnergy() / player_->getMaxEnergy();
@@ -1352,7 +1324,7 @@ void GameScene::handleFarmAction(bool waterOnly)
     }
 
     // 如果是挥动类工具（锄头、镐子、斧头），我们需要配合动画的“打击点”
-    // 假设动画总长约 0.45秒 (3帧 * 0.15s)，打击感通常在中间，所以延迟 0.2秒
+    // 动画总长约 0.45 秒（3 帧 × 0.15 秒），打击点通常在中间，延迟 0.2 秒
     // 黄色能量 (50%)：动作变慢，延迟增加
     float delay = 0.2f;
     if (energyPercent <= 0.5f) {
@@ -1384,14 +1356,8 @@ void GameScene::handleChestPlacement()
     tileCoord.x = std::round(tileCoord.x);
     tileCoord.y = std::round(tileCoord.y);
 
-    // 检查背包是否有储物箱 (这里假设 ItemType::TreasureChest 是储物箱)
-    // 检查项目文档，可能需要一个新的 ItemType。
-    // 但用户说按 K 放置，没说一定要有物品在背包里。
-    // Stardew Valley 需要物品，但很多简单的实现不需要。
-    // 这里我们先实现为：如果有这个物品就放置，没有就不放。
-    // 发现 ItemType 里没有 StorageChest。我用 Wood x 10 作为一个测试门槛？
-    // 或者直接放置（无限箱子）。根据提示“放置储物箱”，通常指玩家拥有箱子物品。
-    // 我先检查 ItemType。
+    // 仅允许背包中有对应物品时放置（当前用宝箱物品占位）。
+    // 如果需要更精细的道具判断，可新增储物箱类型。
 
     if (farmManager_->isTileClearForPlacement(tileCoord))
     {
@@ -1409,64 +1375,18 @@ void GameScene::openChestInventory(StorageChest* chest)
 {
     if (!chest || !inventory_) return;
 
-    // 如果已经打开了 UI，先关闭
+    // 如果已经打开了界面，先关闭
     if (inventoryUI_) {
         inventoryUI_->close();
     }
 
-    // 创建背包 UI，指向箱子的 Inventory
+    // 创建背包界面，指向箱子库存
     inventoryUI_ = InventoryUI::create(chest->getInventory(), &marketState_);
     if (inventoryUI_) {
-        // 设置合作伙伴为玩家背包，这样按 J 可以转移到背包
-        inventoryUI_->setPartnerInventory(inventory_, false); // false = partner is NOT shipping bin (player inv is never a bin)
-
-        // 如果箱子是 ShippingBin，UI 需要知道 self 是 bin 吗？
-        // 实际上 InventoryUI 里是用 partnerIsShippingBin_ 来判断“卖出”逻辑。
-        // 当我们打开箱子时：
-        //   Main = Chest
-        //   Partner = Player
-        //   此时是从 Chest -> Player (取出)。这不需要卖出逻辑。
-        
-        // 当我们打开背包时：
-        //   Main = Player
-        //   Partner = Chest/Bin
-        //   此时是从 Player -> Chest (放入)。如果 Partner 是 Bin，则触发卖出。
-        
-        // 所以这里不需要特殊的 flag，除非我们允许从箱子直接卖出？
-        // 不，根据需求，卖出是“放入交易箱”。即 Player -> Bin。
-        
-        // 但是！还有一个需求：“3. 玩家将物品放置进储物箱的方式是：打开背包...按下J键...移入储物箱”
-        // 这意味着放置物品时，必须打开的是【背包】。
-        // 而“4. ...从储物箱中去取出物品的方式是：...直接点击箱子有效...按下J键...移入背包”
-        // 这意味着取出物品时，必须打开的是【箱子】。
-        
-        // 所以 openChestInventory 只是为了“取出”物品（查看箱子）。
-        
-        // 等等，用户在 Rule 3 说：
-        // "玩家将物品放置进储物箱的方式是：打开背包...按下J键...移入储物箱"
-        // 这意味着要放东西，得先打开背包（按B/Esc或者UI按钮），然后如果旁边有箱子，J键就生效。
-        
-        // 那么问题来了：如果我只打开了箱子 (Rule 4)，我能放东西进去吗？
-        // Rule 4 只说了“取出”。
-        // 但通常游戏里的箱子界面是双向的，或者你打开箱子时也会显示背包。
-        // 如果 InventoryUI 只能显示一个， user interaction flow is:
-        //  - To Put: Open Backpack (B). Stand near chest. Select Item. J.
-        //  - To Take: Click Chest. (Opens Chest Inv). Select Item. J.
-        
-        // 现在的逻辑：
-        // openChestInventory 打开的是 Chest Inv。 Partner 是 Player Inv。
-        // Press J -> move from Chest to Player. (Take). Correct.
-        
-        // The previous bug was: I opened Player Inv, passed Chest as Partner.
-        // So it displayed Player Inv.
-        // Press J -> move from Player to Chest. (Put).
-        // This effectively made "Clicking Chest" act as "Opening Backpack to Put Items".
-        // But the user complained "Storage chests share space". 
-        // Because "Clicking Chest A" showed Player Inv. "Clicking Chest B" showed Player Inv.
-        // So it looked like A and B shared space (and with Player).
-        
-        // Fix is indeed to revert to showing Chest Inventory.
-        
+        // 伙伴背包设为玩家背包，便于快捷转移
+        inventoryUI_->setPartnerInventory(inventory_, false); 
+        // 交易箱的卖出逻辑由背包界面状态判定。
+        // 这里打开的是箱子界面，主要用于取出物品。
         inventoryUI_->setCloseCallback([this]() {
             onInventoryClosed();
         });
@@ -1483,21 +1403,21 @@ void GameScene::openChestInventory(StorageChest* chest)
 
 // ========== 砍树相关函数 ==========
 
-// ========== 辅助函数定义 (必须在 handleFarmAction 外部) ==========
+// ========== 辅助函数定义（需位于农田操作函数外部） ==========
 
 std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
 {
     std::vector<Vec2> out;
     if (!mapLayer_) return out;
 
-    // 树木 GID 白名单
+    // 树木图块编号白名单
     static const std::vector<int> treeGids = {
-        43557, 43558, 43559, // Top
-        43607, 43608, 43609, // Mid
-        43657, 43658, 43659  // Root
+        43557, 43558, 43559, 
+        43607, 43608, 43609, 
+        43657, 43658, 43659  
     };
 
-    // [修改] 检查起点是否为树 (Tree层)
+    // [修改] 检查起点是否为树（树层）
     int startGid = mapLayer_->getTreeGIDAt(start);
     bool isStartTree = false;
     for (int id : treeGids) if (id == startGid) isStartTree = true;
@@ -1529,7 +1449,7 @@ std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
             const long long k = key(static_cast<int>(nt.x), static_cast<int>(nt.y));
             if (visited.count(k)) continue;
 
-            // [修改] 只在 Tree 层检查是否是树木 (不再检查 hasCollisionAt)
+            // [修改] 仅在树层判断树木（不再检查碰撞）
             int nextGid = mapLayer_->getTreeGIDAt(nt);
             bool isNextTree = false;
             for (int id : treeGids) if (id == nextGid) isNextTree = true;
@@ -1550,14 +1470,14 @@ bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) c
         Vec2(0, 0), Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0,-1)
     };
 
-    const int TREE_ROOT_GID = 43658; // 你的树根 GID
+    const int TREE_ROOT_GID = 43658; // 树根图块编号
 
     for (const auto& off : offsets) {
         Vec2 candidate = centerTile + off;
 
-        // 逻辑：如果(Collision层有碰撞) 且 (Tree层是树根)
+        // 逻辑：碰撞层有碰撞且树层是树根
         if (mapLayer_->hasCollisionAt(candidate)) {
-            // [修改] 使用封装好的接口获取 Tree 层 GID
+            // 使用封装接口获取树层图块编号
             int gid = mapLayer_->getTreeGIDAt(candidate);
 
             if (gid == TREE_ROOT_GID) {
@@ -1575,7 +1495,7 @@ Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
 
     Size tileSize = mapLayer_->getTileSize();
 
-    // 1. 找到真正的树根（GID = 43658）
+    // 1. 找到真正的树根（编号 43658）
     Vec2 rootTile(-1, -1);
     const int TREE_ROOT_GID = 43658;
 
@@ -1587,7 +1507,6 @@ Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
         }
     }
 
-    // fallback
     if (rootTile.x < 0) {
         rootTile = tiles[0];
         for (const auto& t : tiles) {
@@ -1599,11 +1518,11 @@ Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
     Vec2 spawnPosition = Vec2(rootTilePos.x + tileSize.width / 2.0f, rootTilePos.y);
 
     // ==========================================
-    // 2. [核心修改] 直接在 Tree 层填充 GID 234
+    // 2. 直接在树层填充编号 234
     // ==========================================
     int rootTx = static_cast<int>(rootTile.x);
     int rootTy = static_cast<int>(rootTile.y);
-    int targetGID = 42991; // 你指定的色块 GID
+    int targetGID = 42991; // 指定的色块编号
 
     for (int x = rootTx - 1; x <= rootTx + 1; ++x) {
         for (int y = rootTy - 2; y <= rootTy; ++y) {
@@ -1613,7 +1532,7 @@ Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
                 x < mapLayer_->getMapSizeInTiles().width &&
                 y < mapLayer_->getMapSizeInTiles().height)
             {
-                // [修改] 不清空，也不改地面，直接把 Tree 层的这一格变成 GID 234
+                // 不清空不改地面，直接把树层改成编号 234
                 mapLayer_->setTreeGID(target, targetGID);
             }
         }
@@ -1742,17 +1661,17 @@ void GameScene::playTreeFallAnimation(TreeChopData* chopData) {
     // 清理回调 (已移除碰撞删除逻辑)
     // ==========================================
     auto cleanup = CallFunc::create([this, actualRootTile, savedTiles, treeSprite]() {
-        // 1. 清理 UserData
+        // 1. 清理用户数据
         Vec2* pData = static_cast<Vec2*>(treeSprite->getUserData());
         if (pData) {
             delete pData;
             treeSprite->setUserData(nullptr);
         }
 
-        // 2. 移除倒下的树 Sprite
+        // 2. 移除倒下的树精灵
         treeSprite->removeFromParent();
 
-        // [删除] 这里不再调用 mapLayer_->clearCollisionAt(actualRootTile);
+        // [删除] 不再清除碰撞瓦片
         // 碰撞层保持原样，意味着玩家走过去还是会撞到隐形的墙
 
         // 3. 生成树桩
@@ -1799,7 +1718,7 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count) {
     std::string itemImage;
     switch (type) {
     case ItemType::Wood:
-        itemImage = "items/wood.png"; // ← 需要这个PNG
+        itemImage = "items/wood.png"; // ← 需要这张图片
         break;
     default:
         itemImage = "items/unknown.png";
@@ -1841,7 +1760,7 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count) {
         countLabel->runAction(labelFade);
     }
 
-    // TODO: 实际游戏中应该将物品添加到背包系统
+    // 实际游戏中应将物品添加到背包系统
 }
 
 void GameScene::updateChopping(float delta) {
@@ -1856,7 +1775,7 @@ void GameScene::updateChopping(float delta) {
         if (activeChops_[i].chopTimer > 10.0f) {
             // 恢复瓦片
             for (const auto& tile : activeChops_[i].tiles) {
-                // 这里需要恢复原始 GID，你可能需要在 TreeChopData 中保存
+                // 这里需要恢复原始编号，可在砍树数据中保存
             }
 
             // 移除精灵
@@ -2140,18 +2059,18 @@ void GameScene::selectItemByIndex(int idx)//用来选择工具的函数
     // 2. 更新选中的索引
     selectedItemIndex_ = idx;
 
-    // 【关键修复】这里必须定义 currentItem 变量！
+    // 【关键修复】这里必须定义当前物品变量！
     // 从工具栏数组中取出当前选中的物品类型
     ItemType currentItem = toolbarItems_[selectedItemIndex_];
 
-    // 3. 告诉 Player 切换了工具 (现在 currentItem 有定义了，不会报错)
+    // 3. 通知玩家切换工具（当前物品已定义）
     if (player_)
     {
-        player_->setCurrentTool(currentItem);  //通过这个传ITEMTYPE，从而在play Amination中选动画
+        player_->setCurrentTool(currentItem);  // 传入物品类型，让角色选择对应动画
     }
 
-    // 4. 更新 UI 显示
-    std::string name = InventoryManager::getItemName(currentItem); // 这里也可以直接用 currentItem
+    // 4. 更新界面显示
+    std::string name = InventoryManager::getItemName(currentItem); // 这里也可以直接用当前物品类型
 
     if (itemLabel_)
     {
@@ -2198,36 +2117,20 @@ void GameScene::onMouseDown(Event* event)
     EventMouse* e = (EventMouse*)event;
     if (e->getMouseButton() == EventMouse::MouseButton::BUTTON_LEFT)
     {
-        // 1. NPC Interaction Check
-        // Convert screen click to map space
-        // Assuming Camera is centering player or moving.
-        // We need to unproject or simple offset calculation.
         
         auto camera = getDefaultCamera();
         Vec2 camPos = Vec2(camera->getPositionX(), camera->getPositionY());
         Size visibleSize = Director::getInstance()->getVisibleSize();
         
         Vec2 mouseLoc = e->getLocationInView();
-        mouseLoc.y = visibleSize.height - mouseLoc.y; // Invert Y
+        mouseLoc.y = visibleSize.height - mouseLoc.y; 
         
-        // World Pos = Camera Pos - VisibleCenter + MouseScreenPos
         Vec2 worldPos = camPos - Vec2(visibleSize.width/2, visibleSize.height/2) + mouseLoc;
         
         for (auto npc : npcs_) {
-            // Convert worldPos to the NPC's parent's coordinate system (which is likely the mapLayer_)
-            // Assuming NPCs are children of mapLayer_ or a similar node whose position is relative to the camera.
-            // For simplicity, if NPCs are directly on the scene, worldPos is fine.
-            // If they are children of mapLayer_, we need to convert.
-            // Let's assume npcs_ are directly added to the scene or a layer that moves with the camera.
-            // If npc->getParent() is mapLayer_, then npc->getParent()->convertToNodeSpace(worldPos) is correct.
-            // If npc is child of scene, then worldPos is already in scene coordinates.
-            // For now, let's assume npc->getParent() is the scene or a layer that doesn't move relative to camera.
-            // If NPCs are on mapLayer_, then the bounding box check needs to be relative to mapLayer_'s position.
-            // A more robust way is to convert the mouse click to mapLayer_ coordinates first.
             Vec2 mapLayerClickPos = mapLayer_->convertToNodeSpace(worldPos);
 
             if (npc->getBoundingBox().containsPoint(mapLayerClickPos)) {
-                // Clicked on NPC
                 
                 if (npc->getNpcName() == "Blacksmith") {
                      auto ui = BlacksmithUI::create();
@@ -2236,16 +2139,14 @@ void GameScene::onMouseDown(Event* event)
                      return;
                 }
                 
-                if (dialogueBox_) { // Ensure dialogueBox_ is initialized
+                if (dialogueBox_) { 
                     dialogueBox_->setNpc(npc);
                     dialogueBox_->showDialogue();
                 }
-                return; // Consume click
+                return; 
             }
         }
 
-        // 2. Fishing Logic (Existing)
-        // Check current item
         if (toolbarItems_.empty()) return;
         
         ItemType current = ItemType::Hoe;
@@ -2253,7 +2154,6 @@ void GameScene::onMouseDown(Event* event)
             current = toolbarItems_[selectedItemIndex_];
         }
 
-        // Fishing Rod Logic
         if (current == ItemType::FishingRod)
         {
             if (fishingState_ == FishingState::NONE)
@@ -2281,10 +2181,6 @@ void GameScene::onMouseDown(Event* event)
             return; 
         }
 
-        // Mouse click for farming? 
-        // The new architecture uses Keyboard J/K for farm actions.
-        // But we can keep mouse click for debugging or if user wants it.
-        // For now, let's just log the click debug info the user liked.
         
         Vec2 clickPos = e->getLocationInView();
         clickPos.y = Director::getInstance()->getWinSize().height - clickPos.y; 
@@ -2307,7 +2203,6 @@ void GameScene::onMouseUp(Event* event)
             fishingState_ = FishingState::WAITING;
             if (chargeBarBg_) chargeBarBg_->setVisible(false);
             
-            // Wait 1.0 - 4.0s
             waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
             if (player_) player_->startFishingCast();
         }
@@ -2461,7 +2356,7 @@ void GameScene::toggleInventory()
         return;
     }
 
-    // 创建背包UI
+    // 创建背包界面
     inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (!inventoryUI_)
     {
@@ -2469,7 +2364,7 @@ void GameScene::toggleInventory()
     }
 
     // 对于玩家自己的背包，当它打开时，如果玩家站在箱子旁边，我们可以设置合作伙伴
-    // 这样玩家按下 J 就能把东西存进箱子。
+    // 这样玩家就能把东西存进箱子。
     if (farmManager_) {
         Vec2 tileCoord = mapLayer_->positionToTileCoord(player_->getPosition());
         tileCoord.x = std::round(tileCoord.x);
@@ -2685,7 +2580,7 @@ bool GameScene::isPlayerAtBeachEntrance() const
 void GameScene::enterMine()
 {
 
-    // 创建电梯楼层选择UI
+    // 创建电梯楼层选择界面
     auto elevatorUI = ElevatorUI::create();
     if (!elevatorUI)
     {
@@ -2712,7 +2607,6 @@ void GameScene::enterMine()
         }
 
         // 创建矿洞场景，传入背包实例和选择的楼层
-        // Time is now handled by singleton TimeManager
         auto mineScene = MineScene::createScene(inventory_, floor);
 
         if (mineScene)
@@ -2725,7 +2619,7 @@ void GameScene::enterMine()
         }
     });
 
-    // 添加到UI层（uiLayer_ 会随摄像机移动，所以这里只需添加到它上面）
+    // 添加到界面层（界面层会随摄像机移动，直接添加即可）
     if (uiLayer_)
     {
         elevatorUI->setPosition(Vec2::ZERO);
@@ -2789,8 +2683,8 @@ Scene* GameScene::createScene(bool loadFromSave)
     auto scene = GameScene::create();
     if (scene && loadFromSave)
     {
-        // 通过调用带参数的 init 来加载存档
-        // 但由于 create() 已经调用了 init()，我们需要手动加载
+        // 通过带参数的初始化加载存档
+        // 但创建时已调用初始化，需要手动加载
         GameScene* gameScene = dynamic_cast<GameScene*>(scene);
         if (gameScene)
         {
@@ -2838,7 +2732,7 @@ void GameScene::loadGame()
     {
         applySaveData(data);
 
-        // 延迟显示消息，确保 UI 已初始化
+        // 延迟显示消息，确保界面已初始化
         if (actionLabel_)
         {
             showActionMessage("Game Loaded!", Color3B::GREEN);
@@ -2998,7 +2892,7 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
         // 清空现有背包
         inventory_->clear();
 
-        // 恢复金币 - 使用 addMoney 一次性添加
+        // 恢复金币，使用一次性增加
         if (data.inventory.money > 0)
         {
             inventory_->addMoney(data.inventory.money);
@@ -3093,7 +2987,6 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
 }
 
 // ==========================================
-// Merchant Interaction Logic
 // ==========================================
 
 void GameScene::startMerchantInteraction(Npc* npc) {
@@ -3107,7 +3000,6 @@ void GameScene::startMerchantInteraction(Npc* npc) {
         dialogueBox_->setVisible(true);
         dialogueBox_->showDialogue("Welcome! What can I do for you?");
         
-        // Advancing via click
         dialogueBox_->setOnClickCallback([this]() {
             this->advanceMerchantDialogue();
         });
@@ -3128,28 +3020,24 @@ void GameScene::advanceMerchantDialogue() {
         endMerchantInteraction();
     }
     else if (merchantState_ == MerchantState::BuyTransition) {
-        // Transition from text to actual shop
         merchantState_ = MerchantState::Buy; 
         if (dialogueBox_) dialogueBox_->setVisible(false);
         toggleMarket(); 
     }
     else if (merchantState_ == MerchantState::SellPre) {
-        // Transition from text to inventory selection
-        merchantState_ = MerchantState::Sell; // Change state to prevent re-entry
+        merchantState_ = MerchantState::Sell; 
 
         if (dialogueBox_) {
              dialogueBox_->hideChoices(); 
-             dialogueBox_->closeDialogue(); // Use closeDialogue to set _isVisible=false
+             dialogueBox_->closeDialogue(); 
         }
         
-        // Ensure InventoryUI exists
         if (!inventoryUI_) {
             if (inventory_) {
                  inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
                  if (inventoryUI_) {
                      this->addChild(inventoryUI_, 1100); 
                      inventoryUI_->setGlobalZOrder(1100);
-                     // Position logic from toggleInventory
                      auto camera = this->getDefaultCamera();
                      if (camera) {
                          Vec3 cameraPos = camera->getPosition3D();
@@ -3163,14 +3051,11 @@ void GameScene::advanceMerchantDialogue() {
 
         if (inventoryUI_) {
             inventoryUI_->show();
-            // Important: We need a way to know we are in "Sell Mode" in inventory
-            // or we handle the selection via callback cleanly.
             inventoryUI_->setSelectionMode(true);
             inventoryUI_->setOnItemSelectedCallback([this](int slotIndex, ItemType type, int count) {
                 this->handleSellSelection(slotIndex, type, count);
             });
             
-            // Show a hint?
             showActionMessage("Select an item to sell", Color3B::YELLOW);
         }
     }
@@ -3179,52 +3064,40 @@ void GameScene::advanceMerchantDialogue() {
 void GameScene::onMerchantChoice(int choice) {
     if (merchantState_ != MerchantState::Choice) return;
 
-    if (choice == 0) { // Buy
-        // New flow: Show dialogue first
+    if (choice == 0) { 
         merchantState_ = MerchantState::BuyTransition;
         if (dialogueBox_) {
-            dialogueBox_->hideChoices(); // Hide buttons
-            // "Just got new stock..."
+            dialogueBox_->hideChoices(); 
             dialogueBox_->showDialogue("We just got a fresh shipment in. Take a look!");
         }
-    } else { // Sell
+    } else { 
         merchantState_ = MerchantState::SellPre;
         if (dialogueBox_) {
              dialogueBox_->hideChoices();
              dialogueBox_->showDialogue("Let me see what fine goods you've brought.");
         }
-        // Wait for next click to open inventory (handled in advanceMerchantDialogue)
     }
 }
 
 void GameScene::handleSellSelection(int slotIndex, ItemType type, int count) {
-    if (merchantState_ != MerchantState::Sell && merchantState_ != MerchantState::SellPre) return; // Allow both states
+    if (merchantState_ != MerchantState::Sell && merchantState_ != MerchantState::SellPre) return; 
 
     pendingSellItem_ = type;
-    pendingSellCount_ = count; // Default placeholder, will be updated by popup
+    pendingSellCount_ = count; 
     
     if (count > 1) {
         auto popup = QuantityPopup::create(count, [this](int qty) {
              this->onQuantityConfirmed(qty);
         });
         
-        // Fix: Add to 'this' scene directly to ensure it sits above InventoryUI (which is also on 'this')
         this->addChild(popup, 3000); 
         popup->setGlobalZOrder(3000);
         
-        // Position it relative to camera since 'this' logic moves with camera? 
-        // No, 'this' implies world space, but popup usually expects HUD.
-        // Wait, InventoryUI is added to 'this' and manually positioned.
-        // QuantityPopup is adding itself to center of screen usually.
-        // If its parent is 'this' (World), we need to position it at Camera Center.
         
         auto camera = this->getDefaultCamera();
         if (camera) {
              Vec3 camPos = camera->getPosition3D();
              auto visibleSize = Director::getInstance()->getVisibleSize();
-             // QuantityPopup internally positions elements at visibleSize/2
-             // So if we position the node at (CamPos - HalfSize), the internal center (HalfSize)
-             // will align with (CamPos - HalfSize + HalfSize) = CamPos.
              popup->setPosition(Vec2(camPos.x - visibleSize.width/2, camPos.y - visibleSize.height/2));
         }
     } else {
@@ -3235,22 +3108,19 @@ void GameScene::handleSellSelection(int slotIndex, ItemType type, int count) {
 void GameScene::onQuantityConfirmed(int qty) {
     if (qty <= 0) return;
     
-    // Fix Flow: Close inventory immediately
     if (inventoryUI_) {
         inventoryUI_->close();
         inventoryUI_ = nullptr;
     }
     
-    // Simple Pricing Logic 
     MarketState marketState; 
     int unitPrice = marketState.getSellPrice(pendingSellItem_);
     
     if (unitPrice <= 0) {
         if (dialogueBox_) {
-             dialogueBox_->setVisible(true); // Ensure visible
+             dialogueBox_->setVisible(true); 
              dialogueBox_->showDialogue("I cannot buy that.");
              
-             // Issue 2 Fix: End interaction on next click
              merchantState_ = MerchantState::End;
              dialogueBox_->setOnClickCallback([this]() {
                  this->endMerchantInteraction();
@@ -3288,8 +3158,6 @@ void GameScene::onTradeConfirmResult(bool confirmed) {
              int total = unitPrice * pendingSellCount_;
              
              inventory_->addMoney(total);
-             // Note: removeItem needs to be robust, here assuming simple remove by type works or we need to find slot.
-             // Given inventory structure, remove by type/count is standard.
              inventory_->removeItem(pendingSellItem_, pendingSellCount_);
              
              if (inventoryUI_) inventoryUI_->refresh();
