@@ -248,7 +248,7 @@ void InventoryUI::updateSelection()
 
 void InventoryUI::updateSlot(int slotIndex)
 {
-    if (slotIndex < 0 || slotIndex >= (int)slotSprites_.size())
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slotSprites_.size()))
         return;
 
     auto& slot = slotSprites_[slotIndex];
@@ -345,7 +345,7 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
                 }
             }
             else {
-                abbreviation = name.substr(0, std::min((size_t)3, name.length()));
+                abbreviation = name.substr(0, std::min<size_t>(3, name.length()));
             }
         }
 
@@ -358,7 +358,7 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
     // === Durability Bar ===
     if (slot.isTool() && slot.maxDurability > 0)
     {
-        float percent = (float)slot.durability / slot.maxDurability;
+        const float percent = static_cast<float>(slot.durability) / slot.maxDurability;
         float barWidth = iconSize; // Full width of icon
         float barHeight = 4.0f;
         
@@ -502,7 +502,7 @@ void InventoryUI::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
     // 数字键重新绑定快捷键
     if (keyCode >= EventKeyboard::KeyCode::KEY_0 && keyCode <= EventKeyboard::KeyCode::KEY_9)
     {
-        int num = (int)keyCode - (int)EventKeyboard::KeyCode::KEY_0;
+        const int num = static_cast<int>(keyCode) - static_cast<int>(EventKeyboard::KeyCode::KEY_0);
         int targetSlotIndex = (num == 0) ? 9 : num - 1; // 1->0, 2->1 ... 0->9
 
         // 如果当前有选中的物品，交换

@@ -151,7 +151,7 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    CCLOG("Mineral definitions initialized: %d types", (int)mineralDefs_.size());
+    CCLOG("Mineral definitions initialized: %d types", static_cast<int>(mineralDefs_.size()));
 }
 
 MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)

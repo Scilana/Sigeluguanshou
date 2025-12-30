@@ -1590,8 +1590,8 @@ Vec2 MineScene::getRandomWalkablePosition() const
 
     for (int i = 0; i < maxAttempts; ++i)
     {
-        float x = (rand() % (int)mapSize.width);
-        float y = (rand() % (int)mapSize.height);
+        float x = (rand() % static_cast<int>(mapSize.width));
+        float y = (rand() % static_cast<int>(mapSize.height));
         Vec2 pos(x, y);
 
         if (mineLayer_->isWalkable(pos))

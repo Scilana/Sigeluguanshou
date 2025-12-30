@@ -624,7 +624,7 @@ void GameScene::initNpcs()
         dialogueBox_->setVisible(false);
     }
     
-    CCLOG("NPCs initialized: %d", (int)npcs_.size());
+    CCLOG("NPCs initialized: %d", static_cast<int>(npcs_.size()));
 }
 
 // ========== 初始化控制 ==========
@@ -1543,7 +1543,7 @@ std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
     std::unordered_set<long long> visited;
 
     q.push(start);
-    visited.insert(key((int)start.x, (int)start.y));
+    visited.insert(key(static_cast<int>(start.x), static_cast<int>(start.y)));
     const Vec2 dirs[4] = { Vec2(1, 0), Vec2(-1, 0), Vec2(0, 1), Vec2(0, -1) };
 
     while (!q.empty()) {
@@ -1557,7 +1557,7 @@ std::vector<Vec2> GameScene::collectCollisionComponent(const Vec2& start) const
             // 边界检查
             if (nt.x < 0 || nt.y < 0 || nt.x >= mapSize.width || nt.y >= mapSize.height) continue;
 
-            long long k = key((int)nt.x, (int)nt.y);
+            const long long k = key(static_cast<int>(nt.x), static_cast<int>(nt.y));
             if (visited.count(k)) continue;
 
             // [修改] 只在 Tree 层检查是否是树木 (不再检查 hasCollisionAt)
@@ -2284,7 +2284,7 @@ void GameScene::onMouseDown(Event* event)
         if (toolbarItems_.empty()) return;
         
         ItemType current = ItemType::Hoe;
-        if (selectedItemIndex_ >= 0 && selectedItemIndex_ < (int)toolbarItems_.size()) {
+        if (selectedItemIndex_ >= 0 && selectedItemIndex_ < static_cast<int>(toolbarItems_.size())) {
             current = toolbarItems_[selectedItemIndex_];
         }
 
@@ -2412,7 +2412,7 @@ void GameScene::startFishing()
         ItemType::ITEM_Carp, ItemType::ITEM_Largemouth_Bass, ItemType::ITEM_Rainbow_Trout, ItemType::ITEM_Eel
     };
     
-    int idx = cocos2d::random(0, (int)freshFish.size() - 1);
+    const int idx = cocos2d::random(0, static_cast<int>(freshFish.size()) - 1);
     ItemType typeToCatch = freshFish[idx];
     Fish* fishObj = Fish::createByType(typeToCatch);
 
@@ -3020,14 +3020,14 @@ SaveManager::SaveData GameScene::collectSaveData()
         for (auto chest : chests)
         {
             SaveManager::SaveData::StorageChestData chestData;
-            chestData.x = (int)chest->getTileCoord().x;
-            chestData.y = (int)chest->getTileCoord().y;
+            chestData.x = static_cast<int>(chest->getTileCoord().x);
+            chestData.y = static_cast<int>(chest->getTileCoord().y);
             
             const auto& slots = chest->getInventory()->getAllSlots();
             for (const auto& slot : slots)
             {
                 SaveManager::SaveData::StorageChestData::SlotData slotData;
-                slotData.type = (int)slot.type;
+                slotData.type = static_cast<int>(slot.type);
                 slotData.count = slot.count;
                 slotData.durability = slot.durability;
                 slotData.maxDurability = slot.maxDurability;
@@ -3047,13 +3047,13 @@ SaveManager::SaveData GameScene::collectSaveData()
     // 保存技能数据
     if (auto skillMgr = SkillManager::getInstance())
     {
-        for (int i = 0; i < (int)SkillManager::SkillType::Count; ++i)
+        for (int i = 0; i < static_cast<int>(SkillManager::SkillType::Count); ++i)
         {
-            auto type = (SkillManager::SkillType)i;
+            const auto type = static_cast<SkillManager::SkillType>(i);
             const auto& sd = skillMgr->getSkillData(type);
             
             SaveManager::SaveData::SkillData skillSave;
-            skillSave.type = (int)type;
+            skillSave.type = static_cast<int>(type);
             skillSave.level = sd.level;
             skillSave.actionCount = sd.actionCount;
             data.skills.push_back(skillSave);
@@ -3163,8 +3163,13 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
                 // 恢复箱子里的物品
                 for (size_t i = 0; i < chestData.slots.size() && i < chest->getInventory()->getSlotCount(); ++i) {
                     const auto& slot = chestData.slots[i];
-                    if (slot.type != (int)ItemType::ITEM_NONE && slot.count > 0) {
-                        chest->getInventory()->setSlotData(i, (ItemType)slot.type, slot.count, slot.durability, slot.maxDurability);
+                    if (slot.type != static_cast<int>(ItemType::ITEM_NONE) && slot.count > 0) {
+                        chest->getInventory()->setSlotData(
+                            i,
+                            static_cast<ItemType>(slot.type),
+                            slot.count,
+                            slot.durability,
+                            slot.maxDurability);
                     }
                 }
                 farmManager_->addStorageChest(chest);
@@ -3184,7 +3189,10 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
         CCLOG("Restoring skills...");
         for (const auto& skillData : data.skills)
         {
-            skillMgr->setSkillData((SkillManager::SkillType)skillData.type, skillData.level, skillData.actionCount);
+            skillMgr->setSkillData(
+                static_cast<SkillManager::SkillType>(skillData.type),
+                skillData.level,
+                skillData.actionCount);
         }
         CCLOG("✓ Skills restored: %zu skills", data.skills.size());
     }

@@ -57,7 +57,7 @@ public:
     bool isSaltwater() const override { return true; }
     bool canSpawn(int hour, int season, int weather) const override {
         // 典型雨天或深夜
-        return (weather == (int)MarketState::Weather::HeavyRain || hour >= 18 || hour <= 6);
+        return (weather == static_cast<int>(MarketState::Weather::HeavyRain) || hour >= 18 || hour <= 6);
     }
 };
 
@@ -93,7 +93,7 @@ public:
     float getMovementFrequency() const override { return 0.5f; }
     bool isSaltwater() const override { return true; }
     bool canSpawn(int hour, int season, int weather) const override {
-        return (weather == (int)MarketState::Weather::Sunny && hour >= 12 && hour <= 16);
+        return (weather == static_cast<int>(MarketState::Weather::Sunny) && hour >= 12 && hour <= 16);
     }
 };
 
@@ -107,7 +107,7 @@ public:
     float getMovementFrequency() const override { return 0.9f; }
     bool isSaltwater() const override { return false; }
     bool canSpawn(int hour, int season, int weather) const override {
-        return (weather == (int)MarketState::Weather::Sunny);
+        return (weather == static_cast<int>(MarketState::Weather::Sunny));
     }
 };
 

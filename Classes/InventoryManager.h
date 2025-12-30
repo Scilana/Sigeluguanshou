@@ -175,7 +175,7 @@ public:
     /**
      * @brief 获取槽位总数
      */
-    int getSlotCount() const { return (int)slots_.size(); }
+    int getSlotCount() const { return static_cast<int>(slots_.size()); }
 
     /**
      * @brief 获取金币数量

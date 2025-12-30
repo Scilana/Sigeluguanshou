@@ -134,7 +134,7 @@ void FarmManager::progressDay()
         if (tile.hasCrop && tile.watered)
         {
             auto def = getCropDef(tile.cropId);
-            if (tile.stage < (int)def.stageDays.size())
+            if (tile.stage < static_cast<int>(def.stageDays.size()))
             {
                 tile.progressDays++;
                 if (tile.progressDays >= def.stageDays[tile.stage])
@@ -193,7 +193,7 @@ void FarmManager::update(float delta)
                     {
                         CCLOG("Catch-up: Processing WATERED crop at (%d, %d) for day skip", tile.x, tile.y);
                         auto def = getCropDef(tile.cropId);
-                        if (tile.stage < (int)def.stageDays.size())
+                        if (tile.stage < static_cast<int>(def.stageDays.size()))
                         {
                             tile.progressDays++;
                             CCLOG("  Grew! Progress: %d -> %d", tile.progressDays-1, tile.progressDays);

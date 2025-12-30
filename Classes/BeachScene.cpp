@@ -922,7 +922,7 @@ void BeachScene::startFishing()
     };
     
     // 简单随机逻辑（后续可根据天气时间细化）
-    int idx = cocos2d::random(0, (int)seaFish.size() - 1);
+    const int idx = cocos2d::random(0, static_cast<int>(seaFish.size()) - 1);
     fishToCatch = seaFish[idx];
     
     Fish* fishObj = Fish::createByType(fishToCatch);

@@ -116,7 +116,7 @@ protected:
                 } catch (const std::exception& e) {
                     // 捕获观察者中的异常，防止影响其他观察者
                     // 在实际项目中应该记录日志
-                    (void)e; // Suppress unused variable warning
+                    static_cast<void>(e); // Suppress unused variable warning
                 }
             }
         }

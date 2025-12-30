@@ -66,7 +66,7 @@ bool InventoryManager::init(int slotCount)
         initDefaultItems();
     }
 
-    CCLOG("InventoryManager initialized with %d slots and %d gold", (int)slots_.size(), money_);
+    CCLOG("InventoryManager initialized with %d slots and %d gold", static_cast<int>(slots_.size()), money_);
 
     return true;
 }
@@ -188,7 +188,7 @@ bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
 
 bool InventoryManager::removeItemFromSlot(int slotIndex, int count)
 {
-    if (slotIndex < 0 || slotIndex >= (int)slots_.size() || count <= 0)
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slots_.size()) || count <= 0)
         return false;
 
     auto& slot = slots_[slotIndex];
@@ -222,7 +222,7 @@ int InventoryManager::getItemCount(ItemType itemType) const
 const InventoryManager::ItemSlot& InventoryManager::getSlot(int slotIndex) const
 {
     static ItemSlot emptySlot;
-    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slots_.size()))
         return emptySlot;
     return slots_[slotIndex];
 }
@@ -234,7 +234,7 @@ void InventoryManager::setSlot(int slotIndex, ItemType itemType, int count)
 
 void InventoryManager::setSlotData(int slotIndex, ItemType itemType, int count, int durability, int maxDurability)
 {
-    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slots_.size()))
         return;
 
     auto& slot = slots_[slotIndex];
@@ -277,7 +277,7 @@ void InventoryManager::setSlotData(int slotIndex, ItemType itemType, int count, 
 
 void InventoryManager::swapSlots(int index1, int index2)
 {
-    if (index1 < 0 || index1 >= (int)slots_.size() || index2 < 0 || index2 >= (int)slots_.size())
+    if (index1 < 0 || index1 >= static_cast<int>(slots_.size()) || index2 < 0 || index2 >= static_cast<int>(slots_.size()))
         return;
 
     ItemSlot temp = slots_[index1];
@@ -318,7 +318,7 @@ void InventoryManager::clear()
 
 bool InventoryManager::decreaseDurability(int slotIndex, int amount)
 {
-    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slots_.size()))
         return false;
 
     auto& slot = slots_[slotIndex];
@@ -350,7 +350,7 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
 
 bool InventoryManager::repairSlot(int slotIndex)
 {
-    if (slotIndex < 0 || slotIndex >= (int)slots_.size())
+    if (slotIndex < 0 || slotIndex >= static_cast<int>(slots_.size()))
         return false;
 
     auto& slot = slots_[slotIndex];
@@ -393,7 +393,7 @@ bool InventoryManager::isTool(ItemType type)
 
 int InventoryManager::findEmptySlot() const
 {
-    for (int i = 0; i < (int)slots_.size(); ++i)
+    for (int i = 0; i < static_cast<int>(slots_.size()); ++i)
     {
         if (slots_[i].isEmpty())
             return i;
@@ -403,7 +403,7 @@ int InventoryManager::findEmptySlot() const
 
 int InventoryManager::findItemSlot(ItemType itemType) const
 {
-    for (int i = 0; i < (int)slots_.size(); ++i)
+    for (int i = 0; i < static_cast<int>(slots_.size()); ++i)
     {
         if (slots_[i].type == itemType)
             return i;
