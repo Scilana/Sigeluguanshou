@@ -70,7 +70,6 @@ bool FarmManager::init(MapLayer* mapLayer)
     SaveManager::SaveData saveData;
     if (SaveManager::getInstance()->hasSaveFile() && SaveManager::getInstance()->loadGame(saveData))
     {
-        CCLOG("FarmManager: Loading saved tiles...");
         for (const auto& tileData : saveData.farmTiles)
         {
             if (isValidTile(Vec2(tileData.x, tileData.y)))
@@ -85,8 +84,6 @@ bool FarmManager::init(MapLayer* mapLayer)
                tile.progressDays = tileData.progressDays;
                
                if (tile.hasCrop && tile.watered) {
-                   CCLOG("Loaded WATERED crop at (%d, %d), Stage: %d, Progress: %d", 
-                       tileData.x, tileData.y, tile.stage, tile.progressDays);
                }
             }
         }
@@ -163,7 +160,6 @@ void FarmManager::update(float delta)
         }
             // Missed some days! Catch up.
             int daysMissed = currentDay - lastUpdate;
-            CCLOG("FarmManager catching up: %d days", daysMissed);
             
             // Prevent recursive updates to LastFarmUpdateDay inside the loop
             // We just want to run the logic N times.
@@ -191,22 +187,18 @@ void FarmManager::update(float delta)
                 {
                     if (tile.hasCrop && tile.watered)
                     {
-                        CCLOG("Catch-up: Processing WATERED crop at (%d, %d) for day skip", tile.x, tile.y);
                         auto def = getCropDef(tile.cropId);
                         if (tile.stage < (int)def.stageDays.size())
                         {
                             tile.progressDays++;
-                            CCLOG("  Grew! Progress: %d -> %d", tile.progressDays-1, tile.progressDays);
                             if (tile.progressDays >= def.stageDays[tile.stage])
                             {
                                 tile.stage++;
                                 tile.progressDays = 0;
-                                CCLOG("  Stage UP! New Stage: %d", tile.stage);
                             }
                         }
                     }
                     else if (tile.hasCrop) {
-                         // CCLOG("Catch-up: Crop at (%d, %d) is NOT watered. Skipping growth.", tile.x, tile.y);
                     }
                     tile.watered = false; // Reset water daily
                 }

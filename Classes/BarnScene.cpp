@@ -182,7 +182,6 @@ void BarnScene::initMap()
     }
     else
     {
-        CCLOG("ERROR: Failed to load barn map: %s", kBarnMapFile);
     }
 }
 

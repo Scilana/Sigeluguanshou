@@ -28,14 +28,12 @@ bool MapLayer::init(const std::string& tmxFile)
 
     if (!loadTMXMap(tmxFile))
     {
-        CCLOG("Failed to load TMX map: %s", tmxFile.c_str());
         return false;
     }
 
     // 初始化碰撞层（调用下面定义的函数）
     initCollisionLayer();
 
-    CCLOG("MapLayer initialized with map: %s", tmxFile.c_str());
     return true;
 }
 
@@ -45,7 +43,6 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
     tmxMap_ = TMXTiledMap::create(tmxFile);
     if (!tmxMap_)
     {
-        CCLOG("Error: Cannot load TMX file: %s", tmxFile.c_str());
         return false;
     }
 
@@ -56,11 +53,9 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
     baseLayer_ = tmxMap_->getLayer("Ground");
     if (!baseLayer_)
     {
-        CCLOG("DEBUG: 'Ground' layer not found. Listing all available layers:");
         for (const auto& child : tmxMap_->getChildren()) {
             auto layer = dynamic_cast<TMXLayer*>(child);
             if (layer) {
-                CCLOG(" - Found Layer: %s (Opacity: %d, Visible: %d)", layer->getLayerName().c_str(), layer->getOpacity(), layer->isVisible());
             }
         }
 
@@ -81,22 +76,14 @@ bool MapLayer::loadTMXMap(const std::string& tmxFile)
     treeLayer_ = tmxMap_->getLayer("Tree");
     if (!treeLayer_)
     {
-        CCLOG("Warning: 'Tree' layer not found in TMX file!");
     }
     else
     {
-        CCLOG("Tree layer loaded.");
     }
 
     // 5. 打印调试信息
     Size mapSize = tmxMap_->getMapSize();
     Size tileSize = tmxMap_->getTileSize();
-    CCLOG("Map loaded: %s", tmxFile.c_str());
-    CCLOG("  Map size: %.0f x %.0f tiles", mapSize.width, mapSize.height);
-    CCLOG("  Tile size: %.0f x %.0f pixels", tileSize.width, tileSize.height);
-    CCLOG("  Total size: %.0f x %.0f pixels",
-        mapSize.width * tileSize.width,
-        mapSize.height * tileSize.height);
 
     return true;
 }
@@ -113,11 +100,9 @@ void MapLayer::initCollisionLayer()
     {
         //通常我们把碰撞层隐藏，不让玩家看到红色的块
         collisionLayer_->setVisible(false);
-        CCLOG("Collision layer found and hidden");
     }
     else
     {
-        CCLOG("Warning: 'Collision' layer not found in TMX!");
     }
 
     // 2. 顺便初始化水域层 (如果有的话)
@@ -155,7 +140,6 @@ bool MapLayer::isWalkable(const Vec2& position) const
 {
     if (!tmxMap_)
     {
-        CCLOG("Warning: tmxMap_ is null in isWalkable");
         return true;
     }
 
@@ -167,7 +151,6 @@ bool MapLayer::isWalkable(const Vec2& position) const
     if (tileCoord.x < 0 || tileCoord.x >= mapSize.width ||
         tileCoord.y < 0 || tileCoord.y >= mapSize.height)
     {
-        // CCLOG("Position out of map bounds: tile(%.0f, %.0f)", tileCoord.x, tileCoord.y);
         return false;
     }
 

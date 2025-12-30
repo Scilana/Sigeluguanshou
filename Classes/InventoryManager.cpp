@@ -24,7 +24,6 @@ InventoryManager* InventoryManager::getInstance()
         if (s_instance && s_instance->init(30))
         {
             // 不调用 autorelease，保持引用计数为 1
-            CCLOG("InventoryManager instance created");
         }
         else
         {
@@ -40,7 +39,6 @@ void InventoryManager::destroyInstance()
     {
         s_instance->release();
         s_instance = nullptr;
-        CCLOG("InventoryManager instance destroyed");
     }
 }
 
@@ -66,7 +64,6 @@ bool InventoryManager::init(int slotCount)
         initDefaultItems();
     }
 
-    CCLOG("InventoryManager initialized with %d slots and %d gold", (int)slots_.size(), money_);
 
     return true;
 }
@@ -122,7 +119,6 @@ bool InventoryManager::addItem(ItemType itemType, int count)
 
                 if (count <= 0)
                 {
-                    CCLOG("Added %s (stacked)", getItemName(itemType).c_str());
                     return true;
                 }
             }
@@ -135,7 +131,6 @@ bool InventoryManager::addItem(ItemType itemType, int count)
         int emptySlot = findEmptySlot();
         if (emptySlot == -1)
         {
-            CCLOG("Inventory full! Cannot add %s", getItemName(itemType).c_str());
             return false;
         }
 
@@ -144,7 +139,6 @@ bool InventoryManager::addItem(ItemType itemType, int count)
         setSlotData(emptySlot, itemType, addCount, -1, -1);
         count -= addCount;
 
-        CCLOG("Added %d x %s to slot %d", addCount, getItemName(itemType).c_str(), emptySlot);
     }
 
     return true;
@@ -158,7 +152,6 @@ bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
     // 先检查是否有足够的物品
     if (!hasItem(itemType, count))
     {
-        CCLOG("Not enough %s to remove", getItemName(itemType).c_str());
         return false;
     }
 
@@ -182,7 +175,6 @@ bool InventoryManager::removeItem(ItemType itemType, int count /*= 1*/)
         }
     }
 
-    CCLOG("Removed %d x %s", count, getItemName(itemType).c_str());
     return true;
 }
 
@@ -284,25 +276,21 @@ void InventoryManager::swapSlots(int index1, int index2)
     slots_[index1] = slots_[index2];
     slots_[index2] = temp;
 
-    CCLOG("Swapped slots %d and %d", index1, index2);
 }
 
 void InventoryManager::addMoney(int amount)
 {
     money_ += amount;
-    CCLOG("Added %d gold. Total: %d", amount, money_);
 }
 
 bool InventoryManager::removeMoney(int amount)
 {
     if (money_ < amount)
     {
-        CCLOG("Not enough money! Have %d, need %d", money_, amount);
         return false;
     }
 
     money_ -= amount;
-    CCLOG("Removed %d gold. Remaining: %d", amount, money_);
     return true;
 }
 
@@ -313,7 +301,6 @@ void InventoryManager::clear()
         slot.clear();
     }
     money_ = 0;
-    CCLOG("Inventory cleared");
 }
 
 bool InventoryManager::decreaseDurability(int slotIndex, int amount)
@@ -330,18 +317,15 @@ bool InventoryManager::decreaseDurability(int slotIndex, int amount)
         if (defMax > 0) {
             slot.maxDurability = defMax;
             slot.durability = defMax;
-            CCLOG("Restored legacy tool durability for %s", getItemName(slot.type).c_str());
         } else {
             return false; // Not a tool
         }
     }
 
     slot.durability -= amount;
-    CCLOG("Tool %s durability: %d/%d", getItemName(slot.type).c_str(), slot.durability, slot.maxDurability);
 
     if (slot.durability <= 0)
     {
-        CCLOG("Tool %s broke!", getItemName(slot.type).c_str());
         slot.clear();
         return true; // Broke
     }
@@ -358,7 +342,6 @@ bool InventoryManager::repairSlot(int slotIndex)
         return false;
 
     slot.durability = slot.maxDurability;
-    CCLOG("Repaired tool in slot %d", slotIndex);
     return true;
 }
 

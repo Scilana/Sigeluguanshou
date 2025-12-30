@@ -25,7 +25,6 @@ bool MineLayer::init(const std::string& tmxFile)
     mineralLayer_ = nullptr;
     stairsLayer_ = nullptr;
 
-    CCLOG("MineLayer initialized with: %s", tmxFile.c_str());
 
     // 新的矿洞地图使用 "Buildings" 层作为碰撞层
     auto tmxMap = getTMXMap();
@@ -37,12 +36,10 @@ bool MineLayer::init(const std::string& tmxFile)
         if (!mineralLayer_)
             mineralLayer_ = tmxMap->getLayer("mine1");
         
-        if (mineralLayer_) CCLOG("Found mineral layer: %s", mineralLayer_->getLayerName().c_str());
         
         stairsLayer_ = tmxMap->getLayer("stairs");
         if (!stairsLayer_)
             stairsLayer_ = tmxMap->getLayer("Stairs");
-        if (stairsLayer_) CCLOG("Found stairs layer: %s", stairsLayer_->getLayerName().c_str());
 
 
         // 检查图层
@@ -50,9 +47,6 @@ bool MineLayer::init(const std::string& tmxFile)
         auto buildingsLayer = tmxMap->getLayer("Buildings");
         auto frontLayer = tmxMap->getLayer("Front");
 
-        if (backLayer) CCLOG("Found Back layer");
-        if (buildingsLayer) CCLOG("Found Buildings layer (collision)");
-        if (frontLayer) CCLOG("Found Front layer");
     }
 
     return true;

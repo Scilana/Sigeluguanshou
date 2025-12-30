@@ -21,7 +21,6 @@ bool DialogueBox::init(Npc* npc) {
     // Background
     background_ = Sprite::create("npcImages/dialogueBox.png");
     if (!background_) {
-        CCLOG("Failed to load dialogueBox.png");
         return false;
     }
     // background_->setPosition(Vec2(0, 0)); // Center relative to node
@@ -66,12 +65,12 @@ bool DialogueBox::init(Npc* npc) {
 
             // Button sizing: 150x50. Pos: -80 and +80.
             // Option 1 (Left): (-80, 0). Bounds: [-155, -5] x [-40, 40]
-            if (locationInNode.x > -155 && locationInNode.x < -5 && locationInNode.y > -40 && locationInNode.y < 40) {
+            if (locationInNode.x > -155 && locationInNode.x < -5 && locationInNode.y > -257 && locationInNode.y < -177) {
                 if (choice_callback_) choice_callback_(0); // Buy
                 return true;
             }
             // Option 2 (Right): (80, 0). Bounds: [5, 155] x [-40, 40]
-            if (locationInNode.x > 5 && locationInNode.x < 155 && locationInNode.y > -40 && locationInNode.y < 40) {
+            if (locationInNode.x > 5 && locationInNode.x < 155 && locationInNode.y > -257 && locationInNode.y < -177) {
                 if (choice_callback_) choice_callback_(1); // Sell
                 return true;
             }

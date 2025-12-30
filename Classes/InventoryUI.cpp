@@ -36,7 +36,6 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
     marketState_ = marketState;
     if (!inventory_)
     {
-        CCLOG("ERROR: InventoryUI requires a valid InventoryManager!");
         return false;
     }
 
@@ -53,7 +52,6 @@ bool InventoryUI::init(InventoryManager* inventory, MarketState* marketState)
     keyListener->onKeyPressed = CC_CALLBACK_2(InventoryUI::onKeyPressed, this);
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
 
-    CCLOG("InventoryUI initialized");
 
     _selectionMode = false;
     return true;
@@ -181,7 +179,6 @@ void InventoryUI::initSlots()
                 Rect rect = Rect(0, 0, size.width, size.height);
                 
                 bool hit = rect.containsPoint(locationInNode);
-                CCLOG("Slot %d touched. Hit: %s, location: (%.1f, %.1f)", slotIndex, hit ? "YES" : "NO", locationInNode.x, locationInNode.y);
                 
                 if (hit)
                 {
@@ -408,7 +405,6 @@ cocos2d::Sprite* InventoryUI::createItemIcon(const InventoryManager::ItemSlot& s
 
 void InventoryUI::onSlotClicked(int slotIndex)
 {
-    CCLOG("onSlotClicked: %d, current selection: %d", slotIndex, selectedSlotIndex_);
     
     // Selection Mode Logic (For Merchant Sell)
     if (_selectionMode) {
@@ -442,7 +438,6 @@ void InventoryUI::onSlotClicked(int slotIndex)
             return;
         }
 
-        CCLOG("Selecting slot %d", slotIndex);
         selectedSlotIndex_ = slotIndex;
         std::string info = StringUtils::format(
             "%s x%d - %s",
@@ -458,7 +453,6 @@ void InventoryUI::onSlotClicked(int slotIndex)
 
     if (selectedSlotIndex_ == slotIndex)
     {
-        CCLOG("Deselecting slot %d", slotIndex);
         selectedSlotIndex_ = -1;
         infoLabel_->setString("");
 
@@ -466,7 +460,6 @@ void InventoryUI::onSlotClicked(int slotIndex)
         return;
     }
 
-    CCLOG("Swapping slot %d with %d", selectedSlotIndex_, slotIndex);
     inventory_->swapSlots(selectedSlotIndex_, slotIndex);
 
     const auto& newSlot = inventory_->getSlot(slotIndex);
@@ -573,7 +566,6 @@ void InventoryUI::close()
     auto sequence = Sequence::create(spawn, callback, nullptr);
     this->runAction(sequence);
 
-    CCLOG("InventoryUI closing");
 }
 
 cocos2d::Color3B InventoryUI::getItemColor(ItemType itemType) const

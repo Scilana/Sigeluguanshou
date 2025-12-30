@@ -136,9 +136,7 @@ void BlacksmithUI::refreshList()
             {ItemType::WateringCan, "Water Can", 500},
             {ItemType::Scythe, "Scythe", 500},
             {ItemType::Axe, "Axe", 1000},
-            {ItemType::Pickaxe, "Pickaxe", 1000},
-            {ItemType::SeedTurnip, "Turnip Seed", 20},
-            {ItemType::SeedCorn, "Corn Seed", 50}
+            {ItemType::Pickaxe, "Pickaxe", 1000}
         };
 
         for (const auto& item : shopItems) {

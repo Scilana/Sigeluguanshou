@@ -57,7 +57,6 @@ bool HouseScene::init(bool isPassedOut)
             player_->setPosition(background_->convertToWorldSpace(Vec2(165, 77)));
         }
         if (sleepSprite_) sleepSprite_->setVisible(true);
-        CCLOG("Player passed out - starting in sleep mode");
     }
     else
     {
@@ -146,7 +145,6 @@ void HouseScene::wakeUp()
     // User didn't ask for save/load.
     // Stardew logic: Sleep -> Save -> New Day.
     
-    CCLOG("Player woke up! (Sprites toggled)");
 
 }
 
@@ -277,13 +275,11 @@ void HouseScene::update(float delta)
         // Auto Wake Up at 6:00 AM
         if (isSleeping_ && tm->getHour() == 6)
         {
-            CCLOG("Alarm clock! 6:00 AM reached.");
             wakeUp(); 
         }
         
         // Forced Sleep check in house (if not already sleeping)
         if (!isSleeping_ && tm->isMidnight()) {
-             CCLOG("Passed out in house!");
              // Pass out logic
              isSleeping_ = true;
              // Penalty? Maybe less in house? Or same?
@@ -367,7 +363,6 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
                 sleepSprite_->setVisible(true); // 显示刚才定好位置的贴图
             }
 
-            CCLOG("Player sleeping! Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
         }
         else
         {
@@ -384,7 +379,6 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
             }
             else
             {
-                CCLOG("Not in sleep or TV area. Pos: (%.1f, %.1f)", playerPosLocal.x, playerPosLocal.y);
             }
         }
     }
@@ -411,7 +405,6 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         // 3. 判定
         if (doorArea.containsPoint(playerPosLocal))
         {
-            CCLOG("Exiting house...");
             if (isPassedOut_)
             {
                 Director::getInstance()->replaceScene(TransitionFade::create(0.5f, GameScene::createScene()));
@@ -424,13 +417,11 @@ void HouseScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         else
         {
             // 调试日志：显示玩家当前坐标 vs 门的位置
-            CCLOG("Pos: (%.1f, %.1f) - Target Y is roughly 2~22", playerPosLocal.x, playerPosLocal.y);
         }
     }
     break;
     case EventKeyboard::KeyCode::KEY_TAB:
     {
-        CCLOG("Cheat: Skipping Day from House...");
         auto tm = TimeManager::getInstance();
         if (tm) {
              // Stop updating THIS scene so we don't trigger wakeUp() here

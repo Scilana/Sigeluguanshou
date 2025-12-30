@@ -60,7 +60,6 @@ void SkillManager::recordAction(SkillType type, int count)
     recalcLevel(skill);
     if (skill.level != prevLevel)
     {
-        CCLOG("Skill %s leveled up: %d", skill.name.c_str(), skill.level);
         if (levelUpCallback_) {
             levelUpCallback_(type, skill.level);
         }

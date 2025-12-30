@@ -45,7 +45,6 @@ void SaveManager::deleteSaveFile()
     if (FileUtils::getInstance()->isFileExist(path))
     {
         FileUtils::getInstance()->removeFile(path);
-        CCLOG("Save file deleted: %s", path.c_str());
     }
 }
 
@@ -156,7 +155,6 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
         }
         else
         {
-            CCLOG("Warning: playerPosition not found in save file");
             data.playerPosition = Vec2::ZERO;
         }
 
@@ -274,12 +272,10 @@ bool SaveManager::deserializeFromJson(const rapidjson::Document& doc, SaveData& 
     }
     catch (const std::exception& e)
     {
-        CCLOG("Error: Exception during save deserialization: %s", e.what());
         return false;
     }
     catch (...)
     {
-        CCLOG("Error: Unknown exception during save deserialization");
         return false;
     }
 }
@@ -289,7 +285,6 @@ bool SaveManager::saveGame(const SaveData& data)
     try
     {
         std::string path = getSaveFilePath();
-        CCLOG("Saving game to: %s", path.c_str());
 
         // 序列化为 JSON
         rapidjson::Document doc = serializeToJson(data);
@@ -305,7 +300,6 @@ bool SaveManager::saveGame(const SaveData& data)
         FILE* file = fopen(path.c_str(), "w");
         if (!file)
         {
-            CCLOG("Error: Failed to open save file for writing: %s", path.c_str());
             return false;
         }
 
@@ -314,21 +308,16 @@ bool SaveManager::saveGame(const SaveData& data)
 
         if (written != jsonStr.length())
         {
-            CCLOG("Error: Failed to write complete save data (wrote %zu of %zu bytes)",
-                  written, jsonStr.length());
             return false;
         }
-        CCLOG("Game saved successfully!");
         return true;
     }
     catch (const std::exception& e)
     {
-        CCLOG("Error: Exception during save operation: %s", e.what());
         return false;
     }
     catch (...)
     {
-        CCLOG("Error: Unknown exception during save operation");
         return false;
     }
 }
@@ -338,11 +327,9 @@ bool SaveManager::loadGame(SaveData& data)
     try
     {
         std::string path = getSaveFilePath();
-        CCLOG("Loading game from: %s", path.c_str());
 
         if (!FileUtils::getInstance()->isFileExist(path))
         {
-            CCLOG("Error: Save file does not exist");
             return false;
         }
 
@@ -350,7 +337,6 @@ bool SaveManager::loadGame(SaveData& data)
         std::string jsonStr = FileUtils::getInstance()->getStringFromFile(path);
         if (jsonStr.empty())
         {
-            CCLOG("Error: Failed to read save file or file is empty");
             return false;
         }
 
@@ -360,29 +346,23 @@ bool SaveManager::loadGame(SaveData& data)
 
         if (doc.HasParseError())
         {
-            CCLOG("Error: Failed to parse JSON at offset %zu: %d",
-                  doc.GetErrorOffset(), doc.GetParseError());
             return false;
         }
 
         // 反序列化
         if (!deserializeFromJson(doc, data))
         {
-            CCLOG("Error: Failed to deserialize save data");
             return false;
         }
 
-        CCLOG("Game loaded successfully!");
         return true;
     }
     catch (const std::exception& e)
     {
-        CCLOG("Error: Exception during load operation: %s", e.what());
         return false;
     }
     catch (...)
     {
-        CCLOG("Error: Unknown exception during load operation");
         return false;
     }
 }

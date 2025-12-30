@@ -7,6 +7,8 @@
 #include "HouseScene.h"
 #include "FishingLayer.h"
 #include "SkillManager.h"
+#include "SaveManager.h"
+#include "TimeManager.h"
 #include "EnergyBar.h"
 #include "Fish.h"
 #include <algorithm>
@@ -160,6 +162,67 @@ namespace
         icon->setScale(scale);
         return icon;
     }
+
+    bool syncSaveInventoryAndSkills(InventoryManager* inventory)
+    {
+        if (!inventory)
+            return false;
+
+        auto saveMgr = SaveManager::getInstance();
+        if (!saveMgr || !saveMgr->hasSaveFile())
+            return false;
+
+        SaveManager::SaveData data;
+        if (!saveMgr->loadGame(data))
+            return false;
+
+        data.inventory.slots.clear();
+        int slotCount = inventory->getSlotCount();
+        data.inventory.slots.reserve(slotCount);
+        for (int i = 0; i < slotCount; ++i)
+        {
+            const auto& slot = inventory->getSlot(i);
+            SaveManager::SaveData::InventoryData::ItemSlotData slotData;
+            if (!slot.isEmpty())
+            {
+                slotData.type = static_cast<int>(slot.type);
+                slotData.count = slot.count;
+                slotData.durability = slot.durability;
+                slotData.maxDurability = slot.maxDurability;
+            }
+            else
+            {
+                slotData.type = static_cast<int>(ItemType::ITEM_NONE);
+                slotData.count = 0;
+                slotData.durability = -1;
+                slotData.maxDurability = -1;
+            }
+            data.inventory.slots.push_back(slotData);
+        }
+        data.inventory.money = inventory->getMoney();
+
+        if (auto tm = TimeManager::getInstance())
+        {
+            data.dayCount = tm->getDay();
+        }
+
+        if (auto skillMgr = SkillManager::getInstance())
+        {
+            data.skills.clear();
+            for (int i = 0; i < static_cast<int>(SkillManager::SkillType::Count); ++i)
+            {
+                auto type = static_cast<SkillManager::SkillType>(i);
+                const auto& sd = skillMgr->getSkillData(type);
+                SaveManager::SaveData::SkillData skillData;
+                skillData.type = i;
+                skillData.level = sd.level;
+                skillData.actionCount = sd.actionCount;
+                data.skills.push_back(skillData);
+            }
+        }
+
+        return saveMgr->saveGame(data);
+    }
 }
 
 BeachScene* BeachScene::createScene(InventoryManager* inventory, int dayCount, float accumulatedSeconds)
@@ -205,7 +268,6 @@ void BeachScene::initMap()
     }
     else
     {
-        CCLOG("ERROR: Failed to load beach map: %s", kBeachMapFile);
     }
 }
 
@@ -679,7 +741,8 @@ void BeachScene::backToFarm()
         return;
 
     transitioning_ = true;
-    auto gameScene = GameScene::createScene(true);
+    bool saveSynced = syncSaveInventoryAndSkills(inventory_);
+    auto gameScene = GameScene::createScene(saveSynced);
     Director::getInstance()->replaceScene(TransitionFade::create(0.8f, gameScene));
 }
 
@@ -759,18 +822,15 @@ void BeachScene::onMouseDown(Event* event)
         fishingState_ = FishingState::CHARGING;
         fishingRodSlotIndex_ = selectedItemIndex_;
         chargePower_ = 0.0f;
-        CCLOG("Start Charging...");
     }
     else if (fishingState_ == FishingState::BITING)
     {
-        CCLOG("HOOKED!");
         if (exclamationMark_) exclamationMark_->setVisible(false);
         fishingRodSlotIndex_ = selectedItemIndex_;
         startFishing();
     }
     else if (fishingState_ == FishingState::WAITING)
     {
-        CCLOG("Pulled too early!");
         fishingState_ = FishingState::NONE;
         fishingRodSlotIndex_ = -1;
         if (exclamationMark_) exclamationMark_->setVisible(false);
@@ -792,7 +852,6 @@ void BeachScene::onMouseUp(Event* event)
 
         waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
         if (player_) player_->startFishingCast();
-        CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
     }
 }
 
@@ -818,7 +877,6 @@ void BeachScene::updateFishingState(float delta)
             fishingState_ = FishingState::BITING;
             biteTimer_ = 1.0f;
             if (exclamationMark_) exclamationMark_->setVisible(true);
-            CCLOG("Fish bit! Click now!");
         }
     }
     else if (fishingState_ == FishingState::BITING)
@@ -830,7 +888,6 @@ void BeachScene::updateFishingState(float delta)
             fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
-            CCLOG("Missed...");
             showActionMessage("Missed...", Color3B::GRAY);
         }
     }
@@ -879,7 +936,6 @@ void BeachScene::startFishing()
                 ItemType type = fishObj ? fishObj->getType() : ItemType::Fish;
                 std::string name = fishObj ? fishObj->getName() : "Fish";
                 
-                CCLOG("Fishing SUCCESS! Caught: %s", name.c_str());
                 showActionMessage("Caught a " + name + "!", Color3B(255, 215, 0));
                 
                 // 【修复】加入背包
@@ -891,7 +947,6 @@ void BeachScene::startFishing()
             }
             else
             {
-                CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
             }
             

@@ -28,7 +28,6 @@ bool MarketUI::init(InventoryManager* inventory, MarketState* marketState, FarmM
     farmManager_ = farmManager;
 
     if (!inventory_ || !marketState_) {
-        CCLOG("ERROR: MarketUI requires InventoryManager and MarketState.");
         return false;
     }
 

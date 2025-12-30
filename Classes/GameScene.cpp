@@ -44,7 +44,7 @@ namespace
 
     // NPC Constants
     const Vec2 kMerchantTile(35.0f, 9.0f);
-    const Vec2 kBlacksmithTile(5.0f, 9.0f);
+    const Vec2 kBlacksmithTile(6.0f, 4.0f);
     const float kInteractionRadius = 80.0f; // Slightly larger for better UX
 
     Color4B lerpColor(const Color4B& from, const Color4B& to, float t)
@@ -118,11 +118,8 @@ bool GameScene::init()
 
         return false;
 
-    CCLOG("========================================");
 
-    CCLOG("Initializing Game Scene (New Architecture)");
 
-    CCLOG("========================================");
 
     // 初始化各个组件
     mapLayer_ = nullptr;
@@ -151,7 +148,6 @@ bool GameScene::init()
     {
         // 不再添加到场景，避免随场景销毁
         // this->addChild(inventory_, 0);
-        CCLOG("InventoryManager retrieved from singleton");
     }
     SkillManager::getInstance();
     marketState_.init();
@@ -173,7 +169,6 @@ bool GameScene::init()
     // 启动更新
     this->scheduleUpdate();
 
-    CCLOG("Game Scene initialized successfully!");
 
     return true;
 
@@ -185,7 +180,6 @@ void GameScene::initMap()
 
 {
 
-    CCLOG("Initializing map...");
 
     // 创建地图层
     FileUtils::getInstance()->purgeCachedEntries();
@@ -203,9 +197,7 @@ void GameScene::initMap()
 
     {
 
-        CCLOG("ERROR: Failed to create map layer!");
 
-        CCLOG("Please ensure farm.tmx exists in Resources/map/");
 
     }
 
@@ -218,7 +210,6 @@ void GameScene::initFarm()
     if (!mapLayer_)
     {
 
-        CCLOG("No map layer, skip farm manager");
 
         return;
 
@@ -245,13 +236,11 @@ void GameScene::initFarm()
         if (player_) {
             player_->setFarmManager(farmManager_);
         }
-        CCLOG("FarmManager added on top of MapLayer and linked to Player");
     }
 
     else
     {
 
-        CCLOG("Failed to create FarmManager");
 
     }
 
@@ -263,7 +252,6 @@ void GameScene::initPlayer()
 
 {
 
-    CCLOG("Initializing player...");
 
     // 创建玩家
 
@@ -340,7 +328,6 @@ void GameScene::initPlayer()
     }
     else
     {
-        CCLOG("ERROR: Failed to create player!");
     }
 
 }
@@ -351,7 +338,6 @@ void GameScene::initCamera()
 
 {
 
-    CCLOG("Initializing camera...");
 
     // 获取默认摄像机
 
@@ -367,7 +353,6 @@ void GameScene::initCamera()
 
         camera->setPosition(playerPos.x, playerPos.y);
 
-        CCLOG("Camera initialized at player position");
 
     }
 
@@ -379,7 +364,6 @@ void GameScene::initUI()
 
 {
 
-    CCLOG("Initializing UI...");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
     auto origin = Director::getInstance()->getVisibleOrigin();
@@ -392,7 +376,6 @@ void GameScene::initUI()
 
     this->addChild(uiLayer_, 1000);
 
-    CCLOG("UI Layer created with global z-order 1000");
 
     // Day/night lighting overlay (tints world, UI drawn above it).
     dayNightLayer_ = LayerColor::create(Color4B(0, 0, 0, 0), visibleSize.width, visibleSize.height);
@@ -536,7 +519,6 @@ void GameScene::initUI()
 
     updateDayNightLighting();
 
-    CCLOG("UI initialized - using simple fixed layer method");
 
     // 能量条
     if (player_)
@@ -560,7 +542,6 @@ void GameScene::initWeather()
 
     {
 
-        CCLOG("Weather skipped: uiLayer_ not initialized");
 
         return;
 
@@ -578,7 +559,6 @@ void GameScene::initWeather()
 
         updateWeather();
 
-        CCLOG("WeatherManager initialized");
 
     }
 
@@ -586,7 +566,6 @@ void GameScene::initWeather()
 
     {
 
-        CCLOG("ERROR: Failed to create WeatherManager!");
 
     }
 
@@ -595,25 +574,22 @@ void GameScene::initWeather()
 // ========== 初始化 NPCs ==========
 void GameScene::initNpcs()
 {
-    CCLOG("Initializing NPCs...");
 
     if (!mapLayer_ || !uiLayer_) return;
 
     // Wizard (Merchant)
-    auto wizard = Npc::create("Wizard", "npcImages/wizard.png", Npc::NpcType::Merchant);
+    auto wizard = Npc::create("Wizard", "NPC/bussiness_person_processed.png", Npc::NpcType::Merchant);
     if (wizard) {
         // Place using tile coordinates (map-friendly)
         wizard->setPosition(mapLayer_->tileCoordToPosition(kMerchantTile));
-        wizard->setScale(0.5f); 
         mapLayer_->addChild(wizard, 10);
         npcs_.push_back(wizard);
     }
 
     // Blacksmith (Replaces Cleaner)
-    auto blacksmith = Npc::create("Blacksmith", "npcImages/cleaner.png", Npc::NpcType::Blacksmith);
+    auto blacksmith = Npc::create("Blacksmith", "NPC/blacksmith_processed.png", Npc::NpcType::Blacksmith);
     if (blacksmith) {
         blacksmith->setPosition(mapLayer_->tileCoordToPosition(kBlacksmithTile));
-        blacksmith->setScale(0.5f); // Scale down
         mapLayer_->addChild(blacksmith, 10);
         npcs_.push_back(blacksmith);
     }
@@ -626,7 +602,6 @@ void GameScene::initNpcs()
         dialogueBox_->setVisible(false);
     }
     
-    CCLOG("NPCs initialized: %d", (int)npcs_.size());
 }
 
 // ========== 初始化控制 ==========
@@ -635,7 +610,6 @@ void GameScene::initControls()
 
 {
 
-    CCLOG("Initializing controls...");
 
     // ESC键监听（返回菜单）
 
@@ -645,7 +619,6 @@ void GameScene::initControls()
 
     _eventDispatcher->addEventListenerWithSceneGraphPriority(keyListener, this);
 
-    CCLOG("Controls initialized");
 
 }
 
@@ -714,9 +687,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         {
             showActionMessage("Elevator is too far!", Color3B::RED);
             // 调试显示位置
-            CCLOG("Player at (%.1f, %.1f), Elevator at (%.1f, %.1f)",
-                player_->getPosition().x, player_->getPosition().y,
-                ELEVATOR_POS.x, ELEVATOR_POS.y);
         }
         break;
     case EventKeyboard::KeyCode::KEY_ENTER:
@@ -830,7 +800,6 @@ void GameScene::onKeyPressed(EventKeyboard::KeyCode keyCode, Event* event)
         break;
     case EventKeyboard::KeyCode::KEY_TAB:
     {
-        CCLOG("Cheat: Skipping Day...");
         auto tm = TimeManager::getInstance();
         if (tm) {
              // 1. Save current state (including farm)
@@ -877,7 +846,6 @@ void GameScene::update(float delta)
     if (tm->isMidnight()) // Midnight
     {
          // Prevent multiple triggers if already passing out (scene replacement stops update anyway)
-         CCLOG("It's midnight! Passing out...");
          if (inventory_) inventory_->removeMoney(200);
          showActionMessage("Passed out...", Color3B::RED);
          Director::getInstance()->replaceScene(TransitionFade::create(1.0f, HouseScene::createScene(true)));
@@ -1230,7 +1198,6 @@ void GameScene::handleFarmAction(bool waterOnly)
 
                         // 第3刀：替换瓦片为Sprite
                         if (existingChop->chopCount == REPLACE_THRESHOLD && existingChop->treeSprite == nullptr) {
-                            CCLOG("Chop 3: Replacing tiles with Sprite...");
                             existingChop->treeSprite = createTreeSprite(existingChop->tiles);
                             showActionMessage("Tree is loose!", Color3B::YELLOW);
                         }
@@ -1595,7 +1562,6 @@ bool GameScene::findNearbyCollisionTile(const Vec2& centerTile, Vec2& outTile) c
 
             if (gid == TREE_ROOT_GID) {
                 outTile = candidate;
-                CCLOG("Found tree root at: (%.0f, %.0f)", candidate.x, candidate.y);
                 return true;
             }
         }
@@ -1658,7 +1624,6 @@ Sprite* GameScene::createTreeSprite(const std::vector<Vec2>& tiles) {
     // ==========================================
     auto treeSprite = Sprite::create("images/items/tree_full.png");
     if (!treeSprite) {
-        CCLOG("Error: tree_full.png not found!");
         return nullptr;
     }
 
@@ -1877,7 +1842,6 @@ void GameScene::spawnItem(ItemType type, const Vec2& position, int count) {
     }
 
     // TODO: 实际游戏中应该将物品添加到背包系统
-    CCLOG("Collected %d x %s", count, getItemName(type).c_str());
 }
 
 void GameScene::updateChopping(float delta) {
@@ -2264,7 +2228,6 @@ void GameScene::onMouseDown(Event* event)
 
             if (npc->getBoundingBox().containsPoint(mapLayerClickPos)) {
                 // Clicked on NPC
-                CCLOG("Clicked NPC: %s", npc->getNpcName().c_str());
                 
                 if (npc->getNpcName() == "Blacksmith") {
                      auto ui = BlacksmithUI::create();
@@ -2300,18 +2263,15 @@ void GameScene::onMouseDown(Event* event)
                  fishingState_ = FishingState::CHARGING;
                  fishingRodSlotIndex_ = selectedItemIndex_;
                  chargePower_ = 0.0f;
-                 CCLOG("Start Charging...");
             }
             else if (fishingState_ == FishingState::BITING)
             {
-                 CCLOG("HOOKED!");
                  if (exclamationMark_) exclamationMark_->setVisible(false);
                  fishingRodSlotIndex_ = selectedItemIndex_;
                  startFishing(); 
             }
             else if (fishingState_ == FishingState::WAITING)
             {
-                 CCLOG("Pulled too early!");
                  fishingState_ = FishingState::NONE;
                  fishingRodSlotIndex_ = -1;
                  if (exclamationMark_) exclamationMark_->setVisible(false);
@@ -2333,7 +2293,6 @@ void GameScene::onMouseDown(Event* event)
         
         if (mapLayer_) {
             Vec2 t = mapLayer_->positionToTileCoord(worldPos2);
-            CCLOG("Target Tile: (%.0f, %.0f)", t.x, t.y);
         }
     }
 }
@@ -2351,7 +2310,6 @@ void GameScene::onMouseUp(Event* event)
             // Wait 1.0 - 4.0s
             waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
             if (player_) player_->startFishingCast();
-            CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
         }
     }
 }
@@ -2378,7 +2336,6 @@ void GameScene::updateFishingState(float delta)
             fishingState_ = FishingState::BITING;
             biteTimer_ = 1.0f; 
             if (exclamationMark_) exclamationMark_->setVisible(true);
-            CCLOG("Fish bit! Click now!");
         }
     }
     else if (fishingState_ == FishingState::BITING)
@@ -2390,7 +2347,6 @@ void GameScene::updateFishingState(float delta)
             fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
-            CCLOG("Missed...");
             showActionMessage("Missed...", Color3B::GRAY);
         }
     }
@@ -2434,7 +2390,6 @@ void GameScene::startFishing()
                 ItemType type = fishObj ? fishObj->getType() : ItemType::Fish;
                 std::string name = fishObj ? fishObj->getName() : "Fish";
 
-                CCLOG("Fishing SUCCESS! Caught: %s", name.c_str());
                 showActionMessage("Caught a " + name + "!", Color3B(255, 215, 0));
                 
                 // 加入背包
@@ -2447,7 +2402,6 @@ void GameScene::startFishing()
             }
             else
             {
-                CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
             }
 
@@ -2483,7 +2437,6 @@ void GameScene::backToMenu()
 
 {
 
-    CCLOG("Returning to menu...");
     saveGame();
 
     auto scene = MenuScene::createScene();
@@ -2498,7 +2451,6 @@ void GameScene::toggleInventory()
 {
     if (!inventory_)
     {
-        CCLOG("ERROR: Inventory not initialized!");
         return;
     }
 
@@ -2513,7 +2465,6 @@ void GameScene::toggleInventory()
     inventoryUI_ = InventoryUI::create(inventory_, &marketState_);
     if (!inventoryUI_)
     {
-        CCLOG("ERROR: Failed to create InventoryUI!");
         return;
     }
 
@@ -2568,7 +2519,6 @@ void GameScene::toggleSkillTree()
     skillUI_ = SkillTreeUI::create();
     if (!skillUI_)
     {
-        CCLOG("ERROR: Failed to create SkillTreeUI!");
         return;
     }
 
@@ -2587,14 +2537,12 @@ void GameScene::toggleSkillTree()
 void GameScene::onInventoryClosed()
 {
     inventoryUI_ = nullptr;
-    CCLOG("Inventory closed");
 }
 
 void GameScene::toggleMarket()
 {
     if (!inventory_)
     {
-        CCLOG("ERROR: Inventory not initialized!");
         return;
     }
 
@@ -2607,7 +2555,6 @@ void GameScene::toggleMarket()
     marketUI_ = MarketUI::create(inventory_, &marketState_, farmManager_);
     if (!marketUI_)
     {
-        CCLOG("ERROR: Failed to create MarketUI!");
         return;
     }
 
@@ -2632,13 +2579,11 @@ void GameScene::toggleMarket()
     }
 
     marketUI_->show();
-    CCLOG("Market opened");
 }
 
 void GameScene::onMarketClosed()
 {
     marketUI_ = nullptr;
-    CCLOG("Market closed");
 }
 
 void GameScene::enterHouse()
@@ -2656,7 +2601,6 @@ void GameScene::enterHouse()
     }
     else
     {
-        CCLOG("ERROR: Failed to create house scene!");
         return;
     }
 
@@ -2669,7 +2613,6 @@ void GameScene::enterBarn()
     auto barnScene = BarnScene::createScene();
     if (!barnScene)
     {
-        CCLOG("ERROR: Failed to create barn scene!");
         return;
     }
 
@@ -2684,15 +2627,12 @@ void GameScene::enterBeach()
 
     enteringBeach_ = true;
 
-    CCLOG("Entering beach...");
     SaveManager::SaveData data = collectSaveData();
     if (SaveManager::getInstance()->saveGame(data))
     {
-        CCLOG("Auto-save before beach: OK");
     }
     else
     {
-        CCLOG("Auto-save before beach: FAILED");
     }
 
     int dayCount = farmManager_ ? farmManager_->getDayCount() : 1;
@@ -2711,7 +2651,6 @@ void GameScene::enterBeach()
     else
     {
         enteringBeach_ = false;
-        CCLOG("ERROR: Failed to create BeachScene");
     }
 }
 
@@ -2745,19 +2684,16 @@ bool GameScene::isPlayerAtBeachEntrance() const
 
 void GameScene::enterMine()
 {
-    CCLOG("Opening elevator UI...");
 
     // 创建电梯楼层选择UI
     auto elevatorUI = ElevatorUI::create();
     if (!elevatorUI)
     {
-        CCLOG("ERROR: Failed to create ElevatorUI!");
         return;
     }
 
     // 设置楼层选择回调
     elevatorUI->setFloorSelectCallback([this](int floor) {
-        CCLOG("Floor %d selected, entering mine...", floor);
 
         if (floor == 0)
         {
@@ -2767,15 +2703,12 @@ void GameScene::enterMine()
         }
 
         // 进入矿洞前自动保存游戏
-        CCLOG("Auto-saving before entering mine...");
         SaveManager::SaveData data = collectSaveData();
         if (SaveManager::getInstance()->saveGame(data))
         {
-            CCLOG("✓ Auto-save successful!");
         }
         else
         {
-            CCLOG("✗ Auto-save failed!");
         }
 
         // 创建矿洞场景，传入背包实例和选择的楼层
@@ -2789,7 +2722,6 @@ void GameScene::enterMine()
         }
         else
         {
-            CCLOG("ERROR: Failed to create mine scene for floor %d!", floor);
         }
     });
 
@@ -2883,36 +2815,27 @@ bool GameScene::init(bool loadFromSave)
 
 void GameScene::saveGame()
 {
-    CCLOG("========================================");
-    CCLOG("Saving game...");
-    CCLOG("========================================");
 
     SaveManager::SaveData data = collectSaveData();
 
     if (SaveManager::getInstance()->saveGame(data))
     {
-        CCLOG("✓ Game saved successfully!");
         // 显示保存成功提示
         showActionMessage("Game Saved!", Color3B::GREEN);
     }
     else
     {
-        CCLOG("✗ Failed to save game!");
         showActionMessage("Save Failed!", Color3B::RED);
     }
 }
 
 void GameScene::loadGame()
 {
-    CCLOG("========================================");
-    CCLOG("Loading game...");
-    CCLOG("========================================");
 
     SaveManager::SaveData data;
 
     if (SaveManager::getInstance()->loadGame(data))
     {
-        CCLOG("✓ Game loaded successfully from file!");
         applySaveData(data);
 
         // 延迟显示消息，确保 UI 已初始化
@@ -2923,7 +2846,6 @@ void GameScene::loadGame()
     }
     else
     {
-        CCLOG("✗ Failed to load game!");
         if (actionLabel_)
         {
             showActionMessage("Load Failed!", Color3B::RED);
@@ -2939,15 +2861,12 @@ SaveManager::SaveData GameScene::collectSaveData()
     if (player_)
     {
         data.playerPosition = player_->getPosition();
-        CCLOG("Saving player position: (%.2f, %.2f)",
-            data.playerPosition.x, data.playerPosition.y);
     }
 
     // 保存背包数据
     if (inventory_)
     {
         data.inventory.money = inventory_->getMoney();
-        CCLOG("Saving money: %d", data.inventory.money);
 
         const auto& slots = inventory_->getAllSlots();
         for (size_t i = 0; i < slots.size(); i++)
@@ -2961,7 +2880,6 @@ SaveManager::SaveData GameScene::collectSaveData()
                 slotData.durability = slot.durability;
                 slotData.maxDurability = slot.maxDurability;
                 data.inventory.slots.push_back(slotData);
-                CCLOG("  Slot %zu: Type=%d, Count=%d", i, slotData.type, slotData.count);
             }
             else
             {
@@ -2980,7 +2898,6 @@ SaveManager::SaveData GameScene::collectSaveData()
     if (farmManager_)
     {
         data.dayCount = farmManager_->getDayCount();
-        CCLOG("Saving day count: %d", data.dayCount);
     }
 
     // 保存农作物数据
@@ -3015,7 +2932,6 @@ SaveManager::SaveData GameScene::collectSaveData()
                 }
             }
         }
-        CCLOG("Saving %zu farm tiles", data.farmTiles.size());
 
         // 保存储物箱数据
         const auto& chests = farmManager_->getStorageChests();
@@ -3037,7 +2953,6 @@ SaveManager::SaveData GameScene::collectSaveData()
             }
             data.storageChests.push_back(chestData);
         }
-        CCLOG("Saving %zu storage chests", data.storageChests.size());
     }
 
     // 树木存档功能已禁用（避免崩溃问题）
@@ -3060,7 +2975,6 @@ SaveManager::SaveData GameScene::collectSaveData()
             skillSave.actionCount = sd.actionCount;
             data.skills.push_back(skillSave);
         }
-        CCLOG("Saving %zu skills", data.skills.size());
     }
 
     return data;
@@ -3068,27 +2982,19 @@ SaveManager::SaveData GameScene::collectSaveData()
 
 void GameScene::applySaveData(const SaveManager::SaveData& data)
 {
-    CCLOG("========================================");
-    CCLOG("Applying save data...");
-    CCLOG("========================================");
 
     // 恢复玩家位置
     if (player_)
     {
-        CCLOG("Restoring player position...");
         player_->setPosition(data.playerPosition);
-        CCLOG("✓ Player position restored: (%.2f, %.2f)",
-            data.playerPosition.x, data.playerPosition.y);
     }
     else
     {
-        CCLOG("✗ Warning: player_ is null!");
     }
 
     // 恢复背包数据
     if (inventory_)
     {
-        CCLOG("Restoring inventory...");
         // 清空现有背包
         inventory_->clear();
 
@@ -3097,10 +3003,8 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
         {
             inventory_->addMoney(data.inventory.money);
         }
-        CCLOG("✓ Money restored: %d", data.inventory.money);
 
         // 恢复物品槽位
-        CCLOG("Restoring %zu inventory slots...", data.inventory.slots.size());
         for (size_t i = 0; i < data.inventory.slots.size() && i < inventory_->getSlotCount(); i++)
         {
             const auto& slotData = data.inventory.slots[i];
@@ -3108,32 +3012,25 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
             {
                 ItemType type = static_cast<ItemType>(slotData.type);
                 inventory_->setSlotData(i, type, slotData.count, slotData.durability, slotData.maxDurability);
-                CCLOG("  Slot %zu restored: Type=%d, Count=%d", i, slotData.type, slotData.count);
             }
         }
-        CCLOG("✓ Inventory restored");
     }
     else
     {
-        CCLOG("✗ Warning: inventory_ is null!");
     }
 
     // 恢复游戏天数
     if (farmManager_)
     {
-        CCLOG("Restoring day count...");
         farmManager_->setDayCount(data.dayCount);
-        CCLOG("✓ Day count restored: %d", data.dayCount);
     }
     else
     {
-        CCLOG("✗ Warning: farmManager_ is null!");
     }
 
     // 恢复农作物数据
     if (farmManager_)
     {
-        CCLOG("Restoring farm tiles...");
         // 获取当前地图尺寸
         Size mapSize = farmManager_->getMapSize();
         std::vector<FarmManager::FarmTile> tiles(mapSize.width * mapSize.height);
@@ -3154,10 +3051,8 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
         }
 
         farmManager_->setAllTiles(tiles);
-        CCLOG("✓ Farm tiles restored: %zu tiles", data.farmTiles.size());
 
         // 恢复储物箱数据
-        CCLOG("Restoring storage chests...");
         for (const auto& chestData : data.storageChests)
         {
             auto chest = StorageChest::create(Vec2(chestData.x, chestData.y));
@@ -3172,28 +3067,21 @@ void GameScene::applySaveData(const SaveManager::SaveData& data)
                 farmManager_->addStorageChest(chest);
             }
         }
-        CCLOG("✓ Storage chests restored: %zu chests", data.storageChests.size());
     }
 
     // 树木恢复功能已禁用（避免崩溃问题）
     // 注意：砍倒的树木在重新加载游戏后会恢复
-    CCLOG("Tree restoration skipped (feature disabled for stability)");
     choppedTrees_.clear();
 
     // 恢复技能数据
     if (auto skillMgr = SkillManager::getInstance())
     {
-        CCLOG("Restoring skills...");
         for (const auto& skillData : data.skills)
         {
             skillMgr->setSkillData((SkillManager::SkillType)skillData.type, skillData.level, skillData.actionCount);
         }
-        CCLOG("✓ Skills restored: %zu skills", data.skills.size());
     }
 
-    CCLOG("========================================");
-    CCLOG("✓ Save data applied successfully!");
-    CCLOG("========================================");
 }
 
 // ==========================================
