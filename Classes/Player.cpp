@@ -58,7 +58,6 @@ namespace
         for (int i = 1; i <= count; ++i) {
             std::string filename = StringUtils::format("tools/fishing/%s%s%d.png", dir, stage, i);
             if (!FileUtils::getInstance()->isFileExist(filename)) {
-                CCLOG("Warning: Fishing frame missing: %s", filename.c_str());
                 continue;
             }
             auto frame = createFullFrame(filename);
@@ -235,7 +234,6 @@ void Player::loadAnimations()
             // 检查文件是否存在
             if (!FileUtils::getInstance()->isFileExist(filename)) {
                 // 只有文件真的缺失时才报错，避免刷屏
-                CCLOG("Warning: Animation file missing: %s", filename.c_str());
                 continue;
             }
 
@@ -457,7 +455,6 @@ void Player::playSwingAnimation()
     // 播放攻击动画
     playAnimation(PlayerState::ATTACK);
 
-    CCLOG("Swing attack! Direction: (%.2f, %.2f)", facingDirection_.x, facingDirection_.y);
 }
 
 void Player::startFishingCast()
@@ -738,7 +735,6 @@ void Player::consumeEnergy(float amount)
         if (!isExhausted_)
         {
             setExhausted(true);
-            CCLOG("Player is EXHAUSTED! Energy: 0");
         }
     }
 }
@@ -782,11 +778,9 @@ void Player::takeDamage(int damage)
     hp_ -= damage;
     if (hp_ < 0) hp_ = 0;
 
-    CCLOG("Player took %d damage! HP: %d/%d", damage, hp_, maxHp_);
 
     if (hp_ <= 0)
     {
-        CCLOG("Player Died!");
         // 这里可以添加死亡逻辑，比如停止所有动画，播放死亡帧等
         this->stopAllActions();
     }
@@ -804,7 +798,6 @@ void Player::heal(int amount)
 {
     hp_ += amount;
     if (hp_ > maxHp_) hp_ = maxHp_;
-    CCLOG("Player healed: +%d, Current HP: %d", amount, hp_);
 }
 
 // ========== 键盘控制 ==========

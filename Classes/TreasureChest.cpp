@@ -30,7 +30,6 @@ bool TreasureChest::init(int floorLevel)
 
     initDisplay();
 
-    CCLOG("TreasureChest created at floor %d", floorLevel_);
 
     return true;
 }
@@ -160,7 +159,6 @@ TreasureChest::LootResult TreasureChest::generateLoot()
         }
     }
 
-    CCLOG("Chest opened: %s x%d", InventoryManager::getItemName(result.item).c_str(), result.count);
 
     return result;
 }

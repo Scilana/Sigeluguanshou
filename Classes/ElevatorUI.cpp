@@ -48,7 +48,6 @@ bool ElevatorUI::init()
     touchListener->onTouchBegan = [](Touch* touch, Event* event) { return true; };
     _eventDispatcher->addEventListenerWithSceneGraphPriority(touchListener, this);
 
-    CCLOG("ElevatorUI created");
 
     return true;
 }

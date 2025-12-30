@@ -15,7 +15,6 @@ bool MenuScene::init()
     if (!Scene::init())
         return false;
 
-    CCLOG("Initializing Menu Scene with start screen assets...");
 
     auto audio = CocosDenshion::SimpleAudioEngine::getInstance();
     if (!audio->isBackgroundMusicPlaying()) {
@@ -267,12 +266,10 @@ void MenuScene::addAnimations()
 
 void MenuScene::startGameCallback(Ref* sender)
 {
-    CCLOG("Start Game clicked!");
 
     // 检查是否已有存档
     if (SaveManager::getInstance()->hasSaveFile())
     {
-        CCLOG("Warning: Existing save file will be overwritten on first save");
         // 可以选择删除旧存档或提示用户
         // SaveManager::getInstance()->deleteSaveFile();
     }
@@ -286,7 +283,6 @@ void MenuScene::startGameCallback(Ref* sender)
 
 void MenuScene::continueGameCallback(Ref* sender)
 {
-    CCLOG("Continue Game clicked!");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
@@ -319,7 +315,6 @@ void MenuScene::continueGameCallback(Ref* sender)
     }
 
     // 有存档，加载游戏
-    CCLOG("Loading saved game...");
     auto scene = GameScene::createScene(true);  // true 表示从存档加载
     Director::getInstance()->replaceScene(
         TransitionFade::create(1.0f, scene)
@@ -328,7 +323,6 @@ void MenuScene::continueGameCallback(Ref* sender)
 
 void MenuScene::coopCallback(Ref* sender)
 {
-    CCLOG("Co-op clicked!");
 
     auto visibleSize = Director::getInstance()->getVisibleSize();
 
@@ -356,7 +350,6 @@ void MenuScene::coopCallback(Ref* sender)
 
 void MenuScene::exitGameCallback(Ref* sender)
 {
-    CCLOG("Exit clicked!");
     Director::getInstance()->end();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_IOS)

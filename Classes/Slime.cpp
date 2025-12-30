@@ -44,8 +44,6 @@ void Slime::initStats()
 
     hp_ = maxHp_;
 
-    CCLOG("Slime created: HP=%d, ATK=%d, SPD=%.1f, Floor=%d",
-          maxHp_, attackPower_, moveSpeed_, floorLevel_);
 }
 
 void Slime::initDisplay()
@@ -67,7 +65,6 @@ void Slime::initDisplay()
             //    this->setScale(2.0f);
             // }
             
-            CCLOG("Slime sprite loaded: %s", spritePath.c_str());
             spriteLoaded = true;
 
             // Make it move (Squash and Stretch animation)

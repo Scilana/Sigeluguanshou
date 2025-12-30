@@ -21,7 +21,6 @@ bool FishingLayer::init(Fish* fish)
         return false;
 
     currentFish_ = fish;
-    CCLOG("Initializing Fishing Layer for %s...", fish ? fish->getName().c_str() : "Unknown");
 
     // 灰色半透明背景，阻挡下层点击
     auto visibleSize = Director::getInstance()->getVisibleSize();

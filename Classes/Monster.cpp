@@ -62,8 +62,6 @@ void Monster::initStats()
 
     hp_ = maxHp_;
 
-    CCLOG("Monster created: %s, HP=%d, ATK=%d, Floor=%d",
-          name_.c_str(), maxHp_, attackPower_, floorLevel_);
 }
 
 void Monster::initDisplay()
@@ -75,11 +73,9 @@ void Monster::initDisplay()
         // 如果有贴图路径，尝试加载
         if (this->initWithFile(spritePath))
         {
-            CCLOG("Monster sprite loaded: %s", spritePath.c_str());
         }
         else
         {
-            CCLOG("Failed to load sprite: %s, using placeholder", spritePath.c_str());
             spritePath = "";  // 回退到占位符
         }
     }
@@ -210,7 +206,6 @@ void Monster::takeDamage(int damage)
         return;
 
     hp_ -= damage;
-    CCLOG("%s took %d damage, HP: %d/%d", name_.c_str(), damage, hp_, maxHp_);
 
     // 受伤闪烁效果
     auto blink = Sequence::create(
@@ -235,7 +230,6 @@ void Monster::attackPlayer(Player* player)
     if (!player || currentAttackCooldown_ > 0)
         return;
 
-    CCLOG("%s attacks player for %d damage!", name_.c_str(), attackPower_);
 
     // 对玩家造成伤害
     player->takeDamage(attackPower_);
@@ -264,7 +258,6 @@ void Monster::updateHpDisplay()
 
 void Monster::onDeath()
 {
-    CCLOG("%s died!", name_.c_str());
 
     // 死亡动画
     auto fadeOut = FadeOut::create(0.5f);

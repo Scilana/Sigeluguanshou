@@ -44,8 +44,6 @@ void Zombie::initStats()
 
     hp_ = maxHp_;
 
-    CCLOG("Zombie created: HP=%d, ATK=%d, SPD=%.1f, Floor=%d",
-          maxHp_, attackPower_, moveSpeed_, floorLevel_);
 }
 
 void Zombie::initDisplay()
@@ -58,7 +56,6 @@ void Zombie::initDisplay()
     {
         if (this->initWithFile(spritePath))
         {
-            CCLOG("Zombie sprite loaded: %s", spritePath.c_str());
             spriteLoaded = true;
 
             // Pixel art settings

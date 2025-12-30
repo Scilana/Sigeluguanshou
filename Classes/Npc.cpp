@@ -45,5 +45,4 @@ std::string Npc::getPortraitFile() const {
 }
 
 void Npc::interact() {
-    CCLOG("Interacting with NPC: %s", name_.c_str());
 }

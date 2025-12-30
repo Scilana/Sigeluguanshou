@@ -31,14 +31,12 @@ bool MiningManager::init(MineLayer* mineLayer, InventoryManager* inventory)
 
     if (!mineLayer_ || !inventory_)
     {
-        CCLOG("ERROR: MiningManager requires valid MineLayer and InventoryManager!");
         return false;
     }
 
     // 初始化矿物定义
     initMineralDefs();
 
-    CCLOG("MiningManager initialized");
     return true;
 }
 
@@ -151,7 +149,6 @@ void MiningManager::initMineralDefs()
         };
     }
 
-    CCLOG("Mineral definitions initialized: %d types", static_cast<int>(mineralDefs_.size()));
 }
 
 MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
@@ -170,7 +167,6 @@ MiningManager::MiningResult MiningManager::mineTile(const Vec2& tileCoord)
     if (!mineralDef)
     {
         // 如果没有定义，使用默认值（1次敲击，不掉落）
-        CCLOG("Unknown mineral GID: %d, using default", gid);
         mineLayer_->clearMineralAt(tileCoord);
         mineLayer_->clearCollisionAt(tileCoord);
         return { true, "" }; // 不提示通用消息
@@ -254,7 +250,6 @@ const MiningManager::MineralDef* MiningManager::getMineralDef(int gid) const
 void MiningManager::addExp(int exp)
 {
     miningExp_ += exp;
-    CCLOG("Mining exp: %d (+%d)", miningExp_, exp);
 }
 
 long long MiningManager::getTileKey(const Vec2& tileCoord) const
@@ -283,12 +278,10 @@ std::string MiningManager::dropItems(const Vec2& tileCoord, const MineralDef& mi
         if (added)
         {
             std::string itemName = InventoryManager::getItemName(mineralDef.dropItem);
-            CCLOG("Collected %d x %s", dropCount, itemName.c_str());
             return StringUtils::format("Found %d %s!", dropCount, itemName.c_str());
         }
         else
         {
-            CCLOG("Inventory full! Could not collect items");
             return "Inventory full!";
         }
     }

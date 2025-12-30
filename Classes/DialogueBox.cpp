@@ -21,7 +21,6 @@ bool DialogueBox::init(Npc* npc) {
     // Background
     background_ = Sprite::create("npcImages/dialogueBox.png");
     if (!background_) {
-        CCLOG("Failed to load dialogueBox.png");
         return false;
     }
     // background_->setPosition(Vec2(0, 0)); // Center relative to node

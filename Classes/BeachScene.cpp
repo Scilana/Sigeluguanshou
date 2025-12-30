@@ -268,7 +268,6 @@ void BeachScene::initMap()
     }
     else
     {
-        CCLOG("ERROR: Failed to load beach map: %s", kBeachMapFile);
     }
 }
 
@@ -823,18 +822,15 @@ void BeachScene::onMouseDown(Event* event)
         fishingState_ = FishingState::CHARGING;
         fishingRodSlotIndex_ = selectedItemIndex_;
         chargePower_ = 0.0f;
-        CCLOG("Start Charging...");
     }
     else if (fishingState_ == FishingState::BITING)
     {
-        CCLOG("HOOKED!");
         if (exclamationMark_) exclamationMark_->setVisible(false);
         fishingRodSlotIndex_ = selectedItemIndex_;
         startFishing();
     }
     else if (fishingState_ == FishingState::WAITING)
     {
-        CCLOG("Pulled too early!");
         fishingState_ = FishingState::NONE;
         fishingRodSlotIndex_ = -1;
         if (exclamationMark_) exclamationMark_->setVisible(false);
@@ -856,7 +852,6 @@ void BeachScene::onMouseUp(Event* event)
 
         waitTimer_ = CCRANDOM_0_1() * 3.0f + 1.0f;
         if (player_) player_->startFishingCast();
-        CCLOG("Casting rod! Power: %.2f. Waiting...", chargePower_);
     }
 }
 
@@ -882,7 +877,6 @@ void BeachScene::updateFishingState(float delta)
             fishingState_ = FishingState::BITING;
             biteTimer_ = 1.0f;
             if (exclamationMark_) exclamationMark_->setVisible(true);
-            CCLOG("Fish bit! Click now!");
         }
     }
     else if (fishingState_ == FishingState::BITING)
@@ -894,7 +888,6 @@ void BeachScene::updateFishingState(float delta)
             fishingRodSlotIndex_ = -1;
             if (exclamationMark_) exclamationMark_->setVisible(false);
             if (player_) player_->startFishingReel();
-            CCLOG("Missed...");
             showActionMessage("Missed...", Color3B::GRAY);
         }
     }
@@ -943,7 +936,6 @@ void BeachScene::startFishing()
                 ItemType type = fishObj ? fishObj->getType() : ItemType::Fish;
                 std::string name = fishObj ? fishObj->getName() : "Fish";
                 
-                CCLOG("Fishing SUCCESS! Caught: %s", name.c_str());
                 showActionMessage("Caught a " + name + "!", Color3B(255, 215, 0));
                 
                 // 【修复】加入背包
@@ -955,7 +947,6 @@ void BeachScene::startFishing()
             }
             else
             {
-                CCLOG("Fishing FAILED.");
                 showActionMessage("Fish got away...", Color3B::RED);
             }
             
