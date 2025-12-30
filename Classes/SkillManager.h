@@ -1,64 +1,58 @@
-#ifndef __SKILL_MANAGER_H__
+﻿#ifndef __SKILL_MANAGER_H__
 #define __SKILL_MANAGER_H__
 
-#include "cocos2d.h"
 #include <array>
 #include <cstdint>
 #include <string>
 
-class SkillManager : public cocos2d::Node
-{
-public:
-    enum class SkillType
-    {
-        Agriculture = 0,
-        Mining,
-        Fishing,
-        Cooking,
-        Count
-    };
+#include "cocos2d.h"
 
-    struct SkillData
-    {
-        std::string name;
-        int level = 0;
-        int maxLevel = 5;
-        int actionCount = 0;
-        int actionsPerLevel = 5;
-    };
+class SkillManager : public cocos2d::Node {
+ public:
+  enum class SkillType { Agriculture = 0, Mining, Fishing, Cooking, Count };
 
-    using LevelUpCallback = std::function<void(SkillType, int)>;
-    void setLevelUpCallback(const LevelUpCallback& callback) { levelUpCallback_ = callback; }
+  struct SkillData {
+    std::string name;
+    int level = 0;
+    int maxLevel = 5;
+    int actionCount = 0;
+    int actionsPerLevel = 5;
+  };
 
-    static SkillManager* getInstance();
-    static void destroyInstance();
+  using LevelUpCallback = std::function<void(SkillType, int)>;
+  void setLevelUpCallback(const LevelUpCallback& callback) {
+    levelUpCallback_ = callback;
+  }
 
-    virtual bool init() override;
+  static SkillManager* getInstance();
+  static void destroyInstance();
 
-    void recordAction(SkillType type, int count = 1);
-    void setSkillData(SkillType type, int level, int actionCount); // For loading
-    const SkillData& getSkillData(SkillType type) const;
-    int getSkillLevel(SkillType type) const;
-    int getActionCount(SkillType type) const;
-    float getProgressToNextLevel(SkillType type) const;
-    uint64_t getVersion() const { return version_; }
+  virtual bool init() override;
 
-    int getMiningHitReduction() const;
-    float getFishingCatchGainMultiplier() const;
-    float getFishingCatchLossMultiplier() const;
-    float getAgricultureBonusChance() const;
-    float getCookingSpeedMultiplier() const;
+  void recordAction(SkillType type, int count = 1);
+  void setSkillData(SkillType type, int level, int actionCount);
+  const SkillData& getSkillData(SkillType type) const;
+  int getSkillLevel(SkillType type) const;
+  int getActionCount(SkillType type) const;
+  float getProgressToNextLevel(SkillType type) const;
+  uint64_t getVersion() const { return version_; }
 
-private:
-    SkillManager();
+  int getMiningHitReduction() const;
+  float getFishingCatchGainMultiplier() const;
+  float getFishingCatchLossMultiplier() const;
+  float getAgricultureBonusChance() const;
+  float getCookingSpeedMultiplier() const;
 
-    static SkillManager* instance_;
-    std::array<SkillData, static_cast<size_t>(SkillType::Count)> skills_;
-    uint64_t version_ = 0;
-    LevelUpCallback levelUpCallback_;
+ private:
+  SkillManager();
 
-    void recalcLevel(SkillData& skill);
-    static size_t toIndex(SkillType type);
+  static SkillManager* instance_;
+  std::array<SkillData, static_cast<size_t>(SkillType::Count)> skills_;
+  uint64_t version_ = 0;
+  LevelUpCallback levelUpCallback_;
+
+  void recalcLevel(SkillData& skill);
+  static size_t toIndex(SkillType type);
 };
 
-#endif // __SKILL_MANAGER_H__
+#endif

@@ -1,58 +1,58 @@
-#ifndef __INVENTORY_MANAGER_H__
+﻿#ifndef __INVENTORY_MANAGER_H__
 #define __INVENTORY_MANAGER_H__
 
-#include "cocos2d.h"
 #include <array>
-#include <vector>
 #include <string>
+#include <vector>
+
+#include "cocos2d.h"
 
 /**
- * @brief 物品类型枚举（与 GameScene 中保持一致）
+ * @brief 物品类型枚举（与主场景保持一致）
  */
-enum class ItemType
-{
-    ITEM_NONE = -1,
-    Hoe = 0,
-    WateringCan,
-    Scythe,
-    Axe,
-    Pickaxe,
-    FishingRod,
-    SeedTurnip,
-    SeedPotato,
-    SeedCorn,
-    SeedTomato,
-    SeedPumpkin,
-    SeedBlueberry,
-    Wood,
-    Turnip,
-    Potato,
-    Corn,
-    Tomato,
-    Pumpkin,
-    Blueberry,
-    Fish,
-    // 矿石类型
-    CopperOre,      // 铜矿石
-    IronOre,        // 铁矿石
-    SilverOre,      // 银矿石
-    GoldOre,        // 金矿石
-    DiamondOre,     // 钻石矿石
-    // 武器类型
-    ITEM_WoodenSword,    // 木剑
-    ITEM_IronSword,      // 铁剑
-    ITEM_GoldSword,      // 金剑
-    ITEM_DiamondSword,   // 钻石剑
-    // 鱼类 [New]
-    ITEM_Anchovy,        // 鳀鱼
-    ITEM_Carp,           // 鲤鱼
-    ITEM_Eel,            // 鳗鱼
-    ITEM_Flounder,       // 比目鱼
-    ITEM_Largemouth_Bass,// 大口黑鲈
-    ITEM_Pufferfish,     // 河豚
-    ITEM_Rainbow_Trout,  // 虹鳟鱼
-    ITEM_Sturgeon,       // 鲟鱼
-    ITEM_Tilapia         // 罗非鱼
+enum class ItemType {
+  ITEM_NONE = -1,
+  Hoe = 0,
+  WateringCan,
+  Scythe,
+  Axe,
+  Pickaxe,
+  FishingRod,
+  SeedTurnip,
+  SeedPotato,
+  SeedCorn,
+  SeedTomato,
+  SeedPumpkin,
+  SeedBlueberry,
+  Wood,
+  Turnip,
+  Potato,
+  Corn,
+  Tomato,
+  Pumpkin,
+  Blueberry,
+  Fish,
+  // 矿石类型
+  CopperOre,   // 铜矿石
+  IronOre,     // 铁矿石
+  SilverOre,   // 银矿石
+  GoldOre,     // 金矿石
+  DiamondOre,  // 钻石矿石
+  // 武器类型
+  ITEM_WoodenSword,   // 木剑
+  ITEM_IronSword,     // 铁剑
+  ITEM_GoldSword,     // 金剑
+  ITEM_DiamondSword,  // 钻石剑
+  // 鱼类（新增）
+  ITEM_Anchovy,          // 鳀鱼
+  ITEM_Carp,             // 鲤鱼
+  ITEM_Eel,              // 鳗鱼
+  ITEM_Flounder,         // 比目鱼
+  ITEM_Largemouth_Bass,  // 大口黑鲈
+  ITEM_Pufferfish,       // 河豚
+  ITEM_Rainbow_Trout,    // 虹鳟鱼
+  ITEM_Sturgeon,         // 鲟鱼
+  ITEM_Tilapia           // 罗非鱼
 };
 
 /**
@@ -64,228 +64,230 @@ enum class ItemType
  * - 管理金币数量
  * - 提供物品数据和元信息
  */
-class InventoryManager : public cocos2d::Node
-{
-public:
-    /**
-     * @brief 物品槽位结构
-     */
-    struct ItemSlot
-    {
-        ItemType type = ItemType::ITEM_NONE;
-        int count = 0;
-        int durability = -1;    // -1 means no durability (e.g. materials/crops)
-        int maxDurability = -1;
+class InventoryManager : public cocos2d::Node {
+ public:
+  /**
+   * @brief 物品槽位结构
+   */
+  struct ItemSlot {
+    ItemType type = ItemType::ITEM_NONE;
+    int count = 0;
+    int durability = -1;
+    int maxDurability = -1;
 
-        bool isEmpty() const { return type == ItemType::ITEM_NONE || count <= 0; }
-        void clear() { type = ItemType::ITEM_NONE; count = 0; durability = -1; maxDurability = -1; }
-        bool isTool() const { return durability != -1; }
-    };
+    bool isEmpty() const { return type == ItemType::ITEM_NONE || count <= 0; }
+    void clear() {
+      type = ItemType::ITEM_NONE;
+      count = 0;
+      durability = -1;
+      maxDurability = -1;
+    }
+    bool isTool() const { return durability != -1; }
+  };
 
-    /**
-     * @brief 创建背包管理器
-     * @param slotCount 槽位数量，默认为 30
-     */
-    static InventoryManager* create(int slotCount = 30);
-    
-    /**
-     * @brief 获取单例实例 (主背包)
-     */
-    static InventoryManager* getInstance();
-    
-    /**
-     * @brief 销毁单例实例
-     */
-    static void destroyInstance();
+  /**
+   * @brief 创建背包管理器
+   * @param slotCount 槽位数量，默认为 30
+   */
+  static InventoryManager* create(int slotCount = 30);
 
-    /**
-     * @brief 初始化
-     * @param slotCount 槽位数量
-     */
-    virtual bool init(int slotCount = 30);
+  /**
+   * @brief 获取单例实例 (主背包)
+   */
+  static InventoryManager* getInstance();
 
-    /**
-     * @brief 添加物品
-     * @param itemType 物品类型
-     * @param count 数量
-     * @return 是否成功添加
-     */
-    bool addItem(ItemType itemType, int count = 1);
+  /**
+   * @brief 销毁单例实例
+   */
+  static void destroyInstance();
 
-    /**
-     * @brief 移除物品
-     * @param itemType 物品类型
-     * @param count 数量
-     * @return 是否成功移除
-     */
-    bool removeItem(ItemType itemType, int count = 1);
+  /**
+   * @brief 初始化
+   * @param slotCount 槽位数量
+   */
+  virtual bool init(int slotCount = 30);
 
-    /**
-     * @brief 从指定槽位移除物品
-     * @param slotIndex 槽位索引
-     * @param count 数量
-     * @return 是否成功移除
-     */
-    bool removeItemFromSlot(int slotIndex, int count = 1);
+  /**
+   * @brief 添加物品
+   * @param itemType 物品类型
+   * @param count 数量
+   * @return 是否成功添加
+   */
+  bool addItem(ItemType itemType, int count = 1);
 
-    /**
-     * @brief 检查是否有指定物品
-     * @param itemType 物品类型
-     * @param count 数量
-     * @return 是否拥有足够数量
-     */
-    bool hasItem(ItemType itemType, int count = 1) const;
+  /**
+   * @brief 移除物品
+   * @param itemType 物品类型
+   * @param count 数量
+   * @return 是否成功移除
+   */
+  bool removeItem(ItemType itemType, int count = 1);
 
-    /**
-     * @brief 获取指定物品的总数量
-     * @param itemType 物品类型
-     * @return 物品总数量
-     */
-    int getItemCount(ItemType itemType) const;
+  /**
+   * @brief 从指定槽位移除物品
+   * @param slotIndex 槽位索引
+   * @param count 数量
+   * @return 是否成功移除
+   */
+  bool removeItemFromSlot(int slotIndex, int count = 1);
 
-    /**
-     * @brief 获取指定槽位的物品
-     * @param slotIndex 槽位索引
-     * @return 物品槽位引用
-     */
-    const ItemSlot& getSlot(int slotIndex) const;
+  /**
+   * @brief 检查是否有指定物品
+   * @param itemType 物品类型
+   * @param count 数量
+   * @return 是否拥有足够数量
+   */
+  bool hasItem(ItemType itemType, int count = 1) const;
 
-    /**
-     * @brief 获取所有槽位
-     * @return 槽位数组
-     */
-    const std::vector<ItemSlot>& getAllSlots() const { return slots_; }
+  /**
+   * @brief 获取指定物品的总数量
+   * @param itemType 物品类型
+   * @return 物品总数量
+   */
+  int getItemCount(ItemType itemType) const;
 
-    /**
-     * @brief 设置槽位物品
-     * @param slotIndex 槽位索引
-     * @param itemType 物品类型
-     * @param count 数量
-     */
-    void setSlot(int slotIndex, ItemType itemType, int count);
-    void setSlotData(int slotIndex, ItemType itemType, int count, int durability, int maxDurability);
+  /**
+   * @brief 获取指定槽位的物品
+   * @param slotIndex 槽位索引
+   * @return 物品槽位引用
+   */
+  const ItemSlot& getSlot(int slotIndex) const;
 
-    /**
-     * @brief 交换两个槽位
-     * @param index1 槽位1索引
-     * @param index2 槽位2索引
-     */
-    void swapSlots(int index1, int index2);
+  /**
+   * @brief 获取所有槽位
+   * @return 槽位数组
+   */
+  const std::vector<ItemSlot>& getAllSlots() const { return slots_; }
 
-    /**
-     * @brief 获取槽位总数
-     */
-    int getSlotCount() const { return (int)slots_.size(); }
+  /**
+   * @brief 设置槽位物品
+   * @param slotIndex 槽位索引
+   * @param itemType 物品类型
+   * @param count 数量
+   */
+  void setSlot(int slotIndex, ItemType itemType, int count);
+  void setSlotData(int slotIndex, ItemType itemType, int count, int durability,
+                   int maxDurability);
 
-    /**
-     * @brief 获取金币数量
-     */
-    int getMoney() const { return money_; }
+  /**
+   * @brief 交换两个槽位
+   * @param index1 槽位1索引
+   * @param index2 槽位2索引
+   */
+  void swapSlots(int index1, int index2);
 
-    /**
-     * @brief 添加金币
-     * @param amount 金币数量
-     */
-    void addMoney(int amount);
+  /**
+   * @brief 获取槽位总数
+   */
+  int getSlotCount() const { return static_cast<int>(slots_.size()); }
 
-    /**
-     * @brief 移除金币
-     * @param amount 金币数量
-     * @return 是否成功移除
-     */
-    bool removeMoney(int amount);
+  /**
+   * @brief 获取金币数量
+   */
+  int getMoney() const { return money_; }
 
-    /**
-     * @brief 获取物品名称
-     * @param itemType 物品类型
-     * @return 物品名称
-     */
-    static std::string getItemName(ItemType itemType);
+  /**
+   * @brief 添加金币
+   * @param amount 金币数量
+   */
+  void addMoney(int amount);
 
-    /**
-     * @brief 获取物品描述
-     * @param itemType 物品类型
-     * @return 物品描述
-     */
-    static std::string getItemDescription(ItemType itemType);
+  /**
+   * @brief 移除金币
+   * @param amount 金币数量
+   * @return 是否成功移除
+   */
+  bool removeMoney(int amount);
 
-    /**
-     * @brief Get item icon resource path (empty if unavailable).
-     */
-    static std::string getItemIconPath(ItemType itemType);
+  /**
+   * @brief 获取物品名称
+   * @param itemType 物品类型
+   * @return 物品名称
+   */
+  static std::string getItemName(ItemType itemType);
 
-    /**
-     * @brief 获取物品是否可堆叠
-     * @param itemType 物品类型
-     * @return 是否可堆叠
-     */
-    static bool isStackable(ItemType itemType);
+  /**
+   * @brief 获取物品描述
+   * @param itemType 物品类型
+   * @return 物品描述
+   */
+  static std::string getItemDescription(ItemType itemType);
 
-    /**
-     * @brief 获取物品最大堆叠数
-     * @param itemType 物品类型
-     * @return 最大堆叠数
-     */
-    static int getMaxStack(ItemType itemType);
+  /**
+   * @brief 获取物品图标资源路径（不可用则返回空）
+   */
+  static std::string getItemIconPath(ItemType itemType);
 
-    /**
-     * @brief 清空背包
-     */
-    void clear();
+  /**
+   * @brief 获取物品是否可堆叠
+   * @param itemType 物品类型
+   * @return 是否可堆叠
+   */
+  static bool isStackable(ItemType itemType);
 
-    /**
-     * @brief 减少指定槽位的耐久度
-     * @param slotIndex 槽位索引
-     * @param amount 减少量
-     * @return 如果工具损坏归零并移除，返回 true
-     */
-    bool decreaseDurability(int slotIndex, int amount = 1);
+  /**
+   * @brief 获取物品最大堆叠数
+   * @param itemType 物品类型
+   * @return 最大堆叠数
+   */
+  static int getMaxStack(ItemType itemType);
 
-    /**
-     * @brief 修复指定槽位的工具 (满耐久)
-     * @param slotIndex 槽位索引
-     * @return 是否修复成功
-     */
-    bool repairSlot(int slotIndex);
+  /**
+   * @brief 清空背包
+   */
+  void clear();
 
-    /**
-     * @brief 获取指定类型的默认最大耐久度
-     */
-    static int getDefaultMaxDurability(ItemType type);
+  /**
+   * @brief 减少指定槽位的耐久度
+   * @param slotIndex 槽位索引
+   * @param amount 减少量
+   * @return 如果工具损坏归零并移除，返回 true
+   */
+  bool decreaseDurability(int slotIndex, int amount = 1);
 
-    /**
-     * @brief 检查物品是否是工具
-     */
-    static bool isTool(ItemType type);
+  /**
+   * @brief 修复指定槽位的工具 (满耐久)
+   * @param slotIndex 槽位索引
+   * @return 是否修复成功
+   */
+  bool repairSlot(int slotIndex);
 
+  /**
+   * @brief 获取指定类型的默认最大耐久度
+   */
+  static int getDefaultMaxDurability(ItemType type);
 
+  /**
+   * @brief 检查物品是否是工具
+   */
+  static bool isTool(ItemType type);
 
-private:
-    std::vector<ItemSlot> slots_;  // 物品槽位数组
-    int money_;                               // 金币数量
-    int selectedSlotIndex_ = 0;               // 当前选中的槽位
+ private:
+  std::vector<ItemSlot> slots_;  // 物品槽位数组
+  int money_;                    // 金币数量
+  int selectedSlotIndex_ = 0;    // 当前选中的槽位
 
-public:
-    int getSelectedSlotIndex() const;
-    void setSelectedSlotIndex(int index);
+ public:
+  int getSelectedSlotIndex() const;
+  void setSelectedSlotIndex(int index);
 
-    /**
-     * @brief 初始化默认物品
-     */
-    void initDefaultItems();
+  /**
+   * @brief 初始化默认物品
+   */
+  void initDefaultItems();
 
-    /**
-     * @brief 查找第一个空槽位
-     * @return 槽位索引，-1 表示没有空槽位
-     */
-    int findEmptySlot() const;
+  /**
+   * @brief 查找第一个空槽位
+   * @return 槽位索引，-1 表示没有空槽位
+   */
+  int findEmptySlot() const;
 
-    /**
-     * @brief 查找指定物品的槽位
-     * @param itemType 物品类型
-     * @return 槽位索引，-1 表示未找到
-     */
-    int findItemSlot(ItemType itemType) const;
+  /**
+   * @brief 查找指定物品的槽位
+   * @param itemType 物品类型
+   * @return 槽位索引，-1 表示未找到
+   */
+  int findItemSlot(ItemType itemType) const;
 };
 
-#endif // __INVENTORY_MANAGER_H__
+#endif
