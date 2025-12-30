@@ -104,14 +104,7 @@ void MarketState::updateContext(int dayCount) {
 void MarketState::adjustGoodPrice(MarketGood& good) const {
   int price = good.basePrice;
 
-  if (good.itemType == ItemType::CopperOre ||
-      good.itemType == ItemType::IronOre ||
-      good.itemType == ItemType::SilverOre ||
-      good.itemType == ItemType::GoldOre ||
-      good.itemType == ItemType::DiamondOre) {
-    good.currentPrice = price;
-    return;
-  }
+
 
   switch (season_) {
     case Season::Spring:

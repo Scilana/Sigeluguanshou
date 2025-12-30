@@ -2804,8 +2804,7 @@ void GameScene::onQuantityConfirmed(int qty) {
     inventoryUI_ = nullptr;
   }
 
-  MarketState marketState;
-  int unitPrice = marketState.getSellPrice(pendingSellItem_);
+  int unitPrice = marketState_.getSellPrice(pendingSellItem_);
 
   if (unitPrice <= 0) {
     if (dialogueBox_) {
@@ -2844,8 +2843,7 @@ void GameScene::onTradeConfirmResult(bool confirmed) {
   } else {
     if (inventory_) {
       int currentMoney = inventory_->getMoney();
-      MarketState marketState;
-      int unitPrice = marketState.getSellPrice(pendingSellItem_);
+      int unitPrice = marketState_.getSellPrice(pendingSellItem_);
       int total = unitPrice * pendingSellCount_;
 
       inventory_->addMoney(total);
